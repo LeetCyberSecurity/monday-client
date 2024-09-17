@@ -27,24 +27,56 @@ class MondayClient:
 	"""
 	Client for interacting with the Monday.com API.
 
+	This client handles API requests, rate limiting, and pagination for Monday.com's GraphQL API.
+	
+	It uses a class-level logger named 'monday_client' for all logging operations.
+
 	Attributes:
+		url (str): The endpoint URL for the Monday.com API.
+
+		headers (dict): HTTP headers used for API requests, including authentication.
+
+	Args:
 		api_key (str): The API key for authenticating with the Monday.com API.
-		debug_logger (logging.Logger): Logger for debug messages.
-		info_logger (logging.Logger): Logger for informational messages.
+
+	Note:
+		Logging can be controlled by configuring the 'monday_client' logger.
+		
+		By default, a NullHandler is added to the logger, which suppresses all output.
+
+		To enable logging, configure the logger in your application code. For example:
+
+		```python
+		import logging
+		logger = logging.getLogger("monday_client")
+		logger.setLevel(logging.INFO)
+		handler = logging.StreamHandler()
+		handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+		logger.addHandler(handler)
+		```
+
+		To disable all logging (including warnings and errors):
+
+		```python
+		import logging
+		logging.getLogger("monday_client").setLevel(logging.CRITICAL)
+		```
+
+	Example:
+		client = MondayClient(api_key="your_api_key")
 	"""
 
-	def __init__(self, api_key: str, logger: logging.Logger = None):
+	logger = logging.getLogger('monday_client')
+
+	def __init__(self, api_key: str):
 		"""
-		Initializes the MondayClient with the provided API key and loggers.
+		Initialize the MondayClient with the provided API key.
 
 		Args:
 			api_key (str): The API key for authenticating with the Monday.com API.
-			debug_logger (logging.Logger): Logger for debug messages.
-			info_logger (logging.Logger): Logger for informational messages.
 		"""
 		self.url = 'https://api.monday.com/v2'
 		self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}'}
-		self.logger = logger or logging.getLogger(__name__)
 		# monday.com rate limits:
 		# https://developer.monday.com/api-reference/docs/rate-limits
 		self.complexity_limit = 10000000 # 10M combined read/write complexity per minute
@@ -349,3 +381,5 @@ class MondayClient:
 				self.logger.warning(f'Failed to parse items JSON: {match}')
 	
 		return all_items
+	
+logging.getLogger('monday_client').addHandler(logging.NullHandler())
