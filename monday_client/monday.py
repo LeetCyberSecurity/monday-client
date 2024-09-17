@@ -1,13 +1,9 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Union
-
-if TYPE_CHECKING:
-	import logging
-
 import json
+import logging
 import re
 import time
 from threading import Lock
-from typing import Any, Dict
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 import requests
 from ratelimit import limits, sleep_and_retry
@@ -37,7 +33,7 @@ class MondayClient:
 		info_logger (logging.Logger): Logger for informational messages.
 	"""
 
-	def __init__(self, api_key: str, debug_logger: "logging.Logger", info_logger: "logging.Logger"):
+	def __init__(self, api_key: str, logger: logging.Logger = None):
 		"""
 		Initializes the MondayClient with the provided API key and loggers.
 
@@ -48,8 +44,7 @@ class MondayClient:
 		"""
 		self.url = 'https://api.monday.com/v2'
 		self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}'}
-		self.debug_logger = debug_logger
-		self.info_logger = info_logger
+		self.logger = logger or logging.getLogger(__name__)
 		# monday.com rate limits:
 		# https://developer.monday.com/api-reference/docs/rate-limits
 		self.complexity_limit = 10000000 # 10M combined read/write complexity per minute
@@ -120,7 +115,7 @@ class MondayClient:
 					return {'items': combined_items, 'completed': False}
 				paginated_query = f'next_items_page (limit: 50, cursor: "{cursor}") {{ cursor {items_value} }}'
 
-			self.info_logger.info(f'submitting paginated query: {paginated_query}')
+			self.logger.info(f'submitting paginated query: {paginated_query}')
 			
 			response_data = self._execute_post_request(paginated_query, query_type)
 			if not response_data:
@@ -186,25 +181,25 @@ class MondayClient:
 		"""
 		query_type = query_type.lower()
 		if query_type not in self.valid_query_types:
-			self.info_logger.error(f'invalid query type: {query_type}')
+			self.logger.error(f'invalid query type: {query_type}')
 			return {'error': 'Invalid query type'}
 
 		query = f'{query_type} {{ complexity {{ before after query reset_in_x_seconds }} {query} }}'
-		self.info_logger.info(f'submitting query: {query}')
+		self.logger.info(f'submitting query: {query}')
 		response = requests.post(self.url, json={'query': query}, headers=self.headers)
 		response_data = response.json()
-		self.debug_logger.debug(f'response to query {query}: {response_data}')
+		self.logger.debug(f'response to query {query}: {response_data}')
 
 		if 'errors' in response_data:
 			error_message = response_data['errors'][0]['message']
-			self.info_logger.error(f'GraphQL error: {error_message}')
+			self.logger.error(f'GraphQL error: {error_message}')
 			return {'error': error_message}
 		
 		with self._lock:
 			try:
 				complexity = response_data['data']['complexity']
 			except KeyError:
-				self.info_logger.error(f'error getting complexity: {response_data}')
+				self.logger.error(f'error getting complexity: {response_data}')
 				return {'error': response_data}
 			complexity_before = complexity['before']
 			complexity_after = complexity['after']
@@ -213,11 +208,11 @@ class MondayClient:
 
 			# Check if complexity has been reset
 			if complexity_after > self._complexity_used:
-				self.info_logger.info('Complexity limit has been reset')
+				self.logger.info('Complexity limit has been reset')
 				self._complexity_used = 0
 
 			if self._complexity_used + complexity_used > self.complexity_limit - 1000:
-				self.info_logger.info(f'Complexity limit exceeded. Resetting complexity used.')
+				self.logger.info(f'Complexity limit exceeded. Resetting complexity used.')
 				self._complexity_used = 0
 				raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in)
 
@@ -247,7 +242,7 @@ class MondayClient:
 		if self._mutations_used >= self.mutation_limit:  # Changed > to >=
 			sleep_time = 60 - (current_time - self._mutations_last_reset)
 			if sleep_time > 0:
-				self.info_logger.info(f'Mutation limit reached. Sleeping for {sleep_time} seconds.')
+				self.logger.info(f'Mutation limit reached. Sleeping for {sleep_time} seconds.')
 				time.sleep(sleep_time)
 			self._mutations_used = 1
 			self._mutations_last_reset = current_time
@@ -270,7 +265,7 @@ class MondayClient:
 		if self._special_mutations_used >= self.special_mutation_limit:
 			sleep_time = 60 - (current_time - self._special_mutations_last_reset)
 			if sleep_time > 0:
-				self.info_logger.info(f'Special mutation limit reached. Sleeping for {sleep_time} seconds.')
+				self.logger.info(f'Special mutation limit reached. Sleeping for {sleep_time} seconds.')
 				time.sleep(sleep_time)
 			self._special_mutations_used = 1
 			self._special_mutations_last_reset = current_time
@@ -290,7 +285,7 @@ class MondayClient:
 		if match:
 			return match.group(1)
 		else:
-			self.debug_logger.warning(f'Could not extract mutation name from query: {query}')
+			self.logger.warning(f'Could not extract mutation name from query: {query}')
 			return None
 		
 	def _extract_cursor_value(self, response_data: str) -> Optional[str]:
@@ -309,7 +304,7 @@ class MondayClient:
 			cursor_value = match.group(1)
 			return cursor_value
 		else:
-			self.debug_logger.warning(f'Could not extract cursor value from response data: {response_data}')
+			self.logger.warning(f'Could not extract cursor value from response data: {response_data}')
 			return None
 		
 	def _extract_items_query(self, query: str) -> Optional[str]:
@@ -329,7 +324,7 @@ class MondayClient:
 			items_value = re.sub(r'\s*cursor\s*(?=})', '', items_value)
 			return items_value
 		else:
-			self.debug_logger.warning(f'Could not extract items value from query: {query}')
+			self.logger.warning(f'Could not extract items value from query: {query}')
 			return None
 		
 	def _extract_items(self, response_data: str) -> List[Dict[str, Any]]:
@@ -351,6 +346,6 @@ class MondayClient:
 				items = json.loads(match)
 				all_items.extend(items)
 			except json.JSONDecodeError:
-				self.debug_logger.warning(f'Failed to parse items JSON: {match}')
+				self.logger.warning(f'Failed to parse items JSON: {match}')
 	
 		return all_items
