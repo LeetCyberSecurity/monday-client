@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "monday-client"
+version = "0.1.0"
+description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
+readme = "README.md"
+requires-python = ">=3.6"
+license = { text = "MIT" }
+authors = [
+    { name = "Dan Hollis", email = "dh@leetsys.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+dependencies = [
+    "requests",
+    "ratelimit",
+    "tenacity"
+]
+
+[project.urls]
+"Bug Reports" = "https://github.com/LeetCyberSecurity/monday-client/issues"
+"Source" = "https://github.com/LeetCyberSecurity/monday-client"
