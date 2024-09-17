@@ -26,14 +26,12 @@ class ComplexityLimitExceeded(Exception):
 class MondayClient:
 	"""
 	Client for interacting with the Monday.com API.
-
 	This client handles API requests, rate limiting, and pagination for Monday.com's GraphQL API.
-	
+
 	It uses a class-level logger named 'monday_client' for all logging operations.
 
 	Attributes:
 		url (str): The endpoint URL for the Monday.com API.
-
 		headers (dict): HTTP headers used for API requests, including authentication.
 
 	Args:
@@ -41,14 +39,12 @@ class MondayClient:
 
 	Note:
 		Logging can be controlled by configuring the 'monday_client' logger.
-		
 		By default, a NullHandler is added to the logger, which suppresses all output.
-
 		To enable logging, configure the logger in your application code. For example:
 
 		```python
 		import logging
-		logger = logging.getLogger("monday_client")
+		logger = logging.getLogger('monday_client')
 		logger.setLevel(logging.INFO)
 		handler = logging.StreamHandler()
 		handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -59,11 +55,11 @@ class MondayClient:
 
 		```python
 		import logging
-		logging.getLogger("monday_client").setLevel(logging.CRITICAL)
+		logging.getLogger('monday_client').setLevel(logging.CRITICAL)
 		```
 
 	Example:
-		client = MondayClient(api_key="your_api_key")
+		client = MondayClient(api_key='your_api_key')
 	"""
 
 	logger = logging.getLogger('monday_client')
@@ -104,8 +100,9 @@ class MondayClient:
 			fields (str, optional): The fields to include in the response. Defaults to 'id name column_values { id text value column { title } }'.
 
 		Returns:
-			Dict[str, Union[bool, List[Dict[str, Any]]]]: A dictionary containing the combined items retrieved
-			and a completion status. The dictionary has the following structure:
+			Dict[str, bool | List[Dict[str, Any]] | str | None]: A dictionary containing the combined items retrieved
+			and a completion status. 
+			The dictionary has the following structure:
 				
 				- 'items': A list of dictionaries representing the items retrieved.
 				- 'completed': A boolean indicating whether the pagination was completed successfully.
@@ -330,7 +327,7 @@ class MondayClient:
 		Returns:
 			Optional[str]: The cursor value if it can be extracted, otherwise None.
 		"""
-		cursor_pattern = re.compile(r'"cursor":\s*"([^"]+)"')
+		cursor_pattern = re.compile(r'"cursor":\s*(?:"([^"]+)"|null)')
 		match = cursor_pattern.search(response_data)
 		if match:
 			cursor_value = match.group(1)
