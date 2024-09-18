@@ -2,7 +2,6 @@ import json
 import logging
 import re
 import time
-from threading import Lock
 from typing import Any, Dict, List, Optional, Union
 
 import requests
@@ -18,7 +17,7 @@ class ComplexityLimitExceeded(Exception):
 		message (str): Explanation of the error.
 		reset_in (int): Time in seconds until the complexity limit is reset.
 	"""
-	def __init__(self, message, reset_in):
+	def __init__(self, message: str, reset_in: int):
 		super().__init__(message)
 		self.reset_in = reset_in
 
@@ -29,7 +28,7 @@ class MutationLimitExceeded(Exception):
 	Attributes:
 		message (str): Explanation of the error.
 	"""
-	def __init__(self, message):
+	def __init__(self, message: str):
 		super().__init__(message)
 
 class MondayClient:
@@ -73,31 +72,20 @@ class MondayClient:
 
 	logger = logging.getLogger('monday_client')
 
-	def __init__(self, api_key: str):
+	def __init__(self, api_key: str, url: str = 'https://api.monday.com/v2', headers: Optional[Dict[str, Any]] = None):
 		"""
 		Initialize the MondayClient with the provided API key.
 
 		Args:
 			api_key (str): The API key for authenticating with the Monday.com API.
+			url (str, optional): The endpoint URL for the Monday.com API. Defaults to 'https://api.monday.com/v2'.
+			headers (dict, optional): HTTP headers used for API requests. Defaults to None.
 		"""
-		self.url = 'https://api.monday.com/v2'
-		self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}'}
-		# monday.com rate limits:
-		# https://developer.monday.com/api-reference/docs/rate-limits
-		self.complexity_limit = 10000000 # 10M combined read/write complexity per minute
-		self.period = 60
-		self.mutation_limit = 2000 # 2000 mutations per minute
-		self.special_mutation_limit = 40 # 40 "special" mutations per minute
-		self.special_mutations = ['duplicate_group', 'create_board', 'duplicate_board']
+		self.url = url
+		self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
 		self.valid_query_types = ['query', 'mutation']
 		self.rate_limit = Rate(5000, Duration.MINUTE)
 		self.limiter = Limiter(self.rate_limit)
-		self._mutations_used = 0
-		self._special_mutations_used = 0
-		self._lock = Lock()
-		self._last_reset = time.time()
-		self._mutations_last_reset = time.time()
-		self._special_mutations_last_reset = time.time()
 
 	def items_page(self, board_id: int, query_params: str = '', limit: int = 25, fields: str = 'id name column_values { id text value column { title } }') -> Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]:
 		"""
@@ -105,12 +93,12 @@ class MondayClient:
 
 		Args:
 			board_id (int): The ID of the board from which to retrieve items.
-			query_params (str, optional): Additional query parameters to filter the items. Defaults to None.
+			query_params (str, optional): Additional query parameters to filter the items. Defaults to ''.
 			limit (int, optional): The maximum number of items to retrieve per page. Defaults to 25.
 			fields (str, optional): The fields to include in the response. Defaults to 'id name column_values { id text value column { title } }'.
 
 		Returns:
-			Dict[str, bool | List[Dict[str, Any]] | str | None]: A dictionary containing the combined items retrieved
+			Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]: A dictionary containing the combined items retrieved
 			and a completion status. 
 			The dictionary has the following structure:
 				
@@ -233,7 +221,7 @@ class MondayClient:
 			self.logger.error(f'invalid query type: {query_type}')
 			return {'error': 'Invalid query type'}
 
-		query = f'{query_type} {{ complexity {{ reset_in_x_seconds }} {query} }}'
+		query = f'{query_type} {{ {query} }}'
 		self.logger.info(f'submitting query: {query}')
 		response = requests.post(self.url, json={'query': query}, headers=self.headers)
 		response_data = response.json()
@@ -255,64 +243,6 @@ class MondayClient:
 			return {'error': error_message}
 		
 		return response_data or False
-
-	def _check_mutation_limit(self):
-		"""
-		Checks and enforces the mutation limit for the API.
-
-		If the mutation limit is reached, the method will sleep until the limit is reset.
-		"""
-		current_time = time.time()
-		if current_time - self._mutations_last_reset >= 60:
-			self._mutations_used = 0
-			self._mutations_last_reset = current_time
-
-		self._mutations_used += 1
-		if self._mutations_used >= self.mutation_limit:  # Changed > to >=
-			sleep_time = 60 - (current_time - self._mutations_last_reset)
-			if sleep_time > 0:
-				self.logger.info(f'Mutation limit reached. Sleeping for {sleep_time} seconds.')
-				time.sleep(sleep_time)
-			self._mutations_used = 1
-			self._mutations_last_reset = current_time
-
-	def _check_special_mutation_limit(self):
-		"""
-		Checks and enforces the special mutation limit for the API.
-
-		If the special mutation limit is reached, the method will sleep until the limit is reset.
-		"""
-		current_time = time.time()
-		if current_time - self._special_mutations_last_reset >= 60:
-			self._special_mutations_used = 0
-			self._special_mutations_last_reset = current_time
-
-		self._special_mutations_used += 1
-		if self._special_mutations_used >= self.special_mutation_limit:
-			sleep_time = 60 - (current_time - self._special_mutations_last_reset)
-			if sleep_time > 0:
-				self.logger.info(f'Special mutation limit reached. Sleeping for {sleep_time} seconds.')
-				time.sleep(sleep_time)
-			self._special_mutations_used = 1
-			self._special_mutations_last_reset = current_time
-
-	def _extract_mutation_name(self, query: str) -> Optional[str]:
-		"""
-		Extracts the mutation name from a GraphQL query string.
-
-		Args:
-			query (str): The GraphQL query string.
-
-		Returns:
-			Optional[str]: The name of the mutation if it can be extracted, otherwise None.
-		"""
-		mutation_pattern = re.compile(r'mutation\s*{.*?}\s*{?\s*(\w+)')
-		match = mutation_pattern.search(query)
-		if match:
-			return match.group(1)
-		else:
-			self.logger.warning(f'Could not extract mutation name from query: {query}')
-			return None
 		
 	def _extract_cursor_value(self, response_data: str) -> Optional[str]:
 		"""
