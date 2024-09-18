@@ -105,13 +105,10 @@ class MondayClient:
 				- 'items': A list of dictionaries representing the items retrieved.
 				- 'completed': A boolean indicating whether the pagination was completed successfully.
 		"""
-		if query_params:
-			query = f'boards (ids: {board_id}) {{ items_page (limit: {limit}, query_params: {query_params}) {{ cursor items {{ {fields} }} }} }}'
-		else:
-			query = f'boards (ids: {board_id}) {{ items_page (limit: {limit}) {{ cursor items {{ {fields} }} }} }}'
-		return self.paginated_item_request(query, 'query')
+		query = f'boards (ids: {board_id}) {{ items_page (limit: {limit}{", query_params: " + query_params if query_params else ""}) {{ cursor items {{ {fields} }} }} }}'
+		return self.paginated_item_request(query, 'query', limit=limit)
 
-	def paginated_item_request(self, query: str, query_type: str) -> Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]:
+	def paginated_item_request(self, query: str, query_type: str, limit: int = 25) -> Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]:
 		"""
 		Executes a paginated request to retrieve items from Monday.com.
 
@@ -121,6 +118,7 @@ class MondayClient:
 		Args:
 			query (str): The GraphQL query string to be executed.
 			query_type (str): The type of the query, either 'query' or 'mutation'.
+			limit (int, optional): The maximum number of items to retrieve per page. Defaults to 25.
 
 		Returns:
 			Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]: A dictionary containing the combined items retrieved,
@@ -140,7 +138,7 @@ class MondayClient:
 				items_value = self._extract_items_query(query)
 				if not items_value:
 					return {'items': combined_items, 'completed': False}
-				paginated_query = f'next_items_page (limit: 50, cursor: "{cursor}") {{ cursor {items_value} }}'
+				paginated_query = f'next_items_page (limit: {limit}, cursor: "{cursor}") {{ cursor {items_value} }}'
 
 			self.logger.info(f'submitting paginated query: {paginated_query}')
 			
