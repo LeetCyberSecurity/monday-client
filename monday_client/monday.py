@@ -3,12 +3,11 @@ import logging
 import re
 import time
 from threading import Lock
-from typing import Any, Dict, List, Mapping, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import requests
-from ratelimit import limits, sleep_and_retry
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_fixed)
+from pyrate_limiter import BucketFullException, Duration, Limiter, Rate
+from tenacity import retry, retry_if_exception_type, stop_after_attempt
 
 
 class ComplexityLimitExceeded(Exception):
@@ -22,6 +21,16 @@ class ComplexityLimitExceeded(Exception):
 	def __init__(self, message, reset_in):
 		super().__init__(message)
 		self.reset_in = reset_in
+
+class MutationLimitExceeded(Exception):
+	"""
+	Exception raised when the mutation per minute limit is exceeded.
+
+	Attributes:
+		message (str): Explanation of the error.
+	"""
+	def __init__(self, message):
+		super().__init__(message)
 
 class MondayClient:
 	"""
@@ -81,7 +90,8 @@ class MondayClient:
 		self.special_mutation_limit = 40 # 40 "special" mutations per minute
 		self.special_mutations = ['duplicate_group', 'create_board', 'duplicate_board']
 		self.valid_query_types = ['query', 'mutation']
-		self._complexity_used = 0
+		self.rate_limit = Rate(5000, Duration.MINUTE)
+		self.limiter = Limiter(self.rate_limit)
 		self._mutations_used = 0
 		self._special_mutations_used = 0
 		self._lock = Lock()
@@ -185,18 +195,17 @@ class MondayClient:
 		if retry_state.outcome.failed:
 			exception = retry_state.outcome.exception()
 			if isinstance(exception, ComplexityLimitExceeded):
-				sleep_time = exception.reset_in
+				sleep_time = int(exception.reset_in)
 				time.sleep(sleep_time)
+			elif isinstance(exception, MutationLimitExceeded):
+				time.sleep(60)
 
 	@retry(
 		stop=stop_after_attempt(4),
-		retry=retry_if_exception_type(ComplexityLimitExceeded),
-		wait=wait_fixed(1),
+		retry=retry_if_exception_type((ComplexityLimitExceeded, MutationLimitExceeded)),
 		before_sleep=_sleep_before_retry,
 		reraise=True
 	)
-	@sleep_and_retry
-	@limits(calls=5000, period=60) # 5000 requests per minute per IP
 	def _execute_post_request(self, query: str, query_type: str) -> Union[Dict[str, Any], bool]:
 		"""
 		Executes a post request to the Monday.com API with rate limiting and retry logic.
@@ -208,52 +217,43 @@ class MondayClient:
 		Returns:
 			Dict[str, Any]: The response data from the API.
 		"""
+		while True:
+			try:
+				# Attempt to acquire a token for 'monday_client'
+				self.limiter.try_acquire('monday_client')
+				break  # Exit the loop if token is acquired successfully
+			except BucketFullException as e:
+				# If rate limit is exceeded, log and sleep for the remaining time
+				rate_limit_sleep_time = e.meta_info['remaining_time']
+				self.logger.info(f'Rate limit exceeded. Sleeping for {rate_limit_sleep_time} seconds.')
+				time.sleep(rate_limit_sleep_time)
+
 		query_type = query_type.lower()
 		if query_type not in self.valid_query_types:
 			self.logger.error(f'invalid query type: {query_type}')
 			return {'error': 'Invalid query type'}
 
-		query = f'{query_type} {{ complexity {{ before after query reset_in_x_seconds }} {query} }}'
+		query = f'{query_type} {{ complexity {{ reset_in_x_seconds }} {query} }}'
 		self.logger.info(f'submitting query: {query}')
 		response = requests.post(self.url, json={'query': query}, headers=self.headers)
 		response_data = response.json()
 		self.logger.debug(f'response to query {query}: {response_data}')
 
-		if 'errors' in response_data:
+		if any('error' in key for key in response_data.keys()):
+			if 'error_code' in response_data and response_data['error_code'] == 'ComplexityException':
+				reset_in_search = re.search(r'reset in (\d+) seconds', response_data['error_message'])
+				if reset_in_search:
+					reset_in = int(reset_in_search.group(1))
+				else:
+					self.logger.error(f'error getting reset_in_x_seconds: {response_data}')
+					return {'error': response_data}
+				raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in)
+			if 'status_code' in response_data and int(response_data['status_code']) == 429:
+				raise MutationLimitExceeded(f'Mutation per minute limit exceeded, retrying after 60 seconds...')
 			error_message = response_data['errors'][0]['message']
 			self.logger.error(f'GraphQL error: {error_message}')
 			return {'error': error_message}
 		
-		with self._lock:
-			try:
-				complexity = response_data['data']['complexity']
-			except KeyError:
-				self.logger.error(f'error getting complexity: {response_data}')
-				return {'error': response_data}
-			complexity_before = complexity['before']
-			complexity_after = complexity['after']
-			complexity_used = complexity_before - complexity_after
-			reset_in = complexity['reset_in_x_seconds']
-
-			# Check if complexity has been reset
-			if complexity_after > self._complexity_used:
-				self.logger.info('Complexity limit has been reset')
-				self._complexity_used = 0
-
-			if self._complexity_used + complexity_used > self.complexity_limit - 1000:
-				self.logger.info(f'Complexity limit exceeded. Resetting complexity used.')
-				self._complexity_used = 0
-				raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in)
-
-			self._complexity_used += complexity_used
-
-			if query_type == 'mutation':
-				mutation_name = self._extract_mutation_name(query)
-				if mutation_name in self.special_mutations:
-					self._check_special_mutation_limit()
-				else:
-					self._check_mutation_limit()
-
 		return response_data or False
 
 	def _check_mutation_limit(self):
@@ -275,9 +275,6 @@ class MondayClient:
 				time.sleep(sleep_time)
 			self._mutations_used = 1
 			self._mutations_last_reset = current_time
-
-		# Add this line for debugging
-		print(f"Mutations used: {self._mutations_used}")
 
 	def _check_special_mutation_limit(self):
 		"""
