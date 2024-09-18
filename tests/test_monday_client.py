@@ -154,3 +154,114 @@ def test_rate_limiting_logic(mock_try_acquire, mock_sleep, mock_post, monday_cli
     assert result == {'data': 'success'}
     # Verify that the post request was made once
     assert mock_post.call_count == 1
+
+# Test to verify successful paginated request
+@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+def test_paginated_item_request_success(mock_post, monday_client):
+    # Mock a successful response with pagination
+    response_page_1 = {
+        'data': {
+            'boards': [{
+                'items_page': {
+                    'cursor': 'next_cursor',
+                    'items': [{'id': '1', 'name': 'Item 1'}]
+                }
+            }]
+        }
+    }
+    response_page_2 = {
+        'data': {
+            'next_items_page': {
+                'cursor': None,
+                'items': [{'id': '2', 'name': 'Item 2'}]
+            }
+        }
+    }
+    mock_post.side_effect = [
+        MagicMock(json=MagicMock(return_value=response_page_1)),
+        MagicMock(json=MagicMock(return_value=response_page_2))
+    ]
+
+    # Call the method under test
+    query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
+    result = monday_client.paginated_item_request(query, 'query', limit=1)
+
+    # Verify that the post request was made twice (for two pages)
+    assert mock_post.call_count == 2
+    # Verify that the result contains both items
+    assert result['items'] == [{'id': '1', 'name': 'Item 1'}, {'id': '2', 'name': 'Item 2'}]
+    # Verify that the pagination was completed successfully
+    assert result['completed'] is True
+
+# Test to verify behavior when an error occurs in the response
+@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+def test_paginated_item_request_error(mock_post, monday_client):
+    # Mock an error response
+    error_response = {
+        'errors': [{'message': 'Some error occurred'}]
+    }
+    mock_post.return_value.json.return_value = error_response
+
+    # Call the method under test
+    query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
+    result = monday_client.paginated_item_request(query, 'query', limit=1)
+
+    # Verify that the post request was made once
+    assert mock_post.call_count == 1
+    # Verify that the result indicates an error
+    assert 'errors' in result
+    assert result['completed'] is False
+
+# Test to verify behavior when no items are found in the response
+@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+def test_paginated_item_request_no_items(mock_post, monday_client):
+    # Mock a response with no items
+    response = {
+        'data': {
+            'boards': [{
+                'items_page': {
+                    'cursor': None,
+                    'items': []
+                }
+            }]
+        }
+    }
+    mock_post.return_value.json.return_value = response
+
+    # Call the method under test
+    query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
+    result = monday_client.paginated_item_request(query, 'query', limit=1)
+
+    # Verify that the post request was made once
+    assert mock_post.call_count == 1
+    # Verify that the result contains no items
+    assert result['items'] == []
+    # Verify that the pagination was completed successfully
+    assert result['completed'] is True
+
+# Test to verify behavior when the cursor cannot be extracted
+@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+def test_paginated_item_request_no_cursor(mock_post, monday_client):
+    # Mock a response with no cursor
+    response = {
+        'data': {
+            'boards': [{
+                'items_page': {
+                    'cursor': None,
+                    'items': [{'id': '1', 'name': 'Item 1'}]
+                }
+            }]
+        }
+    }
+    mock_post.return_value.json.return_value = response
+
+    # Call the method under test
+    query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
+    result = monday_client.paginated_item_request(query, 'query', limit=1)
+
+    # Verify that the post request was made once
+    assert mock_post.call_count == 1
+    # Verify that the result contains the item
+    assert result['items'] == [{'id': '1', 'name': 'Item 1'}]
+    # Verify that the pagination was completed successfully
+    assert result['completed'] is True
