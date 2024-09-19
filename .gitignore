@@ -21,3 +21,4 @@ share/python-wheels/
 MANIFEST
 .pytest_cache/
 monday-env/
+fake_client.py
