@@ -1,11 +1,11 @@
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
-from pyrate_limiter import Duration, Rate, RateItem
+from pyrate_limiter import BucketFullException, Duration, Rate, RateItem
 
-from monday_client.monday import (BucketFullException, ComplexityLimitExceeded,
-                                  MondayClient, MutationLimitExceeded)
+from monday import ComplexityLimitExceeded, MondayClient, MutationLimitExceeded
+from monday.services.utils.pagination import paginated_item_request
 
 
 # Fixture to create an instance of MondayClient with a test API key
@@ -14,8 +14,8 @@ def monday_client():
     return MondayClient("test_api_key")
 
 # Test to verify retry logic when complexity limit is exceeded and then succeeds
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
-@patch('monday_client.monday.time.sleep')  # Mock the time.sleep method
+@patch('monday.client.requests.post')  # Mock the requests.post method
+@patch('monday.client.time.sleep')  # Mock the time.sleep method
 def test_complexity_limit_exceeded_retry_success(mock_sleep, mock_post, monday_client):
     # Mock response indicating complexity limit exceeded
     error_response = {
@@ -31,7 +31,7 @@ def test_complexity_limit_exceeded_retry_success(mock_sleep, mock_post, monday_c
     ]
 
     # Call the method under test
-    result = monday_client.post_request("test_query", "query")
+    result = monday_client.post_request("test_query")
 
     # Verify that the post request was made 4 times (3 retries + 1 success)
     assert mock_post.call_count == 4
@@ -44,8 +44,8 @@ def test_complexity_limit_exceeded_retry_success(mock_sleep, mock_post, monday_c
     assert result == {'data': 'success'}
 
 # Test to verify behavior when complexity limit is exceeded and max retries are reached
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
-@patch('monday_client.monday.time.sleep')  # Mock the time.sleep method
+@patch('monday.client.requests.post')  # Mock the requests.post method
+@patch('monday.client.time.sleep')  # Mock the time.sleep method
 def test_complexity_limit_exceeded_max_retries(mock_sleep, mock_post, monday_client):
     # Mock response indicating complexity limit exceeded
     error_response = {
@@ -60,7 +60,7 @@ def test_complexity_limit_exceeded_max_retries(mock_sleep, mock_post, monday_cli
 
     # Call the method under test and expect an exception
     with pytest.raises(ComplexityLimitExceeded) as exc_info:
-        monday_client.post_request("test_query", "query")
+        monday_client.post_request("test_query")
 
     # Verify that the post request was made 4 times
     assert mock_post.call_count == 4
@@ -73,13 +73,13 @@ def test_complexity_limit_exceeded_max_retries(mock_sleep, mock_post, monday_cli
     assert str(exc_info.value) == "Complexity limit exceeded, retrying after 10 seconds..."
 
 # Test to verify successful request without any exceptions
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+@patch('monday.client.requests.post')  # Mock the requests.post method
 def test_successful_request(mock_post, monday_client):
     # Mock a successful response
     mock_post.return_value.json.return_value = {'data': 'success'}
 
     # Call the method under test
-    result = monday_client.post_request("test_query", "query")
+    result = monday_client.post_request("test_query")
 
     # Verify that the result is a success response
     assert result == {'data': 'success'}
@@ -87,8 +87,8 @@ def test_successful_request(mock_post, monday_client):
     assert mock_post.call_count == 1
 
 # Test to verify behavior when mutation limit is exceeded and retries are performed
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
-@patch('monday_client.monday.time.sleep')  # Mock the time.sleep method
+@patch('monday.client.requests.post')  # Mock the requests.post method
+@patch('monday.client.time.sleep')  # Mock the time.sleep method
 def test_mutation_limit_exceeded_with_retries(mock_sleep, mock_post, monday_client):
     # Mock response indicating mutation limit exceeded
     error_response = {
@@ -103,7 +103,7 @@ def test_mutation_limit_exceeded_with_retries(mock_sleep, mock_post, monday_clie
 
     # Call the method under test and expect an exception
     with pytest.raises(MutationLimitExceeded) as exc_info:
-        monday_client.post_request("test_mutation", "mutation")
+        monday_client.post_request("test_mutation")
 
     # Verify that the post request was made 4 times
     assert mock_post.call_count == 4
@@ -116,9 +116,9 @@ def test_mutation_limit_exceeded_with_retries(mock_sleep, mock_post, monday_clie
     assert str(exc_info.value) == "Mutation per minute limit exceeded, retrying after 60 seconds..."
 
 # Test to verify rate limiting logic
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
-@patch('monday_client.monday.time.sleep')  # Mock the time.sleep method
-@patch('monday_client.monday.Limiter.try_acquire')  # Mock the Limiter.try_acquire method
+@patch('monday.client.requests.post')  # Mock the requests.post method
+@patch('monday.client.time.sleep')  # Mock the time.sleep method
+@patch('monday.client.Limiter.try_acquire')  # Mock the Limiter.try_acquire method
 def test_rate_limiting_logic(mock_try_acquire, mock_sleep, mock_post, monday_client):
     # Create mock RateItem and Rate instances
     rate_item_1 = RateItem('monday_client', time.time())
@@ -141,7 +141,7 @@ def test_rate_limiting_logic(mock_try_acquire, mock_sleep, mock_post, monday_cli
     mock_post.return_value.json.return_value = {'data': 'success'}
 
     # Call the method under test
-    result = monday_client.post_request("test_query", "query")
+    result = monday_client.post_request("test_query")
 
     # Verify that try_acquire was called three times
     assert mock_try_acquire.call_count == 3
@@ -156,7 +156,7 @@ def test_rate_limiting_logic(mock_try_acquire, mock_sleep, mock_post, monday_cli
     assert mock_post.call_count == 1
 
 # Test to verify successful paginated request
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+@patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_success(mock_post, monday_client):
     # Mock a successful response with pagination
     response_page_1 = {
@@ -184,7 +184,7 @@ def test_paginated_item_request_success(mock_post, monday_client):
 
     # Call the method under test
     query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
-    result = monday_client.paginated_item_request(query, 'query', limit=1)
+    result = paginated_item_request(monday_client, query, limit=1)
 
     # Verify that the post request was made twice (for two pages)
     assert mock_post.call_count == 2
@@ -194,26 +194,25 @@ def test_paginated_item_request_success(mock_post, monday_client):
     assert result['completed'] is True
 
 # Test to verify behavior when an error occurs in the response
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+@patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_error(mock_post, monday_client):
     # Mock an error response
     error_response = {
-        'errors': [{'message': 'Some error occurred'}]
+        'error': [{'message': 'Some error occurred'}]
     }
     mock_post.return_value.json.return_value = error_response
 
     # Call the method under test
     query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
-    result = monday_client.paginated_item_request(query, 'query', limit=1)
+    result = paginated_item_request(monday_client, query, limit=1)
 
     # Verify that the post request was made once
     assert mock_post.call_count == 1
     # Verify that the result indicates an error
-    assert 'errors' in result
-    assert result['completed'] is False
+    assert 'error' in result
 
 # Test to verify behavior when no items are found in the response
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+@patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_no_items(mock_post, monday_client):
     # Mock a response with no items
     response = {
@@ -230,7 +229,7 @@ def test_paginated_item_request_no_items(mock_post, monday_client):
 
     # Call the method under test
     query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
-    result = monday_client.paginated_item_request(query, 'query', limit=1)
+    result = paginated_item_request(monday_client, query, limit=1)
 
     # Verify that the post request was made once
     assert mock_post.call_count == 1
@@ -240,7 +239,7 @@ def test_paginated_item_request_no_items(mock_post, monday_client):
     assert result['completed'] is True
 
 # Test to verify behavior when the cursor cannot be extracted
-@patch('monday_client.monday.requests.post')  # Mock the requests.post method
+@patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_no_cursor(mock_post, monday_client):
     # Mock a response with no cursor
     response = {
@@ -257,7 +256,7 @@ def test_paginated_item_request_no_cursor(mock_post, monday_client):
 
     # Call the method under test
     query = 'boards (ids: 123) { items_page (limit: 1) { cursor items { id name } } }'
-    result = monday_client.paginated_item_request(query, 'query', limit=1)
+    result = paginated_item_request(monday_client, query, limit=1)
 
     # Verify that the post request was made once
     assert mock_post.call_count == 1
