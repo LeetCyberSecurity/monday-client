@@ -26,9 +26,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-    "pyrate-limiter",
-    "requests",
-    "tenacity"
+    "aiohttp",
+    "pydantic",
+    "requests"
 ]
 
 [project.urls]

@@ -16,9 +16,9 @@ setup(
     url='https://github.com/LeetCyberSecurity/monday-client',
     packages=find_packages(include=['monday_client']),
     install_requires=[
-        'pyrate-limiter',
-        'requests',
-        'tenacity'
+        'aiohttp',
+        'pydantic',
+        'requests'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
