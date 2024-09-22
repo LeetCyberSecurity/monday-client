@@ -5,34 +5,29 @@ from typing import List, Literal, Optional, Union, get_args
 from pydantic import BaseModel, Field, field_validator
 
 
-class BoardConfig(BaseModel):
+class QueryBoardInput(BaseModel):
     """Configuration for board selection and filtering."""
     board_ids: Optional[Union[int, List[int]]] = None
     board_kind: Literal['private', 'public', 'share', 'all'] = 'all'
     order_by: Literal['created_at', 'used_at'] = 'created_at'
-    limit: int = Field(default=25, gt=0)
+    items_page_limit: int = Field(default=25, gt=0, lt=500)
+    boards_limit: int = Field(default=25, gt=0)
     page: int = Field(default=1, gt=0)
     state: Literal['active', 'all', 'archived', 'deleted'] = 'active'
     workspace_ids: Optional[Union[int, List[int]]] = None
 
-    def __getattribute__(self, name):
-        """Ensure board_ids is always a list when accessed."""
-        value = object.__getattribute__(self, name)
-        if name == 'board_ids' and value is None:
-            return []
-        return value
-
     @field_validator('board_ids', 'workspace_ids', mode='before')
     @classmethod
     def ensure_list_of_ints(cls, v, info):
-        """Ensure the input is a list of integers or None."""
-        if v is None:
-            return None
+        """Ensure the input is an integer"""
+        error_info = f"{info.field_name} must be int or list of ints" + " or None" if info.field_name == 'workspace_ids' else ""
+        if v is None and info.field_name == 'workspace_ids':
+            return v
         if isinstance(v, int):
             return [v]
-        if isinstance(v, list) and all(isinstance(i, int) for i in v):
-            return [int(item) for item in v]
-        raise ValueError(f"{info.field_name} must be int or list of ints")
+        if isinstance(v, list) and all(isinstance(item, int) for item in v):
+            return v
+        raise ValueError(error_info)
 
     @field_validator('board_kind', 'order_by', 'state')
     @classmethod
@@ -44,7 +39,7 @@ class BoardConfig(BaseModel):
             raise ValueError(f"{info.field_name} must be one of {allowed_values}")
         return v
 
-    @field_validator('limit', 'page')
+    @field_validator('boards_limit', 'items_page_limit', 'page')
     @classmethod
     def check_positive_int(cls, v, info):
         """Validate that the input is a positive integer."""

@@ -1,6 +1,6 @@
 """Defines the schema for updating a board in the Monday service."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
@@ -20,9 +20,9 @@ class UpdateBoardInput(BaseModel):
     Note:
         Only one board can be updated at a time.
     """
+    board_id: int
     board_attribute: Literal['communication', 'description', 'name']
     new_value: str
-    board_id: Optional[int] = None
 
     @field_validator('board_attribute')
     @classmethod

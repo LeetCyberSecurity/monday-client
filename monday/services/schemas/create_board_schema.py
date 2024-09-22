@@ -8,7 +8,7 @@ from pydantic import BaseModel, field_validator
 class CreateBoardInput(BaseModel):
     """Input model for creating a board."""
     name: str
-    kind: Literal['private', 'public', 'share'] = 'public'
+    kind: Literal['private', 'public', 'share', 'all'] = 'all'
     owner_ids: Optional[List[int]] = None
     subscriber_ids: Optional[List[int]] = None
     subscriber_teams_ids: Optional[List[int]] = None
@@ -27,7 +27,7 @@ class CreateBoardInput(BaseModel):
     @classmethod
     def ensure_valid_kind(cls, v):
         """Validate and normalize the 'kind' field."""
-        valid_kinds = ['private', 'public', 'share']
+        valid_kinds = ['private', 'public', 'share', 'all']
         v = str(v).lower()
         if v not in valid_kinds:
             raise ValueError(f"kind must be one of {valid_kinds}")

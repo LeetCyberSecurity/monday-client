@@ -3,13 +3,12 @@
 import asyncio
 import logging
 import re
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
 
 from .exceptions import ComplexityLimitExceeded, MutationLimitExceeded
 from .services.boards import Boards
-from .services.items import Items
 from .services.utils.decorators import board_action
 from .services.utils.pagination import paginated_item_request
 
@@ -71,87 +70,38 @@ class MondayClient:
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
         self.rate_limit_seconds = 60
         self.max_retries = 4
-        self.items = Items(self)
-
-    @property
-    def boards(self):
-        """
-        Returns a Boards instance for interacting with Monday.com boards.
-
-        This property creates and returns a new Boards instance each time it's accessed.
-        The Boards instance can be further configured with additional parameters.
-
-        Returns:
-            Boards: An instance of the Boards class.
-
-        Note:
-            The returned Boards instance can be configured with additional parameters such as
-            board_ids, board_kind, order_by, limit, page, state, and workspace_ids.
-            See the Boards class documentation for more details on these parameters.
-
-        Example:
-            # Get a Boards instance
-
-            boards = client.boards
-
-            # Configure the Boards instance
-
-            configured_boards = boards(board_ids=[123, 456], board_kind='private', limit=50)
-        """
-        return Boards(self)
+        self.boards = Boards(self)
 
     @board_action('duplicate')
-    async def duplicate_board(
-        self,
-        board_id: int,
-        return_original: bool = False,
-        **kwargs
-    ) -> Union['Boards', Tuple['Boards', 'Boards']]:
+    async def duplicate_board(self, **kwargs) -> Dict[str, Any]:
         """
         Duplicate a board on Monday.com.
 
-        Args:
-            board_id (int): The ID of the board to duplicate.
-            return_original (bool, optional): If True, returns both the original and new Boards instances. Defaults to False.
-
-            **kwargs: Additional keyword arguments for board duplication:
-                board_id (int, optional): The ID of the board to duplicate. Can only be called on a single board ID. Defaults to boards.boards_ids.
-                board_name (str, optional): The duplicated board's name. If omitted, it will be automatically generated.
-                duplicate_type (str, optional): The duplication type.
-                    Options: 'duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure'. Defaults to 'duplicate_board_with_structure'
-                folder_id (int, optional): The destination folder within the destination workspace. The folder_id is required if you are duplicating to another workspace, otherwise, it is optional. If omitted, it will default to the original board's folder.
-                keep_subscribers (bool, optional): Duplicate the subscribers to the new board. Defaults to False.
-                workspace_id (int, optional): The destination workspace. If omitted, it will default to the original board's workspace.
+        This method is a wrapper for the Boards.duplicate() method.
+        For detailed information on parameters and usage, refer to the Boards.duplicate() method documentation.
 
         Returns:
-            Union['Boards', Tuple['Boards', 'Boards']]: New Boards instance or tuple of original and new instances.
+            Dict[str, Any]: Dictionary containing info for the new board.
 
         Raises:
-            ValueError: If board_ids is empty and no board_id is provided.
+            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
     @board_action('update')
-    async def update_board(
-        self,
-        board_attribute: Literal['communication', 'description', 'name'],
-        new_value: str,
-        board_id: Optional[int] = None
-    ) -> Union['Boards', Tuple['Boards', 'Boards']]:
+    async def update_board(self, **kwargs) -> Dict[str, Any]:
         """
         Update a board on Monday.com.
 
-        Args:
-            board_attribute (Literal['communication', 'description', 'name']): The board's attribute to update.
-            new_value (str): The new attribute value.
-            board_id (Optional[int]): The ID of the board to update. Can only be called on a single board ID. Defaults to boards.board_ids.
+        This method is a wrapper for the Boards.update() method.
+        For detailed information on parameters and usage, refer to the Boards.update() method documentation.
+
+        Returns:
+            Dict[str, Any]: Dictionary containing updated board info.
 
         Raises:
-            ValueError: If board_ids is empty and no board_id is provided.
+            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
-
-        Note:
-            Only one board can be updated at a time.
         """
 
     async def post_request(self, query: str) -> Dict[str, Any]:
