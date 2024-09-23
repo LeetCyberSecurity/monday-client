@@ -3,14 +3,12 @@
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
-from pydantic import ValidationError
-
 from ..exceptions import QueryFormatError
 from .schemas.create_board_schema import CreateBoardInput
 from .schemas.duplicate_board_schema import DuplicateBoardInput
 from .schemas.query_board_schema import QueryBoardInput
 from .schemas.update_board_schema import UpdateBoardInput
-from .utils.error_handlers import check_query_result
+from .utils.error_handlers import check_query_result, check_schema
 from .utils.pagination import paginated_item_request
 
 if TYPE_CHECKING:
@@ -57,10 +55,10 @@ class Boards:
             boards_limit (int): The number of boards to return per page. Must be > 0. Default: 25.
             page (int): The page number to start from. Default: 1.
             state (Literal['active', 'all', 'archived', 'deleted']): The state of the boards to include. Default: 'active'.
-            workspace_ids (Optional[Union[int, List[int]]]): The ID or list of IDs of the workspaces to filter by. Default: None.
+            workspace_ids (Union[int, List[int]]): The ID or list of IDs of the workspaces to filter by. Default: None.
 
         Returns:
-            List[Dict[str, Any]]: List of queried board data.
+            List[Dict[str, Any]]: List of dictionaries containing queried board data.
 
         Raises:
             QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
@@ -68,22 +66,18 @@ class Boards:
             ValueError: If input parameters are invalid.
             PaginationError: If item pagination fails during the request.
         """
-        try:
-            input_data = QueryBoardInput(
-                board_ids=board_ids,
-                board_kind=board_kind,
-                order_by=order_by,
-                items_page_limit=items_page_limit,
-                boards_limit=boards_limit,
-                page=page,
-                state=state,
-                workspace_ids=workspace_ids
-            )
-        except ValidationError as e:
-            error_messages = [f"{''.join([m.strip() for m in error['msg'].split(',', 1)[1:]])}" for error in e.errors()]
-            if not any(msg for msg in error_messages):
-                error_messages = ["Invalid arguments"] + [f"Invalid argument {error['loc'][0]}" for error in e.errors()]
-            raise ValueError('\n'.join(error_messages)) from None
+        input_data = check_schema(
+            QueryBoardInput,
+            board_ids=board_ids,
+            fields=fields,
+            board_kind=board_kind,
+            order_by=order_by,
+            items_page_limit=items_page_limit,
+            boards_limit=boards_limit,
+            page=page,
+            state=state,
+            workspace_ids=workspace_ids
+        )
 
         if paginate_items and 'items_page' in fields and 'cursor' not in fields:
             raise QueryFormatError(
@@ -95,7 +89,7 @@ class Boards:
         page = input_data.page
         boards_data = []
         while True:
-            query_string = self._build_boards_query_string(fields, input_data, page)
+            query_string = self._build_boards_query_string(input_data, page)
 
             query_result = await self.client.post_request(query_string)
 
@@ -127,18 +121,21 @@ class Boards:
         workspace_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        Create a new board on Monday.com.
+        Create a new board.
 
         Args:
             name (str): The name of the new board.
-            kind (Optional[Literal['private', 'public', 'share']]): The kind of board to create. Defaults to 'public'.
-            owner_ids (Optional[List[int]]): List of user IDs to set as board owners.
-            subscriber_ids (Optional[List[int]]): List of user IDs to set as board subscribers.
-            subscriber_teams_ids (Optional[List[int]]): List of team IDs to set as board subscribers.
-            description (Optional[str]): Description of the board.
-            folder_id (Optional[int]): ID of the folder to place the board in.
-            template_id (Optional[int]): ID of the template to use for the board.
-            workspace_id (Optional[int]): ID of the workspace to create the board in.
+            kind (Literal['private', 'public', 'share']): The kind of board to create. Defaults to 'public'.
+            owner_ids (List[int]): List of user IDs to set as board owners. Defaults to None.
+                The user that creates the board will automatically be added as the board's owner
+                when creating a private or shareable board or if owners_ids is None.
+            subscriber_ids (List[int]): List of user IDs to set as board subscribers. Defaults to None.
+                The user that creates the board will automatically be added as a subscriber.
+            subscriber_teams_ids (List[int]): List of team IDs to set as board subscribers. Defaults to None.
+            description (str): Description of the board.
+            folder_id (int): ID of the folder to place the board in.
+            template_id (int): ID of the template to use for the board.
+            workspace_id (int): ID of the workspace to create the board in.
 
         Returns:
             Dict[str, Any]: Dictionary containing info for the new board.
@@ -147,23 +144,18 @@ class Boards:
             MondayAPIError: If API request fails or returns unexpected format.
             ValueError: If input parameters are invalid.
         """
-        try:
-            input_data = CreateBoardInput(
-                name=name,
-                kind=kind,
-                owner_ids=owner_ids,
-                subscriber_ids=subscriber_ids,
-                subscriber_teams_ids=subscriber_teams_ids,
-                description=description,
-                folder_id=folder_id,
-                template_id=template_id,
-                workspace_id=workspace_id,
-            )
-        except ValidationError as e:
-            error_messages = [f"{''.join([m.strip() for m in error['msg'].split(',', 1)[1:]])}" for error in e.errors()]
-            if not any(msg for msg in error_messages):
-                error_messages = ["Invalid arguments"] + [f"Invalid argument {error['loc'][0]}" for error in e.errors()]
-            raise ValueError('\n'.join(error_messages)) from None
+        input_data = check_schema(
+            CreateBoardInput,
+            name=name,
+            kind=kind,
+            owner_ids=owner_ids,
+            subscriber_ids=subscriber_ids,
+            subscriber_teams_ids=subscriber_teams_ids,
+            description=description,
+            folder_id=folder_id,
+            template_id=template_id,
+            workspace_id=workspace_id,
+        )
 
         query_string = self._build_create_query_string(input_data)
 
@@ -187,14 +179,14 @@ class Boards:
 
         Args:
             board_id (int): The ID of the board to duplicate.
-            board_name (Optional[str]): The duplicated board's name. If omitted, it will be automatically generated.
+            board_name (str): The duplicated board's name. If omitted, it will be automatically generated.
             duplicate_type (Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure']):
                 The duplication type. Defaults to 'duplicate_board_with_structure'.
-            folder_id (Optional[int]): The destination folder within the destination workspace.
+            folder_id (int): The destination folder within the destination workspace.
                 The folder_id is required if you are duplicating to another workspace, otherwise, it is optional.
                 If omitted, it will default to the original board's folder.
             keep_subscribers (bool): Duplicate the subscribers to the new board. Defaults to False.
-            workspace_id (Optional[int]): The destination workspace. If omitted, it will default to the original board's workspace.
+            workspace_id (int): The destination workspace. If omitted, it will default to the original board's workspace.
 
         Returns:
             Dict[str, Any]: Dictionary containing info for the new board.
@@ -203,20 +195,15 @@ class Boards:
             ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
-        try:
-            input_data = DuplicateBoardInput(
-                board_id=board_id,
-                board_name=board_name,
-                duplicate_type=duplicate_type,
-                folder_id=folder_id,
-                keep_subscribers=keep_subscribers,
-                workspace_id=workspace_id,
-            )
-        except ValidationError as e:
-            error_messages = [f"{''.join([m.strip() for m in error['msg'].split(',', 1)[1:]])}" for error in e.errors()]
-            if not any(msg for msg in error_messages):
-                error_messages = ["Invalid arguments"] + [f"Invalid argument {error['loc'][0]}" for error in e.errors()]
-            raise ValueError('\n'.join(error_messages)) from None
+        input_data = check_schema(
+            DuplicateBoardInput,
+            board_id=board_id,
+            board_name=board_name,
+            duplicate_type=duplicate_type,
+            folder_id=folder_id,
+            keep_subscribers=keep_subscribers,
+            workspace_id=workspace_id,
+        )
 
         query_string = self._build_duplicate_query_string(input_data)
 
@@ -247,13 +234,12 @@ class Boards:
             ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
-        try:
-            input_data = UpdateBoardInput(board_id=board_id, board_attribute=board_attribute, new_value=new_value)
-        except ValidationError as e:
-            error_messages = [f"{''.join([m.strip() for m in error['msg'].split(',', 1)[1:]])}" for error in e.errors()]
-            if not any(msg for msg in error_messages):
-                error_messages = ["Invalid arguments"] + [f"Invalid argument {error['loc'][0]}" for error in e.errors()]
-            raise ValueError('\n'.join(error_messages)) from None
+        input_data = check_schema(
+            UpdateBoardInput,
+            board_id=board_id,
+            board_attribute=board_attribute,
+            new_value=new_value
+        )
 
         query_string = self._build_update_query_string(input_data)
 
@@ -269,7 +255,7 @@ class Boards:
         fields: str = 'id'
     ) -> Dict[str, Any]:
         """
-        Archive a board on Monday.com.
+        Archive a board.
 
         Args:
             board_id (int): The ID of the board to archive.
@@ -305,7 +291,7 @@ class Boards:
         fields: str = 'id'
     ) -> Dict[str, Any]:
         """
-        Delete a board on Monday.com.
+        Delete a board.
 
         Args:
             board_id (int): The ID of the board to delete.
@@ -453,7 +439,7 @@ class Boards:
             }}
         """
 
-    def _build_boards_query_string(self, fields: str, data: QueryBoardInput, page: int) -> str:
+    def _build_boards_query_string(self, data: QueryBoardInput, page: int) -> str:
         """
         Build GraphQL query string for board queries.
 
@@ -478,7 +464,7 @@ class Boards:
         return f"""
             query {{
                 boards ({args_str}) {{
-                    {fields}
+                    {data.fields}
                 }}
             }}
         """

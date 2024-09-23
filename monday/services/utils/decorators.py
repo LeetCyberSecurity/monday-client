@@ -22,3 +22,23 @@ def board_action(method_name: str) -> Callable:
             return await board_method(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def item_action(method_name: str) -> Callable:
+    """
+    Decorator for item actions.
+
+    Args:
+        method_name (str): The name of the method to be decorated.
+
+    Returns:
+        Callable: A decorator function.
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            items = self.items()
+            item_method = getattr(items, method_name)
+            return await item_method(*args, **kwargs)
+        return wrapper
+    return decorator

@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field, field_validator
 
 class QueryBoardInput(BaseModel):
     """Configuration for board selection and filtering."""
-    board_ids: Optional[Union[int, List[int]]] = None
+    board_ids: Optional[Union[int, List[int]]]
+    fields: str = 'id name'
     board_kind: Literal['private', 'public', 'share', 'all'] = 'all'
     order_by: Literal['created_at', 'used_at'] = 'created_at'
     items_page_limit: int = Field(default=25, gt=0, lt=500)
@@ -19,33 +20,68 @@ class QueryBoardInput(BaseModel):
     @field_validator('board_ids', 'workspace_ids', mode='before')
     @classmethod
     def ensure_list_of_ints(cls, v, info):
-        """Ensure the input is an integer"""
-        error_info = f"{info.field_name} must be int or list of ints" + " or None" if info.field_name == 'workspace_ids' else ""
-        if v is None and info.field_name == 'workspace_ids':
+        """Ensure the input is a positive integer or list of positive integers."""
+        field_name = info.field_name
+        if v is None and field_name == 'workspace_ids':
             return v
-        if isinstance(v, int):
-            return [v]
-        if isinstance(v, list) and all(isinstance(item, int) for item in v):
-            return v
-        raise ValueError(error_info)
+        try:
+            if isinstance(v, int):
+                if v <= 0:
+                    raise ValueError(f"{field_name} must be positive")
+                return [v]
+            if isinstance(v, list):
+                result = []
+                for item in v:
+                    item = int(item)
+                    if item <= 0:
+                        raise ValueError(f"All {field_name} must be positive")
+                    result.append(item)
+                return result
+            raise ValueError(f"{field_name} must be int or list of ints")
+        except ValueError as e:
+            raise ValueError(str(e)) from None
+        except TypeError:
+            raise ValueError(f"{field_name} must be int or list of ints") from None
 
     @field_validator('board_kind', 'order_by', 'state')
     @classmethod
-    def check_literal_values(cls, v, info):
+    def ensure_literal_values(cls, v, info):
         """Validate literal values against allowed values."""
-        field = cls.model_fields[info.field_name]
+        field_name = info.field_name
+        field = cls.model_fields[field_name]
         allowed_values = get_args(field.annotation)
-        if v not in allowed_values:
-            raise ValueError(f"{info.field_name} must be one of {allowed_values}")
-        return v
+        try:
+            v = str(v).lower().strip()
+            if v not in allowed_values:
+                raise ValueError(f"{field_name} must be one of {allowed_values}")
+            return v
+        except AttributeError:
+            raise ValueError(f"{field_name} must be a string") from None
 
     @field_validator('boards_limit', 'items_page_limit', 'page')
     @classmethod
-    def check_positive_int(cls, v, info):
+    def ensure_positive_int(cls, v, info):
         """Validate that the input is a positive integer."""
-        if not isinstance(v, int) or v <= 0:
-            raise ValueError(f"{info.field_name} must be a positive integer")
-        return v
+        field_name = info.field_name
+        try:
+            v = int(v)
+            if v <= 0:
+                raise ValueError(f"{field_name} must be a positive integer")
+            return v
+        except ValueError:
+            raise ValueError(f"{field_name} must be a valid integer") from None
+
+    @field_validator('fields')
+    @classmethod
+    def ensure_string(cls, v):
+        """Ensure the input is a non-empty string."""
+        try:
+            v = str(v).strip()
+            if not v:
+                raise ValueError("fields must be a non-empty string")
+            return v
+        except AttributeError:
+            raise ValueError("fields must be a string") from None
 
     model_config = {
         'strict': True,

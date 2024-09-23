@@ -34,31 +34,50 @@ class DuplicateBoardInput(BaseModel):
     @classmethod
     def ensure_string(cls, v):
         """Ensure the input is a stripped string or None."""
-        return str(v).strip() if v is not None else None
+        if v is None:
+            return None
+        try:
+            return str(v).strip()
+        except AttributeError:
+            raise ValueError("board_name must be a string or None") from None
 
     @field_validator('duplicate_type')
     @classmethod
     def ensure_valid_duplicate_type(cls, v):
         """Validate and normalize the 'duplicate_type' field."""
         valid_types = ['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure']
-        v = str(v).lower()
-        if v not in valid_types:
-            raise ValueError(f"duplicate_type must be one of {valid_types}")
-        return v
+        try:
+            v = str(v).lower().strip()
+            if v not in valid_types:
+                raise ValueError(f"duplicate_type must be one of {valid_types}")
+            return v
+        except AttributeError:
+            raise ValueError("duplicate_type must be a string") from None
 
     @field_validator('board_id', 'folder_id', 'workspace_id')
     @classmethod
-    def ensure_positive_int(cls, v):
+    def ensure_positive_int(cls, v, info):
         """Ensure the input is a positive integer or None."""
-        if v is None:
+        field_name = info.field_name
+        if v is None and field_name != 'board_id':
             return None
-        v = int(v)
-        if v <= 0:
-            raise ValueError("Must be a positive integer")
-        return v
+        try:
+            v = int(v)
+            if v <= 0:
+                raise ValueError(f"{field_name} must be a positive integer")
+            return v
+        except ValueError:
+            raise ValueError(f"{field_name} must be a valid integer") from None
 
     @field_validator('keep_subscribers')
     @classmethod
     def ensure_bool(cls, v):
         """Ensure the input is a boolean."""
-        return bool(v)
+        if not isinstance(v, bool):
+            raise ValueError("keep_subscribers must be a boolean")
+        return v
+
+    model_config = {
+        'strict': True,
+        'extra': 'forbid',
+    }

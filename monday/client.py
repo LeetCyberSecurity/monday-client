@@ -3,14 +3,14 @@
 import asyncio
 import logging
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 import aiohttp
 
 from .exceptions import ComplexityLimitExceeded, MutationLimitExceeded
 from .services.boards import Boards
-from .services.utils.decorators import board_action
-from .services.utils.pagination import paginated_item_request
+from .services.items import Items
+from .services.utils.decorators import board_action, item_action
 
 
 class MondayClient:
@@ -57,25 +57,65 @@ class MondayClient:
 
     logger = logging.getLogger(__name__)
 
-    def __init__(self, api_key: str, url: str = 'https://api.monday.com/v2', headers: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        api_key: str,
+        url: str = 'https://api.monday.com/v2',
+        headers: Optional[Dict[str, Any]] = None
+    ):
         """
         Initialize the MondayClient with the provided API key.
 
         Args:
-                api_key (str): The API key for authenticating with the Monday.com API.
-                url (str, optional): The endpoint URL for the Monday.com API. Defaults to 'https://api.monday.com/v2'.
-                headers (dict, optional): Additional HTTP headers used for API requests. Defaults to None.
+            api_key (str): The API key for authenticating with the Monday.com API.
+            url (str): The endpoint URL for the Monday.com API. Defaults to 'https://api.monday.com/v2'.
+            headers ([Dict[str, Any]]): Additional HTTP headers used for API requests. Defaults to None.
         """
         self.url = url
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
         self.rate_limit_seconds = 60
         self.max_retries = 4
         self.boards = Boards(self)
+        self.items = Items(self)
+
+    @board_action('query')
+    async def query_board(self, **kwargs) -> Dict[str, Any]:
+        """
+        Query boards to return metadata about one or multiple boards.
+
+        This method is a wrapper for the Boards.query() method.
+        For detailed information on parameters and usage, refer to the Boards.query() method documentation.
+
+        Returns:
+            List[Dict[str, Any]]: List of dictionaries containing queried board data.
+
+        Raises:
+            QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
+            PaginationError: If item pagination fails during the request.
+        """
+
+    @board_action('create')
+    async def create_board(self, **kwargs) -> Dict[str, Any]:
+        """
+        Create a new board.
+
+        This method is a wrapper for the Boards.create() method.
+        For detailed information on parameters and usage, refer to the Boards.create() method documentation.
+
+        Returns:
+            Dict[str, Any]: Dictionary containing info for the new board.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
+        """
 
     @board_action('duplicate')
     async def duplicate_board(self, **kwargs) -> Dict[str, Any]:
         """
-        Duplicate a board on Monday.com.
+        Duplicate a board.
 
         This method is a wrapper for the Boards.duplicate() method.
         For detailed information on parameters and usage, refer to the Boards.duplicate() method documentation.
@@ -91,7 +131,7 @@ class MondayClient:
     @board_action('update')
     async def update_board(self, **kwargs) -> Dict[str, Any]:
         """
-        Update a board on Monday.com.
+        Update a board.
 
         This method is a wrapper for the Boards.update() method.
         For detailed information on parameters and usage, refer to the Boards.update() method documentation.
@@ -101,6 +141,54 @@ class MondayClient:
 
         Raises:
             ValueError: If input parameters are invalid.
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+    @board_action('archive')
+    async def archive_board(self, **kwargs) -> Dict[str, Any]:
+        """
+        Archive a board.
+
+        This method is a wrapper for the Boards.archive() method.
+        For detailed information on parameters and usage, refer to the Boards.archive() method documentation.
+
+        Returns:
+            Dict[str, Any]: Dictionary containing archived board info.
+
+        Raises:
+            ValueError: If board_id is not a positive integer.
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+    @board_action('delete')
+    async def delete_board(self, **kwargs) -> Dict[str, Any]:
+        """
+        Delete a board.
+
+        This method is a wrapper for the Boards.delete() method.
+        For detailed information on parameters and usage, refer to the Boards.delete() method documentation.
+
+        Returns:
+            Dict[str, Any]: Dictionary containing deleted board info.
+
+        Raises:
+            ValueError: If board_id is not a positive integer.
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+    @item_action('items_page_by_column_values')
+    async def items_page_by_column_values(self, **kwargs) -> Dict[str, Any]:
+        """
+        Query paginated items by their column values.
+
+        This method is a wrapper for the Items.items_page_by_column_values() method.
+        For detailed information on parameters and usage, refer to the Items.items_page_by_column_values() method documentation.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries containing the combined items retrieved.
+
+        Raises:
+            ValueError: If board_id is not a positive integer.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
@@ -143,51 +231,6 @@ class MondayClient:
                     return {'error': str(e)}
 
         return {'error': f'Max retries reached: {response_data}'}
-
-    async def items_page_by_column_values(
-            self,
-            board_id: int,
-            columns: str,
-            limit: int = 25,
-            fields: str = 'items { id name }',
-            paginate_items: bool = True
-    ) -> Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]:
-        """
-        Retrieves a paginated list of items from a specified board on Monday.com.
-
-        Args:
-                board_id (int): The ID of the board from which to retrieve items.
-                columns (str): One or more columns and their values to search by.
-                limit (int, optional): The maximum number of items to retrieve per page. Defaults to 25.
-                fields (str, optional): The fields to include in the response. Defaults to 'items { id name }'.
-                paginate_items (bool, optional): Whether to paginate items or just return the first page. Defaults to True.
-
-        Returns:
-                Dict[str, Union[bool, List[Dict[str, Any]], Optional[str]]]: A dictionary containing the combined items retrieved
-                and a completion status.
-                The dictionary has the following structure:
-
-                        - 'items': A list of dictionaries representing the items retrieved.
-                        - 'completed': A boolean indicating whether the pagination was completed successfully.
-        """
-        if not isinstance(board_id, int):
-            raise TypeError('board_id must be an int')
-
-        query_string = f"""
-        	query {{
-                items_page_by_column_values (
-                	board_id: {board_id},
-                    limit: {limit},
-                    {f"{columns}" if columns else ""}
-                ) {{
-                    cursor {fields}
-                }}
-            }}
-        """
-        if paginate_items:
-            return await paginated_item_request(self, query_string, limit=limit)
-        else:
-            return await self.post_request(query_string)
 
     async def _execute_request(self, query: Dict[str, Any]) -> Dict[str, Any]:
         async with aiohttp.ClientSession() as session:
