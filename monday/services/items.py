@@ -468,7 +468,7 @@ class Items:
     def _build_create_query_string(self, data: CreateItemInput) -> str:
         args = {
             'board_id': data.board_id,
-            'item_name': data.item_name,
+            'item_name': f'"{data.item_name}"',
             'column_values': json.dumps(json.dumps(data.column_values)),
             'group_id': f'"{data.group_id}"',
             'create_labels_if_missing': str(data.create_labels_if_missing).lower(),
