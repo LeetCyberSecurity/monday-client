@@ -631,7 +631,7 @@ class Items:
 
         return f"""
             query {{
-                boards ([{board_ids_string}]) {{
+                boards (ids: [{board_ids_string}]) {{
                     items_page ({args_str}) {{
                         cursor {data.fields}
                     }}

@@ -1,13 +1,14 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
-
-if TYPE_CHECKING:
-    from ...client import MondayClient
+"""Utility functions and classes for handling pagination."""
 
 import json
 import logging
 import re
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from ...exceptions import PaginationError
+
+if TYPE_CHECKING:
+    from ...client import MondayClient
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,15 @@ def extract_items_page_value(data):
 
 
 def extract_cursor_from_response(response_data: str) -> Optional[str]:
+    """
+    Extract the cursor value from the response data.
+
+    Args:
+        response_data (str): The response data containing the cursor information.
+
+    Returns:
+        Optional[str]: The extracted cursor value, or None if not found.
+    """
     cursor_pattern = re.compile(r'"cursor":\s*(?:"([^"]+)"|null)')
     match = cursor_pattern.search(response_data)
     if match:
@@ -47,8 +57,17 @@ def extract_cursor_from_response(response_data: str) -> Optional[str]:
         return None
 
 
-def extract_items_from_response(response_data: str) -> List[Dict[str, Any]]:
-    items_pattern = re.compile(r'"items"\s*:\s*(\[(?:[^[\]]*|\[(?:[^[\]]*|\[[^[\]]*\])*\])*\])')
+def extract_items_from_response(response_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract items from the response data.
+
+    Args:
+        response_data (Dict[str, Any]): The response data containing the items.
+
+    Returns:
+        List[Dict[str, Any]]: A list of extracted items, where each item is represented as a dictionary.
+    """
+    items_pattern = re.compile(r'"items"\s*:\s*(\[(?:[^[\]]*|\[(?:[^[\]]*|\[[^[\]]*\])*\])\])')
     matches = items_pattern.findall(response_data)
     all_items = []
     for match in matches:
@@ -61,6 +80,15 @@ def extract_items_from_response(response_data: str) -> List[Dict[str, Any]]:
 
 
 def extract_items_from_query(query: str) -> Optional[str]:
+    """
+    Extract items from the query string.
+
+    Args:
+        query (str): The query string containing the items.
+
+    Returns:
+        Optional[str]: The extracted items value, or None if not found.
+    """
     items_query_pattern = re.compile(r'items\s*{(?:[^{}]|{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*})*}')
     match = items_query_pattern.search(query)
     if match:
