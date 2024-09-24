@@ -60,8 +60,9 @@ def check_schema(schema: Type[T], **kwargs) -> T:
     try:
         input_data = schema(**kwargs)
     except ValidationError as e:
-        error_messages = [f"{''.join([m.strip() for m in error['msg'].split(',', 1)[1:]])}" for error in e.errors()]
-        if not any(msg for msg in error_messages):
-            error_messages = ["Invalid arguments"] + [f"Invalid argument {error['loc'][0]}" for error in e.errors()]
-        raise ValueError("\n".join(error_messages)) from None
+        error_messages = [
+            f"{' -> '.join(str(loc) for loc in m['loc'])}: {m['msg'].strip()}"
+            for m in e.errors()
+        ]
+        raise ValueError("Validation error\n" + "\n".join(error_messages)) from None
     return input_data

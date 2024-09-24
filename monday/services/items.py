@@ -470,7 +470,7 @@ class Items:
         args = {
             'board_id': data.board_id,
             'item_name': data.item_name,
-            'column_values': data.column_values,
+            'column_values': json.dumps(json.dumps(data.column_values)),
             'group_id': data.group_id,
             'create_labels_if_missing': str(data.create_labels_if_missing).lower(),
             'position_relative_method': data.position_relative_method,
