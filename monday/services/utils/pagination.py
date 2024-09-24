@@ -12,6 +12,32 @@ from ...exceptions import PaginationError
 logger = logging.getLogger(__name__)
 
 
+def extract_items_page_value(data):
+    """
+    Recursively extract the 'items_page' value from a nested dictionary or list.
+
+    Args:
+        data (dict or list): The dictionary or list to search.
+
+    Returns:
+        dict or None: The 'items_page' value if found; otherwise, None.
+    """
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == 'items_page':
+                return value
+            else:
+                result = extract_items_page_value(value)
+                if result is not None:
+                    return result
+    elif isinstance(data, list):
+        for item in data:
+            result = extract_items_page_value(item)
+            if result is not None:
+                return result
+    return None
+
+
 def extract_cursor_from_response(response_data: str) -> Optional[str]:
     cursor_pattern = re.compile(r'"cursor":\s*(?:"([^"]+)"|null)')
     match = cursor_pattern.search(response_data)

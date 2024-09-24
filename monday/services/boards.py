@@ -10,8 +10,9 @@ from .schemas.boards.delete_board_schema import DeleteBoardInput
 from .schemas.boards.duplicate_board_schema import DuplicateBoardInput
 from .schemas.boards.query_board_schema import QueryBoardInput
 from .schemas.boards.update_board_schema import UpdateBoardInput
+from .utils.data_modifiers import update_items_page_in_place
 from .utils.error_handlers import check_query_result, check_schema
-from .utils.pagination import paginated_item_request
+from .utils.pagination import extract_items_page_value, paginated_item_request
 
 if TYPE_CHECKING:
     from ..client import MondayClient
@@ -106,7 +107,7 @@ class Boards:
 
         if 'items_page' in fields and paginate_items:
             query_result = await self._paginate_items(query_string, boards_data, input_data.items_page_limit)
-            boards_data = check_query_result(query_result)
+            boards_data = query_result
 
         return boards_data
 
@@ -346,13 +347,12 @@ class Boards:
         """
         boards_list = boards
         for board in boards_list:
-            all_board_items = board['items_page']['items']
-            if board['items_page']['cursor']:
-                query_result = await paginated_item_request(self.client, query_string, limit=limit, _cursor=board['items_page']['cursor'])
+            items_page = extract_items_page_value(board)
+            if items_page['cursor']:
+                query_result = await paginated_item_request(self.client, query_string, limit=limit, _cursor=items_page['cursor'])
                 data = check_query_result(query_result)
-                all_board_items.extend(data['items'])
-            board['items_page']['items'] = all_board_items
-            del board['items_page']['cursor']
+                items_page['items'].extend(data['items'])
+            board = update_items_page_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
         return boards_list
 
     def _build_create_query_string(self, data: CreateBoardInput) -> str:
