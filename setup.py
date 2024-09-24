@@ -7,14 +7,14 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 
 setup(
     name='monday-client',
-    version='0.1.9',
+    version='0.1.10',
     author='Dan Hollis',
     author_email='dh@leetsys.com',
     description='Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/LeetCyberSecurity/monday-client',
-    packages=find_packages(include=['monday_client']),
+    packages=find_packages(include=['monday', 'monday.*']),
     install_requires=[
         'aiohttp',
         'pydantic',
