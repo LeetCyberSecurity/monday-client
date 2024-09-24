@@ -440,11 +440,10 @@ class Items:
         query_string = self._build_items_page_query_string(input_data)
 
         if input_data.paginate_items:
-            query_result = await paginated_item_request(self.client, query_string, limit=input_data.limit)
+            data = await paginated_item_request(self.client, query_string, limit=input_data.limit)
         else:
             query_result = await self.client.post_request(query_string)
-
-        data = check_query_result(query_result)
+            data = check_query_result(query_result)
 
         return data
 
