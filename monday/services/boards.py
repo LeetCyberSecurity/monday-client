@@ -33,7 +33,7 @@ class Boards:
 
     async def query(
         self,
-        board_ids: Union[int, List[int]],
+        board_ids: Optional[Union[int, List[int]]] = None,
         fields: str = 'id name',
         paginate_items: bool = True,
         board_kind: Literal['private', 'public', 'share', 'all'] = 'all',
@@ -48,7 +48,7 @@ class Boards:
         Query boards to return metadata about one or multiple boards.
 
         Args:
-            board_ids (Union[int, List[int]]): The ID or list of IDs of the boards to query.
+            board_ids (Union[int, List[int]]): The ID or list of IDs of the boards to query. Default is None.
             fields (str): Fields to specify in the boards query. Default: 'id name'.
             paginate_items (bool): Whether to paginate items if items_page is in fields. Default: True.
             board_kind (Literal['private', 'public', 'share', 'all']): The kind of boards to include. Default: 'all'.

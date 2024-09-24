@@ -22,7 +22,7 @@ class QueryBoardInput(BaseModel):
     def ensure_list_of_ints(cls, v, info):
         """Ensure the input is a positive integer or list of positive integers."""
         field_name = info.field_name
-        if v is None and field_name == 'workspace_ids':
+        if v is None:
             return v
         try:
             if isinstance(v, int):
