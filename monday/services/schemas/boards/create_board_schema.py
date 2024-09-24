@@ -8,22 +8,28 @@ from pydantic import BaseModel, field_validator
 class CreateBoardInput(BaseModel):
     """Input model for creating a board."""
     name: str
+    fields: str = 'id'
     kind: Literal['private', 'public', 'share', 'all'] = 'all'
     owner_ids: Optional[List[int]] = None
     subscriber_ids: Optional[List[int]] = None
     subscriber_teams_ids: Optional[List[int]] = None
-    description: str = ''
+    description: Optional[str] = None
     folder_id: Optional[int] = None
     template_id: Optional[int] = None
     workspace_id: Optional[int] = None
 
-    @field_validator('name', 'description')
+    @field_validator('name', 'description', 'fields')
     @classmethod
     def ensure_string(cls, v, info):
         """Ensure the input is a stripped string."""
         field_name = info.field_name
+        if field_name == 'description' and v is None:
+            return None
         try:
-            return str(v).strip()
+            v = str(v).strip()
+            if not v:
+                raise ValueError(f"{field_name} must be a non-empty string")
+            return v
         except AttributeError:
             raise ValueError(f"{field_name} must be a string") from None
 

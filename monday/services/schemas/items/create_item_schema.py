@@ -10,6 +10,7 @@ class CreateItemInput(BaseModel):
     board_id: int
     item_name: str
     column_values: Optional[Dict[str, Any]] = None
+    fields: str = 'id'
     group_id: Optional[str] = None
     create_labels_if_missing: bool = False
     position_relative_method: Optional[Literal['before_at', 'after_at']] = None
@@ -30,7 +31,7 @@ class CreateItemInput(BaseModel):
         except (ValueError, TypeError):
             raise ValueError(f"{field_name} must be a valid integer") from None
 
-    @field_validator('item_name', 'group_id')
+    @field_validator('item_name', 'fields', 'group_id')
     @classmethod
     def ensure_string(cls, v, info):
         """Ensure the input is a non-empty string or None."""

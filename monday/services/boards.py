@@ -4,10 +4,12 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 from ..exceptions import QueryFormatError
-from .schemas.create_board_schema import CreateBoardInput
-from .schemas.duplicate_board_schema import DuplicateBoardInput
-from .schemas.query_board_schema import QueryBoardInput
-from .schemas.update_board_schema import UpdateBoardInput
+from .schemas.boards.archive_board_schema import ArchiveBoardInput
+from .schemas.boards.create_board_schema import CreateBoardInput
+from .schemas.boards.delete_board_schema import DeleteBoardInput
+from .schemas.boards.duplicate_board_schema import DuplicateBoardInput
+from .schemas.boards.query_board_schema import QueryBoardInput
+from .schemas.boards.update_board_schema import UpdateBoardInput
 from .utils.error_handlers import check_query_result, check_schema
 from .utils.pagination import paginated_item_request
 
@@ -111,6 +113,7 @@ class Boards:
     async def create(
         self,
         name: str,
+        fields: str = 'id',
         kind: Optional[Literal['private', 'public', 'share']] = 'public',
         owner_ids: Optional[List[int]] = None,
         subscriber_ids: Optional[List[int]] = None,
@@ -125,17 +128,18 @@ class Boards:
 
         Args:
             name (str): The name of the new board.
-            kind (Literal['private', 'public', 'share']): The kind of board to create. Defaults to 'public'.
-            owner_ids (List[int]): List of user IDs to set as board owners. Defaults to None.
+            fields (str): Fields to query back from the created board. Defaults to 'id'.
+            kind (Literal['private', 'public', 'share']): The kind of board to create. Default is 'public'.
+            owner_ids (List[int]): List of user IDs to set as board owners. Default is None.
                 The user that creates the board will automatically be added as the board's owner
                 when creating a private or shareable board or if owners_ids is None.
-            subscriber_ids (List[int]): List of user IDs to set as board subscribers. Defaults to None.
+            subscriber_ids (List[int]): List of user IDs to set as board subscribers. Default is None.
                 The user that creates the board will automatically be added as a subscriber.
-            subscriber_teams_ids (List[int]): List of team IDs to set as board subscribers. Defaults to None.
-            description (str): Description of the board.
-            folder_id (int): ID of the folder to place the board in.
-            template_id (int): ID of the template to use for the board.
-            workspace_id (int): ID of the workspace to create the board in.
+            subscriber_teams_ids (List[int]): List of team IDs to set as board subscribers. Default is None.
+            description (str): Description of the board. Default is None.
+            folder_id (int): ID of the folder to place the board in. Default is None.
+            template_id (int): ID of the template to use for the board. Default is None.
+            workspace_id (int): ID of the workspace to create the board in. Default is None.
 
         Returns:
             Dict[str, Any]: Dictionary containing info for the new board.
@@ -147,6 +151,7 @@ class Boards:
         input_data = check_schema(
             CreateBoardInput,
             name=name,
+            fields=fields,
             kind=kind,
             owner_ids=owner_ids,
             subscriber_ids=subscriber_ids,
@@ -168,6 +173,7 @@ class Boards:
     async def duplicate(
         self,
         board_id: int,
+        fields: str = 'board { id }',
         board_name: Optional[str] = None,
         duplicate_type: Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure'] = 'duplicate_board_with_structure',
         folder_id: Optional[int] = None,
@@ -179,6 +185,7 @@ class Boards:
 
         Args:
             board_id (int): The ID of the board to duplicate.
+            fields (str): Fields to query back from the duplicated board. Defaults to 'board { id }'.
             board_name (str): The duplicated board's name. If omitted, it will be automatically generated.
             duplicate_type (Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure']):
                 The duplication type. Defaults to 'duplicate_board_with_structure'.
@@ -198,6 +205,7 @@ class Boards:
         input_data = check_schema(
             DuplicateBoardInput,
             board_id=board_id,
+            fields=fields,
             board_name=board_name,
             duplicate_type=duplicate_type,
             folder_id=folder_id,
@@ -268,16 +276,13 @@ class Boards:
             ValueError: If board_id is not a positive integer.
             MondayAPIError: If API request fails or returns unexpected format.
         """
-        if not isinstance(board_id, int) or board_id <= 0:
-            raise ValueError('board_id must be a positive integer') from None
+        input_data = check_schema(
+            ArchiveBoardInput,
+            board_id=board_id,
+            fields=fields
+        )
 
-        query_string = f"""
-            mutation {{
-                archive_board (board_id: {board_id}) {{
-                    {fields or 'id'}
-                }}
-            }}
-        """
+        query_string = self._build_archive_query_string(input_data)
 
         query_result = await self.client.post_request(query_string)
 
@@ -304,16 +309,13 @@ class Boards:
             ValueError: If board_id is not a positive integer.
             MondayAPIError: If API request fails or returns unexpected format.
         """
-        if not isinstance(board_id, int) or board_id <= 0:
-            raise ValueError('board_id must be a positive integer') from None
+        input_data = check_schema(
+            DeleteBoardInput,
+            board_id=board_id,
+            fields=fields
+        )
 
-        query_string = f"""
-            mutation {{
-                delete_board (board_id: {board_id}) {{
-                    {fields or 'id'}
-                }}
-            }}
-        """
+        query_string = self._build_delete_query_string(input_data)
 
         query_result = await self.client.post_request(query_string)
 
@@ -381,7 +383,7 @@ class Boards:
         return f"""
             mutation {{
                 create_board ({args_str}) {{
-                    id
+                    {data.fields}
                 }}
             }}
         """
@@ -409,9 +411,7 @@ class Boards:
         return f"""
             mutation {{
                 duplicate_board ({args_str}) {{
-                    board {{
-                        id
-                    }}
+                    {data.fields}
                 }}
             }}
         """
@@ -436,6 +436,52 @@ class Boards:
         return f"""
             mutation {{
                 update_board ({args_str})
+            }}
+        """
+
+    def _build_archive_query_string(self, data: ArchiveBoardInput) -> str:
+        """
+        Build GraphQL query string for archiving a board.
+
+        Args:
+            data (ArchiveBoardInput): Board archive input data.
+
+        Returns:
+            str: Formatted GraphQL query string.
+        """
+        args = {
+            'board_id': data.board_id
+        }
+        args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
+
+        return f"""
+            mutation {{
+                archive_board ({args_str}) {{
+                    {data.fields}
+                }}
+            }}
+        """
+
+    def _build_delete_query_string(self, data: DeleteBoardInput) -> str:
+        """
+        Build GraphQL query string for archiving a board.
+
+        Args:
+            data (ArchiveBoardInput): Board archive input data.
+
+        Returns:
+            str: Formatted GraphQL query string.
+        """
+        args = {
+            'board_id': data.board_id
+        }
+        args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
+
+        return f"""
+            mutation {{
+                delete ({args_str}) {{
+                    {data.fields}
+                }}
             }}
         """
 

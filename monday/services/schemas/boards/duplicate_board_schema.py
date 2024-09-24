@@ -24,22 +24,27 @@ class DuplicateBoardInput(BaseModel):
         Only one board can be duplicated at a time.
     """
     board_id: int
+    fields: str = 'id'
     board_name: Optional[str] = None
     duplicate_type: Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure'] = 'duplicate_board_with_structure'
     folder_id: Optional[int] = None
     keep_subscribers: bool = False
     workspace_id: Optional[int] = None
 
-    @field_validator('board_name')
+    @field_validator('board_name', 'fields')
     @classmethod
-    def ensure_string(cls, v):
-        """Ensure the input is a stripped string or None."""
-        if v is None:
+    def ensure_string(cls, v, info):
+        """Ensure the input is a stripped string."""
+        field_name = info.field_name
+        if field_name == 'board_name' and v is None:
             return None
         try:
-            return str(v).strip()
+            v = str(v).strip()
+            if not v:
+                raise ValueError(f"{field_name} must be a non-empty string")
+            return v
         except AttributeError:
-            raise ValueError("board_name must be a string or None") from None
+            raise ValueError(f"{field_name} must be a string") from None
 
     @field_validator('duplicate_type')
     @classmethod
