@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "monday-client"
-version = "0.1.13"
+version = "0.1.14"
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.6"

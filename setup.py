@@ -7,7 +7,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 
 setup(
     name='monday-client',
-    version='0.1.13',
+    version='0.1.14',
     author='Dan Hollis',
     author_email='dh@leetsys.com',
     description='Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits.',
