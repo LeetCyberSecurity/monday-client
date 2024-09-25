@@ -1,15 +1,13 @@
 """Defines the schema for duplicating an item in the Monday service."""
 
-from typing import Optional
-
 from pydantic import BaseModel, field_validator
 
 
 class DuplicateItemInput(BaseModel):
     """Input model for duplicating an item."""
     item_id: int
+    board_id: int
     fields: str = 'id'
-    board_id: Optional[int] = None
     with_updates: bool = False
 
     @field_validator('item_id', 'board_id')
@@ -17,8 +15,6 @@ class DuplicateItemInput(BaseModel):
     def ensure_positive_int(cls, v, info):
         """Ensure the input is a positive integer or None."""
         field_name = info.field_name
-        if v is None and field_name == 'board_id':
-            return None
         try:
             v = int(v)
             if v <= 0:

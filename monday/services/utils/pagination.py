@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...exceptions import PaginationError
+from .error_handlers import check_query_result
 
 if TYPE_CHECKING:
     from ...client import MondayClient
@@ -179,15 +180,28 @@ async def paginated_item_request(
         response_data = await client.post_request(paginated_query)
         if 'error' in response_data:
             return response_data
+        data = check_query_result(response_data)
 
-        items = extract_items_from_response(response_data)
-        if not items:
-            logger.error('Failed to extract items from response')
-            logger.error(json.dumps(response_data))
-            raise PaginationError('Item pagination failed')
-        combined_items.extend(items)
+        if 'boards' in data['data']:
+            for board in data['data']['boards']:
+                board_data = {
+                    'board_id': board['id'],
+                    'items': board['items_page']['items']
+                }
+                existing_board = next((b for b in combined_items if b['board_id'] == board['id']), None)
+                if existing_board:
+                    existing_board['items'].extend(board_data['items'])
+                else:
+                    combined_items.append(board_data)
+        else:
+            items = extract_items_from_response(data)
+            if not items:
+                logger.error('Failed to extract items from response')
+                logger.error(json.dumps(response_data))
+                raise PaginationError('Item pagination failed')
+            combined_items.extend(items)
 
-        cursor = extract_cursor_from_response(response_data)
+        cursor = extract_cursor_from_response(data)
         if not cursor:
             break
 

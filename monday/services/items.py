@@ -9,8 +9,8 @@ from .schemas.items.clear_item_updates_schema import ClearItemUpdatesInput
 from .schemas.items.create_item_schema import CreateItemInput
 from .schemas.items.delete_item_schema import DeleteItemInput
 from .schemas.items.duplicate_item_schema import DuplicateItemInput
-from .schemas.items.items_page_by_column_values_schema import \
-    ItemsPageByColumnValuesInput
+from .schemas.items.items_page_by_column_values_schema import (
+    ColumnInput, ItemsPageByColumnValuesInput)
 from .schemas.items.items_page_schema import ItemsPageInput
 from .schemas.items.move_item_to_board_schema import MoveToBoardInput
 from .schemas.items.move_item_to_group_schema import MoveToGroupInput
@@ -44,7 +44,7 @@ class Items:
         page: int = 1,
         exclude_nonactive: bool = False,
         newest_first: bool = False
-    ):
+    ) -> List[Dict[str, Any]]:
         """
         Query items to return metadata about one or multiple items.
 
@@ -104,7 +104,7 @@ class Items:
         create_labels_if_missing: bool = False,
         position_relative_method: Optional[Literal['before_at', 'after_at']] = None,
         relative_to: Optional[int] = None
-    ):
+    ) -> Dict[str, Any]:
         """
         Query items to return metadata about one or multiple items.
 
@@ -143,22 +143,22 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['create_item']
 
     async def duplicate(
         self,
         item_id: int,
+        board_id: int,
         fields: str = 'id',
-        board_id: Optional[int] = None,
         with_updates: bool = False
-    ):
+    ) -> Dict[str, Any]:
         """
         Duplicate an item.
 
         Args:
-            item_id (int): The ID of the item to be copied.
+            item_id (int): The ID of the item to be duplicated.
+            board_id (int): The ID of the board where the item will be duplicated.
             fields (str): Fields to query back from the duplicated item. Defaults to 'id'.
-            board_id (int): The ID of the board where the item will be copied. Defaults to None.
             with_updates (bool): Duplicates the item with existing updates. Defaults to False.
 
         Returns:
@@ -171,8 +171,8 @@ class Items:
         input_data = check_schema(
             DuplicateItemInput,
             item_id=item_id,
-            fields=fields,
             board_id=board_id,
+            fields=fields,
             with_updates=with_updates
         )
 
@@ -182,14 +182,14 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['duplicate_item']
 
     async def move_to_group(
         self,
         item_id: int,
         group_id: str,
         fields: str = 'id'
-    ):
+    ) -> Dict[str, Any]:
         """
         Move an item to a different group.
 
@@ -218,25 +218,25 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['move_item_to_group']
 
     async def move_to_board(
         self,
         item_id: int,
         board_id: int,
+        group_id: str,
         fields: str = 'id',
-        group_id: Optional[str] = None,
         columns_mapping: Optional[List[Dict[str, str]]] = None,
         subitems_columns_mapping: Optional[List[Dict[str, str]]] = None
-    ):
+    ) -> Dict[str, Any]:
         """
         Move an item to a different board.
 
         Args:
             item_id (int): The ID of the item to be moved.
             board_id (int): The ID of the board to move the item to.
-            fields (str): Fields to query back from the moved item. Defaults to 'id'.
             group_id (str): The ID of the group to move the item to.
+            fields (str): Fields to query back from the moved item. Defaults to 'id'.
             columns_mapping (List[Dict[str, str]]): Defines the column mapping between the original and target board.
             subitems_columns_mapping (List[Dict[str, str]]): Defines the subitems' column mapping between the original and target board.
 
@@ -251,8 +251,8 @@ class Items:
             MoveToBoardInput,
             item_id=item_id,
             board_id=board_id,
-            fields=fields,
             group_id=group_id,
+            fields=fields,
             columns_mapping=columns_mapping,
             subitems_columns_mapping=subitems_columns_mapping
         )
@@ -263,13 +263,13 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['move_item_to_board']
 
     async def archive(
         self,
         item_id: int,
         fields: str = 'id'
-    ):
+    ) -> Dict[str, Any]:
         """
         Archive an item.
 
@@ -296,13 +296,13 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['archive_item']
 
     async def delete(
         self,
         item_id: int,
         fields: str = 'id'
-    ):
+    ) -> Dict[str, Any]:
         """
         Delete an item.
 
@@ -329,13 +329,13 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['delete_item']
 
     async def clear_updates(
         self,
         item_id: int,
         fields: str = 'id'
-    ):
+    ) -> Dict[str, Any]:
         """
         Clear an item's updates.
 
@@ -362,14 +362,14 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['clear_item_updates']
 
     async def items_page_by_column_values(
             self,
             board_id: int,
-            columns: str,
+            columns: List[ColumnInput],
             limit: int = 25,
-            fields: str = 'items { id name }',
+            fields: str = 'id name',
             paginate_items: bool = True
     ) -> List[Dict[str, Any]]:
         """
@@ -377,9 +377,9 @@ class Items:
 
         Args:
             board_id (int): The ID of the board from which to retrieve items.
-            columns (str): One or more columns and their values to search by.
+            columns (List[ColumnInput]): One or more columns and their values to search by.
             limit (int): The maximum number of items to retrieve per page. Defaults to 25.
-            fields (str): The fields to include in the response. Defaults to 'items { id name }'.
+            fields (str): The fields to include in the response. Defaults to 'id name'.
             paginate_items (bool): Whether to paginate items. Defaults to True.
 
         Returns:
@@ -397,11 +397,13 @@ class Items:
         query_string = self._build_by_column_values_query_string(input_data)
 
         if input_data.paginate_items:
-            query_result = await paginated_item_request(self.client, query_string, limit=input_data.limit)
+            data = await paginated_item_request(self.client, query_string, limit=input_data.limit)
+            if 'error' in data:
+                check_query_result(data)
         else:
             query_result = await self.client.post_request(query_string)
-
-        data = check_query_result(query_result)
+            data = check_query_result(query_result)
+            data = {'items': data['data']['items_page_by_column_values']['items']}
 
         return data
 
@@ -410,23 +412,24 @@ class Items:
             board_ids: Union[int, List[int]],
             query_params: Optional[str] = None,
             limit: int = 25,
-            fields: str = 'items { id name }',
+            fields: str = 'id name',
+            group_id: Optional[str] = None,
             paginate_items: bool = True
     ) -> List[Dict[str, Any]]:
         """
-        Retrieves a paginated list of items from a specified board on Monday.com.
-        This will always be nested within a boards query.
+        Retrieves a paginated list of items from specified boards on Monday.com.
 
         Args:
             board_ids (int): The ID or list of IDs of the boards from which to retrieve items.
             query_params (str): A set of parameters to filter, sort, and control the scope of the underlying boards query.
                                 Use this to customize the results based on specific criteria. Defaults to None.
             limit (int): The maximum number of items to retrieve per page. Must be > 0 and <= 500. Defaults to 25.
-            fields (str): The fields to include in the response. Defaults to 'items { id name }'.
+            fields (str): The fields to include in the response. Defaults to 'id name'.
+            group_id (str): Only retrieve items from the specified group ID. Default is None.
             paginate_items (bool): Whether to paginate items. Defaults to True.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the combined items retrieved.
+            List[Dict[str, Any]]: A list of dictionaries containing the board IDs and their combined items retrieved.
         """
         input_data = check_schema(
             ItemsPageInput,
@@ -434,6 +437,7 @@ class Items:
             query_params=query_params,
             limit=limit,
             fields=fields,
+            group_id=group_id,
             paginate_items=paginate_items
         )
 
@@ -441,9 +445,13 @@ class Items:
 
         if input_data.paginate_items:
             data = await paginated_item_request(self.client, query_string, limit=input_data.limit)
+            if 'error' in data:
+                check_query_result(data)
+            data = data['items']
         else:
             query_result = await self.client.post_request(query_string)
             data = check_query_result(query_result)
+            data = [{'board_id': board['id'], 'items': board['items_page']['items']} for board in data['data']['boards']]
 
         return data
 
@@ -466,11 +474,12 @@ class Items:
         """
 
     def _build_create_query_string(self, data: CreateItemInput) -> str:
+        column_values = data.column_values or {}
         args = {
             'board_id': data.board_id,
             'item_name': f'"{data.item_name}"',
-            'column_values': json.dumps(json.dumps(data.column_values)),
-            'group_id': f'"{data.group_id}"',
+            'column_values': json.dumps(json.dumps(column_values)),
+            'group_id': f'"{data.group_id}"' if data.group_id else None,
             'create_labels_if_missing': str(data.create_labels_if_missing).lower(),
             'position_relative_method': data.position_relative_method,
             'relative_to': data.relative_to
@@ -520,7 +529,7 @@ class Items:
         args = {
             'item_id': data.item_id,
             'board_id': data.board_id,
-            'group_id': f'"{data.group_id}"' if data.group_id else None,
+            'group_id': f'"{data.group_id}"',
             'columns_mapping': json.dumps(data.columns_mapping),
             'subitems_columns_mapping': json.dumps(data.subitems_columns_mapping)
         }
@@ -605,16 +614,25 @@ class Items:
 
     def _build_by_column_values_query_string(self, data: ItemsPageByColumnValuesInput) -> str:
         args = {
-            'board': data.board_id,
-            'limit': data.limit,
-            'columns': data.columns
+            'board_id': data.board_id,
+            'limit': data.limit
         }
-        args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
+
+        columns_list = []
+        for column in data.columns:
+            column_id_str = f'"{column.column_id}"'
+            column_values_str = '[' + ', '.join(f'"{v}"' for v in column.column_values) + ']'
+            columns_list.append(f'{{column_id: {column_id_str}, column_values: {column_values_str}}}')
+
+        columns_str = '[' + ', '.join(columns_list) + ']'
+        args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
+        args_str += f', columns: {columns_str}'
 
         return f"""
         	query {{
                 items_page_by_column_values ({args_str}) {{
-                    cursor {data.fields}
+                    cursor
+                    items {{ {data.fields} }}
                 }}
             }}
         """
@@ -628,12 +646,19 @@ class Items:
 
         board_ids_string = ', '.join(map(str, data.board_ids))
 
+        group_query = f'groups (ids: "{data.group_id}") {{' if data.group_id else ''
+        group_query_end = '}' if data.group_id else ''
+
         return f"""
             query {{
                 boards (ids: [{board_ids_string}]) {{
+                    id
+                    {group_query}
                     items_page ({args_str}) {{
-                        cursor {data.fields}
+                        cursor
+                        items {{ {data.fields} }}
                     }}
+                    {group_query_end}
                 }}
             }}
         """

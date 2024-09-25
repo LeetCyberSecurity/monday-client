@@ -12,6 +12,7 @@ class ItemsPageInput(BaseModel):
     query_params: Optional[str] = None
     limit: int = Field(default=25, gt=0, le=500)
     fields: str = 'items { id name }'
+    group_id: Optional[str] = None
     paginate_items: bool = True
 
     @field_validator('board_ids')
@@ -37,12 +38,12 @@ class ItemsPageInput(BaseModel):
         except TypeError:
             raise ValueError("board_ids must be int or list of ints") from None
 
-    @field_validator('query_params', 'fields')
+    @field_validator('query_params', 'fields', 'group_id')
     @classmethod
     def ensure_string(cls, v, info):
         """Ensure the input is a non-empty string."""
         field_name = info.field_name
-        if v is None and field_name == 'query_params':
+        if v is None and field_name != 'fields':
             return v
         try:
             v = str(v).strip()

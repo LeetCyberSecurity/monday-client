@@ -9,8 +9,8 @@ class MoveToBoardInput(BaseModel):
     """Input model for moving an item to a different board."""
     item_id: int
     board_id: int
+    group_id: str
     fields: str = 'id'
-    group_id: Optional[str] = None
     columns_mapping: Optional[List[Dict[str, str]]] = None
     subitems_columns_mapping: Optional[List[Dict[str, str]]] = None
 
@@ -30,10 +30,8 @@ class MoveToBoardInput(BaseModel):
     @field_validator('fields', 'group_id')
     @classmethod
     def ensure_string(cls, v, info):
-        """Ensure the input is a non-empty string or None."""
+        """Ensure the input is a non-empty string"""
         field_name = info.field_name
-        if v is None and field_name == 'group_id':
-            return None
         try:
             v = str(v).strip()
             if not v:

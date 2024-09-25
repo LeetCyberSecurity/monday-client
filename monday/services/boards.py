@@ -1,5 +1,6 @@
 """Module for handling Monday.com board operations."""
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
@@ -8,6 +9,7 @@ from .schemas.boards.archive_board_schema import ArchiveBoardInput
 from .schemas.boards.create_board_schema import CreateBoardInput
 from .schemas.boards.delete_board_schema import DeleteBoardInput
 from .schemas.boards.duplicate_board_schema import DuplicateBoardInput
+from .schemas.boards.get_groups_schema import GetGroupsInput
 from .schemas.boards.query_board_schema import QueryBoardInput
 from .schemas.boards.update_board_schema import UpdateBoardInput
 from .utils.data_modifiers import update_items_page_in_place
@@ -169,7 +171,7 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['create_board']
 
     async def duplicate(
         self,
@@ -220,7 +222,7 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['duplicate_board']
 
     async def update(
         self,
@@ -256,7 +258,7 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data
+        return json.loads(data['data']['update_board'])
 
     async def archive(
         self,
@@ -289,7 +291,7 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['archive_board']
 
     async def delete(
         self,
@@ -322,7 +324,40 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data
+        return data['data']['delete_board']
+
+    async def get_groups(
+        self,
+        board_id: int,
+        fields: str = 'title id'
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all group names and IDs from a board ID.
+
+        Args:
+            board_id (int): The ID of the board to query.
+            fields (str): Fields to query back from the groups. Defaults to 'title id'.
+
+        Returns:
+            List[Dict[str, Any]]: List of dictionaries containing group info.
+
+        Raises:
+            ValueError: If board_id is not a positive integer.
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+        input_data = check_schema(
+            GetGroupsInput,
+            board_id=board_id,
+            fields=fields
+        )
+
+        query_string = self._build_get_groups_query_string(input_data)
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['boards'][0]['groups']
 
     async def _paginate_items(
         self,
@@ -350,8 +385,8 @@ class Boards:
             items_page = extract_items_page_value(board)
             if items_page['cursor']:
                 query_result = await paginated_item_request(self.client, query_string, limit=limit, _cursor=items_page['cursor'])
-                data = check_query_result(query_result)
-                items_page['items'].extend(data['items'])
+                items_page['items'].extend(query_result['items'])
+            del items_page['cursor']
             board = update_items_page_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
         return boards_list
 
@@ -368,12 +403,12 @@ class Boards:
         description = data.description.replace('"', '\\"') if data.description else None
         name = data.name.replace('"', '\\"')
         args = {
-            'board_name': name,
+            'board_name': f'"{name}"',
             'board_kind': data.kind if data.kind != 'all' else None,
             'board_owner_ids': f"[{', '.join(map(str, data.owner_ids))}]" if data.owner_ids else None,
             'board_subscriber_ids': f"[{', '.join(map(str, data.subscriber_ids))}]" if data.subscriber_ids else None,
             'board_subscriber_teams_ids': f"[{', '.join(map(str, data.subscriber_teams_ids))}]" if data.subscriber_teams_ids else None,
-            'description': description,
+            'description': f'"{description}"' if description else None,
             'folder_id': data.folder_id,
             'template_id': data.template_id,
             'workspace_id': data.workspace_id
@@ -398,9 +433,10 @@ class Boards:
         Returns:
             str: Formatted GraphQL query string.
         """
+        board_name = data.board_name.replace('"', '\\"') if data.board_name else None
         args = {
             'board_id': data.board_id,
-            'board_name': data.board_name,
+            'board_name': f'"{board_name}"' if board_name else None,
             'duplicate_type': data.duplicate_type,
             'folder_id': data.folder_id,
             'keep_subscribers': str(data.keep_subscribers).lower(),
@@ -479,7 +515,7 @@ class Boards:
 
         return f"""
             mutation {{
-                delete ({args_str}) {{
+                delete_board ({args_str}) {{
                     {data.fields}
                 }}
             }}
@@ -490,8 +526,8 @@ class Boards:
         Build GraphQL query string for board queries.
 
         Args:
-            fields (str): Fields to include in the query.
-            item_fields (str): Fields for item queries.
+            data (QueryBoardInput): Board query input data.
+            page (int): Page on which to begin query
 
         Returns:
             str: Formatted GraphQL query string.
@@ -511,6 +547,27 @@ class Boards:
             query {{
                 boards ({args_str}) {{
                     {data.fields}
+                }}
+            }}
+        """
+
+    def _build_get_groups_query_string(self, data: GetGroupsInput) -> str:
+        """
+        Build GraphQL query string for board group queries.
+
+        Args:
+            data (GetGroupsInput): Board group query input data.
+
+        Returns:
+            str: Formatted GraphQL query string.
+        """
+
+        return f"""
+            query {{
+                boards (ids: {data.board_id}) {{
+                    groups {{
+                        {data.fields}
+                    }}
                 }}
             }}
         """

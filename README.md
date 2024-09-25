@@ -1,15 +1,18 @@
 # Monday.com API Client
 
-This Python library provides a convenient way to interact with the Monday.com API.
+This Python library provides an **asynchronous** client to interact with the [Monday.com API](https://api.developer.monday.com/docs).
 
-Key features include:
-- Automatic handling of API rate limits and query limits
-- Easy-to-use methods for common Monday.com operations
-- Ability to send fully customizable requests with all Monday.com method arguments and fields available to the user 
+## Key Features
+
+- **Asynchronous API calls** using `asyncio` and `aiohttp` for efficient I/O operations.
+- **Automatic handling of API rate limits and query limits** following Monday.com's rate limit policies.
+- **Built-in retry logic** for handling rate limit exceptions, ensuring smooth operation without manual intervention.
+- **Easy-to-use methods** for common Monday.com operations.
+- **Fully customizable requests** with all Monday.com method arguments and fields available to the user.
 
 ## Installation
 
-You can install the library from this private repo using pip:
+You can install the library from this private repository using pip:
 
 ```bash
 pip install git+ssh://git@github.com/LeetCyberSecurity/monday-client
@@ -18,11 +21,52 @@ pip install git+ssh://git@github.com/LeetCyberSecurity/monday-client
 ## Quick Start
 
 ```python
+import asyncio
+
 from monday import MondayClient
 
-client = MondayClient(api_key='your_api_key_here')
+async def main():
+    client = MondayClient(api_key='your_api_key_here')
+    boards = await client.boards.query(board_ids=[1234567890, 1234567891])
+    items_page = await client.items.items_page(board_ids=[1234567890, 1234567891])
 
-boards = client.boards.query(board_ids=[1234567890, 1234567891])
+asyncio.run(main())
+```
 
-items_page = client.items.items_page(board_ids=[1234567890, 1234567891])
+
+## Usage
+
+### Asynchronous Operations
+
+All methods provided by the `MondayClient` are asynchronous and should be awaited. This allows for efficient concurrent execution of API calls.
+
+### Rate Limiting and Retry Logic
+
+The client automatically handles rate limiting in compliance with Monday.com's API policies. When a rate limit is reached, the client will wait for the specified reset time before retrying the request. This ensures that your application doesn't need to manually handle rate limit exceptions and can operate smoothly.
+
+### Error Handling
+
+Custom exceptions are defined for handling specific error cases:
+
+- `MondayAPIError`: Raised when an error occurs during API communication with Monday.com.
+- `PaginationError`: Raised when item pagination fails during a request.
+- `QueryFormatError`: Raised when there is a query formatting error.
+
+These exceptions are handled internally by the client during retries. If the maximum number of retries is exceeded, the client will return an error response.
+
+- `ComplexityLimitExceeded`: Raised when the complexity limit is exceeded.
+- `MutationLimitExceeded`: Raised when the mutation limit is exceeded.
+
+### Logging
+
+The client uses a logger named `monday_client` for all logging operations. By default, a `NullHandler` is added to suppress logging output. To enable logging, you can configure the logger in your application:
+
+```python
+import logging
+
+logger = logging.getLogger('monday_client')
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 ```
