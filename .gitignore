@@ -22,6 +22,7 @@ MANIFEST
 .pytest_cache/
 docs/make.bat
 docs/Makefile
+env-test/
 fake_client.py
 monday-env/
 old/

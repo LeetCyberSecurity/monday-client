@@ -12,10 +12,8 @@ This Python library provides an **asynchronous** client to interact with the [Mo
 
 ## Installation
 
-You can install the library from this private repository using pip:
-
 ```bash
-pip install git+ssh://git@github.com/LeetCyberSecurity/monday-client
+pip install monday-client
 ```
 
 ## Quick Start

@@ -2,9 +2,12 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["monday"]
+
 [project]
 name = "monday-client"
-version = "0.1.20"
+version = "0.1.21"
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,7 +28,10 @@ dependencies = [
     "pydantic",
     "requests"
 ]
+keywords = ["monday", "api", "client", "async", "rate-limiting", "complexity-limiting"]
 
 [project.urls]
+"Homepage" = "https://github.com/LeetCyberSecurity/monday-client"
+"Documentation" = "https://monday-client.readthedocs.io/"
 "Bug Reports" = "https://github.com/LeetCyberSecurity/monday-client/issues"
 "Source" = "https://github.com/LeetCyberSecurity/monday-client"
