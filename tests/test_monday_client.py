@@ -1,3 +1,20 @@
+# This file is part of monday-client.
+#
+# Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
+#
+# monday-client is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# monday-client is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with monday-client. If not, see <https://www.gnu.org/licenses/>.
+
 import time
 from unittest.mock import MagicMock, call, patch
 
@@ -14,6 +31,8 @@ def monday_client():
     return MondayClient("test_api_key")
 
 # Test to verify retry logic when complexity limit is exceeded and then succeeds
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 @patch('monday.client.time.sleep')  # Mock the time.sleep method
 def test_complexity_limit_exceeded_retry_success(mock_sleep, mock_post, monday_client):
@@ -44,6 +63,8 @@ def test_complexity_limit_exceeded_retry_success(mock_sleep, mock_post, monday_c
     assert result == {'data': 'success'}
 
 # Test to verify behavior when complexity limit is exceeded and max retries are reached
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 @patch('monday.client.time.sleep')  # Mock the time.sleep method
 def test_complexity_limit_exceeded_max_retries(mock_sleep, mock_post, monday_client):
@@ -73,6 +94,8 @@ def test_complexity_limit_exceeded_max_retries(mock_sleep, mock_post, monday_cli
     assert str(exc_info.value) == "Complexity limit exceeded, retrying after 10 seconds..."
 
 # Test to verify successful request without any exceptions
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 def test_successful_request(mock_post, monday_client):
     # Mock a successful response
@@ -87,6 +110,8 @@ def test_successful_request(mock_post, monday_client):
     assert mock_post.call_count == 1
 
 # Test to verify behavior when mutation limit is exceeded and retries are performed
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 @patch('monday.client.time.sleep')  # Mock the time.sleep method
 def test_mutation_limit_exceeded_with_retries(mock_sleep, mock_post, monday_client):
@@ -116,6 +141,8 @@ def test_mutation_limit_exceeded_with_retries(mock_sleep, mock_post, monday_clie
     assert str(exc_info.value) == "Mutation per minute limit exceeded, retrying after 60 seconds..."
 
 # Test to verify rate limiting logic
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 @patch('monday.client.time.sleep')  # Mock the time.sleep method
 @patch('monday.client.Limiter.try_acquire')  # Mock the Limiter.try_acquire method
@@ -156,6 +183,8 @@ def test_rate_limiting_logic(mock_try_acquire, mock_sleep, mock_post, monday_cli
     assert mock_post.call_count == 1
 
 # Test to verify successful paginated request
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_success(mock_post, monday_client):
     # Mock a successful response with pagination
@@ -194,6 +223,8 @@ def test_paginated_item_request_success(mock_post, monday_client):
     assert result['completed'] is True
 
 # Test to verify behavior when an error occurs in the response
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_error(mock_post, monday_client):
     # Mock an error response
@@ -212,6 +243,8 @@ def test_paginated_item_request_error(mock_post, monday_client):
     assert 'error' in result
 
 # Test to verify behavior when no items are found in the response
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_no_items(mock_post, monday_client):
     # Mock a response with no items
@@ -239,6 +272,8 @@ def test_paginated_item_request_no_items(mock_post, monday_client):
     assert result['completed'] is True
 
 # Test to verify behavior when the cursor cannot be extracted
+
+
 @patch('monday.client.requests.post')  # Mock the requests.post method
 def test_paginated_item_request_no_cursor(mock_post, monday_client):
     # Mock a response with no cursor

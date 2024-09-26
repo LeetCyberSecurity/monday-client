@@ -24,3 +24,4 @@ fake_client.py
 monday-env/
 old/
 services/models
+setup.py

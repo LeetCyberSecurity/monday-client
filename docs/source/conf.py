@@ -1,3 +1,25 @@
+# This file is part of monday-client.
+#
+# Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
+#
+# monday-client is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# monday-client is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with monday-client. If not, see <https://www.gnu.org/licenses/>.
+
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -12,9 +34,9 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
 project = 'monday-client'
-copyright = '2024, Dan Hollis'
+copyright = '2024, Leet Cyber Security'
 author = 'Dan Hollis'
-release = '0.1.19'
+release = '0.1.20'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
