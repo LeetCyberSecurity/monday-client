@@ -236,10 +236,17 @@ class MondayClient:
 
                 return response_data
 
-            except (ComplexityLimitExceeded, MutationLimitExceeded, aiohttp.ClientError) as e:
+            except (ComplexityLimitExceeded, MutationLimitExceeded) as e:
                 if attempt < self.max_retries - 1:
                     self.logger.warning("Attempt %d failed: %s. Retrying...", attempt + 1, str(e))
                     await asyncio.sleep(e.reset_in)
+                else:
+                    self.logger.error("Max retries reached. Last error: %s", str(e))
+                    return {'error': str(e)}
+            except aiohttp.ClientError as e:
+                if attempt < self.max_retries - 1:
+                    self.logger.warning("Attempt %d failed due to ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
+                    await asyncio.sleep(60)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
                     return {'error': str(e)}
