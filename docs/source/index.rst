@@ -1,16 +1,32 @@
-.. monday-client documentation master file, created by
-   sphinx-quickstart on Wed Sep 25 19:54:49 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to monday-client's documentation!
 =========================================
 
+.. image:: _static/leet_logo.png
+   :alt: monday-client Logo
+   :align: center
+
+Introduction
+------------
+This is the official documentation for the `monday-client` library. This documentation will help you understand how to use the library to interact with the Monday.com API efficiently.
+
+.. contents:: Table of Contents
+   :depth: 3
+   :local:
+
+.. toctree::
+   :maxdepth: 3
+   :caption: README
+
+   readme
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: API Documentation
 
-   modules
+   mondayclient
+   items
+   boards
+   exceptions
 
 Indices and tables
 ==================
