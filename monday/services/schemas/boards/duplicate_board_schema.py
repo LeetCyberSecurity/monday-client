@@ -11,17 +11,6 @@ class DuplicateBoardInput(BaseModel):
 
     This model validates and normalizes the input parameters for the board duplication process.
     It ensures that only one board is being duplicated and that all input values are in the correct format.
-
-    Attributes:
-        board_id (int): The ID of the board to duplicate.
-        board_name (Optional[str]): The name for the duplicated board. If not provided, Monday.com will auto-generate a name.
-        duplicate_type (Literal): The type of duplication to perform. Defaults to 'duplicate_board_with_structure'.
-        folder_id (Optional[int]): The ID of the folder to place the duplicated board in.
-        keep_subscribers (bool): Whether to keep the subscribers from the original board. Defaults to False.
-        workspace_id (Optional[int]): The ID of the workspace to place the duplicated board in.
-
-    Note:
-        Only one board can be duplicated at a time.
     """
     board_id: int
     fields: str = 'id'

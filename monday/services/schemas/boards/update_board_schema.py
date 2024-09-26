@@ -11,11 +11,6 @@ class UpdateBoardInput(BaseModel):
 
     This model validates and normalizes the input parameters for the board update process.
     It ensures that only one board is being updated and that all input values are in the correct format.
-
-    Attributes:
-        board_id (int): The ID of the board to update. Can only be called on a single board ID
-        board_attribute (Literal): The board's attribute to update.
-        new_value (str): The new attribute value.
     """
     board_id: int
     board_attribute: Literal['communication', 'description', 'name']

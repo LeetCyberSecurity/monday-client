@@ -9,7 +9,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 project = 'monday-client'
 copyright = '2024, Dan Hollis'
@@ -21,15 +21,20 @@ release = '0.1.19'
 
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx_autodoc_typehints'
+    'sphinx.ext.napoleon',
+    'sphinx_autodoc_typehints',
+    'sphinx_rtd_theme',
 ]
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = []
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
+autodoc_member_order = 'bysource'
+autodoc_typehints = 'description'
