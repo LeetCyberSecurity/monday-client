@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 project = 'monday-client'
 copyright = '2024, Leet Cyber Security'
 author = 'Dan Hollis'
-release = '0.1.21'
+release = '0.1.23'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

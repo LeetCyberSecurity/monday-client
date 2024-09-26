@@ -7,11 +7,11 @@ packages = ["monday"]
 
 [project]
 name = "monday-client"
-version = "0.1.22"
+version = "0.1.23"
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "GPL-3.0-only" }
+license = { file = "LICENSE" }
 authors = [
     { name = "Dan Hollis", email = "dh@leetsys.com" }
 ]
