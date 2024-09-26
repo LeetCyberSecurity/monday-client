@@ -70,3 +70,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(handler)
 ```
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [COPYING](COPYING) file for details.
