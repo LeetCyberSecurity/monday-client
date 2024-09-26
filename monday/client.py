@@ -43,36 +43,33 @@ class MondayClient:
 
     Args:
             api_key (str): The API key for authenticating with the Monday.com API.
+    """
+
+    logger = logging.getLogger(__name__)
+    """
+    Class-level logger named 'monday_client' for all logging operations.
 
     Note:
-            Logging can be controlled by configuring the 'monday_client' logger.
-            By default, a NullHandler is added to the logger, which suppresses all output.
-            To enable logging, configure the logger in your application code. For example:
+        Logging can be controlled by configuring this logger.
+        By default, a NullHandler is added to the logger, which suppresses all output.
+        To enable logging, configure the logger in your application code. For example:
 
-            ```python
+        .. code-block:: python
+
             import logging
             logger = logging.getLogger('monday_client')
             logger.setLevel(logging.INFO)
             handler = logging.StreamHandler()
             handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
             logger.addHandler(handler)
-            ```
 
-            To disable all logging (including warnings and errors):
+        To disable all logging (including warnings and errors):
 
-            ```python
+        .. code-block:: python
+
             import logging
             logging.getLogger('monday_client').disabled = True
-            ```
-
-    Example:
-            ```python
-            from monday_client import MondayClient
-            client = MondayClient(api_key='your_api_key')
-            ```
     """
-
-    logger = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -100,8 +97,8 @@ class MondayClient:
         """
         Query boards to return metadata about one or multiple boards.
 
-        This method is a wrapper for the Boards.query() method.
-        For detailed information on parameters and usage, refer to the Boards.query() method documentation.
+        This method is a wrapper for the :meth:`Boards.query() <monday.services.boards.Boards.query>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.query() <monday.services.boards.Boards.query>` method documentation.
 
         Returns:
             List[Dict[str, Any]]: List of dictionaries containing queried board data.
@@ -118,8 +115,8 @@ class MondayClient:
         """
         Create a new board.
 
-        This method is a wrapper for the Boards.create() method.
-        For detailed information on parameters and usage, refer to the Boards.create() method documentation.
+        This method is a wrapper for the :meth:`Boards.create() <monday.services.boards.Boards.create>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.create() <monday.services.boards.Boards.create>` method documentation.
 
         Returns:
             Dict[str, Any]: Dictionary containing info for the new board.
@@ -134,8 +131,8 @@ class MondayClient:
         """
         Duplicate a board.
 
-        This method is a wrapper for the Boards.duplicate() method.
-        For detailed information on parameters and usage, refer to the Boards.duplicate() method documentation.
+        This method is a wrapper for the :meth:`Boards.duplicate() <monday.services.boards.Boards.duplicate>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.duplicate() <monday.services.boards.Boards.duplicate>` method documentation.
 
         Returns:
             Dict[str, Any]: Dictionary containing info for the new board.
@@ -150,8 +147,8 @@ class MondayClient:
         """
         Update a board.
 
-        This method is a wrapper for the Boards.update() method.
-        For detailed information on parameters and usage, refer to the Boards.update() method documentation.
+        This method is a wrapper for the :meth:`Boards.update() <monday.services.boards.Boards.update>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.update() <monday.services.boards.Boards.update>` method documentation.
 
         Returns:
             Dict[str, Any]: Dictionary containing updated board info.
@@ -166,8 +163,8 @@ class MondayClient:
         """
         Archive a board.
 
-        This method is a wrapper for the Boards.archive() method.
-        For detailed information on parameters and usage, refer to the Boards.archive() method documentation.
+        This method is a wrapper for the :meth:`Boards.archive() <monday.services.boards.Boards.archive>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.archive() <monday.services.boards.Boards.archive>` method documentation.
 
         Returns:
             Dict[str, Any]: Dictionary containing archived board info.
@@ -182,8 +179,8 @@ class MondayClient:
         """
         Delete a board.
 
-        This method is a wrapper for the Boards.delete() method.
-        For detailed information on parameters and usage, refer to the Boards.delete() method documentation.
+        This method is a wrapper for the :meth:`Boards.delete() <monday.services.boards.Boards.delete>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.delete() <monday.services.boards.Boards.delete>` method documentation.
 
         Returns:
             Dict[str, Any]: Dictionary containing deleted board info.
@@ -198,8 +195,8 @@ class MondayClient:
         """
         Query paginated items by their column values.
 
-        This method is a wrapper for the Items.items_page_by_column_values() method.
-        For detailed information on parameters and usage, refer to the Items.items_page_by_column_values() method documentation.
+        This method is a wrapper for the :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` method documentation.
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries containing the combined items retrieved.
