@@ -72,7 +72,8 @@ class Boards:
     Each method in this class corresponds to a specific Monday.com API endpoint,
     providing a pythonic interface for board-related operations.
 
-    Note: This class requires an initialized MondayClient instance for making API requests.
+    Note:
+        This class requires an initialized MondayClient instance for making API requests.
     """
 
     logger: logging.Logger = logging.getLogger(__name__)

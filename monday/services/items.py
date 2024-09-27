@@ -73,7 +73,8 @@ class Items:
     Each method in this class corresponds to a specific Monday.com API endpoint,
     providing a pythonic interface for item-related operations.
 
-    Note: This class requires an initialized MondayClient instance for making API requests.
+    Note:
+        This class requires an initialized MondayClient instance for making API requests.
     """
 
     logger = logging.getLogger(__name__)
@@ -115,7 +116,7 @@ class Items:
             ValueError: If input parameters are invalid.
 
         Note:
-            To return all items on a board, use :meth:`Items.items_page() <monday.services.items.Items.items_page>` or :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` instead.
+            To return all items on a board, use :meth:`Items.items_page() <monday.Items.items_page>` or :meth:`Items.items_page_by_column_values() <monday.Items.items_page_by_column_values>` instead.
         """
         input_data = check_schema(
             QueryItemInput,

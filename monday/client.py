@@ -123,8 +123,8 @@ class MondayClient:
         """
         Query boards to return metadata about one or multiple boards.
 
-        This method is a wrapper for the :meth:`Boards.query() <monday.services.boards.Boards.query>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.query() <monday.services.boards.Boards.query>` method documentation.
+        This method is a wrapper for the :meth:`Boards.query() <monday.Boards.query>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.query() <monday.Boards.query>` method documentation.
 
         Returns:
             Dictionary containing queried board data.
@@ -141,8 +141,8 @@ class MondayClient:
         """
         Create a new board.
 
-        This method is a wrapper for the :meth:`Boards.create() <monday.services.boards.Boards.create>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.create() <monday.services.boards.Boards.create>` method documentation.
+        This method is a wrapper for the :meth:`Boards.create() <monday.Boards.create>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.create() <monday.Boards.create>` method documentation.
 
         Returns:
             Dictionary containing info for the new board.
@@ -157,8 +157,8 @@ class MondayClient:
         """
         Duplicate a board.
 
-        This method is a wrapper for the :meth:`Boards.duplicate() <monday.services.boards.Boards.duplicate>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.duplicate() <monday.services.boards.Boards.duplicate>` method documentation.
+        This method is a wrapper for the :meth:`Boards.duplicate() <monday.Boards.duplicate>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.duplicate() <monday.Boards.duplicate>` method documentation.
 
         Returns:
             Dictionary containing info for the new board.
@@ -173,8 +173,8 @@ class MondayClient:
         """
         Update a board.
 
-        This method is a wrapper for the :meth:`Boards.update() <monday.services.boards.Boards.update>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.update() <monday.services.boards.Boards.update>` method documentation.
+        This method is a wrapper for the :meth:`Boards.update() <monday.Boards.update>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.update() <monday.Boards.update>` method documentation.
 
         Returns:
             Dictionary containing updated board info.
@@ -189,8 +189,8 @@ class MondayClient:
         """
         Archive a board.
 
-        This method is a wrapper for the :meth:`Boards.archive() <monday.services.boards.Boards.archive>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.archive() <monday.services.boards.Boards.archive>` method documentation.
+        This method is a wrapper for the :meth:`Boards.archive() <monday.Boards.archive>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.archive() <monday.Boards.archive>` method documentation.
 
         Returns:
             Dictionary containing archived board info.
@@ -205,8 +205,8 @@ class MondayClient:
         """
         Delete a board.
 
-        This method is a wrapper for the :meth:`Boards.delete() <monday.services.boards.Boards.delete>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.delete() <monday.services.boards.Boards.delete>` method documentation.
+        This method is a wrapper for the :meth:`Boards.delete() <monday.Boards.delete>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Boards.delete() <monday.Boards.delete>` method documentation.
 
         Returns:
             Dictionary containing deleted board info.
@@ -221,8 +221,8 @@ class MondayClient:
         """
         Query paginated items by their column values.
 
-        This method is a wrapper for the :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` method documentation.
+        This method is a wrapper for the :meth:`Items.items_page_by_column_values() <monday.Items.items_page_by_column_values>` method.
+        For detailed information on parameters and usage, refer to the :meth:`Items.items_page_by_column_values() <monday.Items.items_page_by_column_values>` method documentation.
 
         Returns:
             Dictionary containing the items retrieved.
