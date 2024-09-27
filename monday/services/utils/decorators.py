@@ -26,10 +26,10 @@ def board_action(method_name: str) -> Callable:
     Decorator for board actions.
 
     Args:
-        method_name (str): The name of the method to be decorated.
+        method_name: The name of the method to be decorated.
 
     Returns:
-        Callable: A decorator function.
+        A decorator function.
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
@@ -46,10 +46,10 @@ def item_action(method_name: str) -> Callable:
     Decorator for item actions.
 
     Args:
-        method_name (str): The name of the method to be decorated.
+        method_name: The name of the method to be decorated.
 
     Returns:
-        Callable: A decorator function.
+        A decorator function.
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)

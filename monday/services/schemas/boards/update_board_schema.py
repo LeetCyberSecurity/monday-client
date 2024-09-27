@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Defines the schema for updating a board in the Monday service."""
+"""Defines the schema for updating a board."""
 
 from typing import Literal
 
@@ -23,12 +23,7 @@ from pydantic import BaseModel, field_validator
 
 
 class UpdateBoardInput(BaseModel):
-    """
-    Input model for updating a board on Monday.com.
-
-    This model validates and normalizes the input parameters for the board update process.
-    It ensures that only one board is being updated and that all input values are in the correct format.
-    """
+    """Input model for updating a board."""
     board_id: int
     board_attribute: Literal['communication', 'description', 'name']
     new_value: str

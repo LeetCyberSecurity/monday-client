@@ -40,7 +40,7 @@ class MondayAPIError(Exception):
 
     Attributes:
         message (str): Explanation of the error.
-        json_data (Dict[str, Any], optional): JSON data returned by the API, if available.
+        json_data (Dict[str, Any]): JSON data returned by the API, if available.
     """
 
     def __init__(self, message, json_data: Optional[Dict[str, Any]] = None):

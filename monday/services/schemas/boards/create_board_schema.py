@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Defines the schema for creating a board in the Monday service."""
+"""Defines the schema for creating a board."""
 
 from typing import List, Literal, Optional
 

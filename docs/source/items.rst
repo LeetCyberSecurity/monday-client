@@ -19,7 +19,7 @@
 Items
 -----
 
-.. autoclass:: monday.services.items.Items
+.. autoclass:: monday.Items
    :members:
    :undoc-members:
    :show-inheritance:

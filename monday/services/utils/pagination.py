@@ -35,10 +35,10 @@ def extract_items_page_value(data):
     Recursively extract the 'items_page' value from a nested dictionary or list.
 
     Args:
-        data (dict or list): The dictionary or list to search.
+        data: The dictionary or list to search.
 
     Returns:
-        dict or None: The 'items_page' value if found; otherwise, None.
+        The 'items_page' value if found; otherwise, None.
     """
     if isinstance(data, dict):
         for key, value in data.items():
@@ -61,10 +61,10 @@ def extract_cursor_from_response(response_data: Dict[str, Any]) -> Optional[str]
     Recursively extract the 'cursor' value from the response data.
 
     Args:
-        response_data (Dict[str, Any]): The response data containing the cursor information.
+        response_data: The response data containing the cursor information.
 
     Returns:
-        Optional[str]: The extracted cursor value, or None if not found.
+       The extracted cursor value, or None if not found.
     """
     if isinstance(response_data, dict):
         for key, value in response_data.items():
@@ -87,10 +87,10 @@ def extract_items_from_response(data: Any) -> List[Dict[str, Any]]:
     Recursively extract items from the response data.
 
     Args:
-        data (Any): The response data containing the items.
+        data: The response data containing the items.
 
     Returns:
-        List[Dict[str, Any]]: A list of extracted items.
+        A list of extracted items.
     """
     items = []
 
@@ -112,10 +112,10 @@ def extract_items_from_query(query: str) -> Optional[str]:
     Extract the items block from the query string.
 
     Args:
-        query (str): The GraphQL query string containing the items block.
+        query: The GraphQL query string containing the items block.
 
     Returns:
-        Optional[str]: The items block as a string, or None if not found.
+        The items block as a string, or None if not found.
     """
     # Find the starting index of 'items {'
     start_index = query.find('items {')
@@ -159,14 +159,13 @@ async def paginated_item_request(
     Executes a paginated request to retrieve items from Monday.com.
 
     Args:
-        client (MondayClient): The MondayClient instance to execute the request.
-        query (str): The GraphQL query string.
-        limit (int, optional): Maximum items per page. Defaults to 25.
-        _cursor (str, optional): Starting cursor for pagination. Defaults to None.
+        client: The MondayClient instance to execute the request.
+        query: The GraphQL query string.
+        limit: Maximum items per page. Defaults to 25.
+        _cursor: Starting cursor for pagination. Defaults to None.
 
     Returns:
-        Dict[str, Any]: A dictionary containing:
-        - 'items': List of retrieved items.
+        A dictionary containing the list of retrieved items.
 
     Raises:
         PaginationError: If item extraction fails.

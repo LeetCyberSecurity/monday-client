@@ -17,7 +17,7 @@
 
 """Monday API client and related utilities."""
 
-__version__ = "0.1.30"
+__version__ = "0.1.31"
 __authors__ = [
     {"name": "Dan Hollis", "email": "dh@leetsys.com"}
 ]
@@ -26,3 +26,4 @@ from .client import MondayClient
 from .exceptions import (ComplexityLimitExceeded, MondayAPIError,
                          MutationLimitExceeded, PaginationError,
                          QueryFormatError)
+from .services import Boards, Items

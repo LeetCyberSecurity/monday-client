@@ -15,7 +15,29 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Client module for interacting with the Monday.com API."""
+"""
+Client module for interacting with the Monday.com API.
+
+This module provides a comprehensive client for interacting with the Monday.com GraphQL API.
+It includes the MondayClient class, which handles authentication, rate limiting, pagination,
+and various API operations for boards and items.
+
+Key features:
+- Asynchronous API requests using aiohttp
+- Rate limiting and automatic retries
+- Error handling for API-specific exceptions
+- Convenient methods for common board and item operations
+- Logging support for debugging and monitoring
+
+Classes:
+    MondayClient: The main client class for interacting with the Monday.com API.
+
+Usage:
+    from monday.client import MondayClient
+
+    client = MondayClient(api_key='your_api_key')
+    # Use client methods to interact with the Monday.com API
+"""
 
 import asyncio
 import logging
@@ -39,11 +61,12 @@ class MondayClient:
     It uses a class-level logger named 'monday_client' for all logging operations.
 
     Attributes:
-            url (str): The endpoint URL for the Monday.com API.
-            headers (dict): HTTP headers used for API requests, including authentication.
-
-    Args:
-            api_key (str): The API key for authenticating with the Monday.com API.
+        url (str): The endpoint URL for the Monday.com API.
+        headers (Dict[str, str]): HTTP headers used for API requests, including authentication.
+        max_retries (int): Maximum number of retry attempts for API requests.
+        boards (Boards): Service for board-related operations.
+        items (Items): Service for item-related operations.
+        _rate_limit_seconds (int): Rate limit in seconds for API requests.
     """
 
     logger = logging.getLogger(__name__)
@@ -76,22 +99,24 @@ class MondayClient:
         self,
         api_key: str,
         url: str = 'https://api.monday.com/v2',
-        headers: Optional[Dict[str, Any]] = None
+        headers: Optional[Dict[str, Any]] = None,
+        max_retries: int = 4
     ):
         """
         Initialize the MondayClient with the provided API key.
 
         Args:
-            api_key (str): The API key for authenticating with the Monday.com API.
-            url (str): The endpoint URL for the Monday.com API. Defaults to 'https://api.monday.com/v2'.
-            headers ([Dict[str, Any]]): Additional HTTP headers used for API requests. Defaults to None.
+            api_key: The API key for authenticating with the Monday.com API.
+            url: The endpoint URL for the Monday.com API. Defaults to 'https://api.monday.com/v2'.
+            headers: Additional HTTP headers used for API requests. Defaults to None.
+            max_retries: Maximum amount of retry attempts before raising an error. Defaults to 4.
         """
         self.url = url
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
-        self.rate_limit_seconds = 60
-        self.max_retries = 4
+        self.max_retries = int(max_retries)
         self.boards = Boards(self)
         self.items = Items(self)
+        self._rate_limit_seconds = 60
 
     @board_action('query')
     async def query_board(self, **kwargs) -> Dict[str, Any]:
@@ -102,7 +127,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Boards.query() <monday.services.boards.Boards.query>` method documentation.
 
         Returns:
-            List[Dict[str, Any]]: List of dictionaries containing queried board data.
+            Dictionary containing queried board data.
 
         Raises:
             QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
@@ -120,7 +145,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Boards.create() <monday.services.boards.Boards.create>` method documentation.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the new board.
+            Dictionary containing info for the new board.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -136,7 +161,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Boards.duplicate() <monday.services.boards.Boards.duplicate>` method documentation.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the new board.
+            Dictionary containing info for the new board.
 
         Raises:
             ValueError: If input parameters are invalid.
@@ -152,7 +177,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Boards.update() <monday.services.boards.Boards.update>` method documentation.
 
         Returns:
-            Dict[str, Any]: Dictionary containing updated board info.
+            Dictionary containing updated board info.
 
         Raises:
             ValueError: If input parameters are invalid.
@@ -168,7 +193,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Boards.archive() <monday.services.boards.Boards.archive>` method documentation.
 
         Returns:
-            Dict[str, Any]: Dictionary containing archived board info.
+            Dictionary containing archived board info.
 
         Raises:
             ValueError: If board_id is not a positive integer.
@@ -184,7 +209,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Boards.delete() <monday.services.boards.Boards.delete>` method documentation.
 
         Returns:
-            Dict[str, Any]: Dictionary containing deleted board info.
+            Dictionary containing deleted board info.
 
         Raises:
             ValueError: If board_id is not a positive integer.
@@ -200,7 +225,7 @@ class MondayClient:
         For detailed information on parameters and usage, refer to the :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` method documentation.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the combined items retrieved.
+            Dictionary containing the items retrieved.
 
         Raises:
             ValueError: If board_id is not a positive integer.
@@ -212,10 +237,15 @@ class MondayClient:
         Executes an asynchronous post request to the Monday.com API with rate limiting and retry logic.
 
         Args:
-                query (str): The GraphQL query string to be executed.
+            query: The GraphQL query string to be executed.
 
         Returns:
-                Dict[str, Any]: The response data from the API.
+            The response data from the API.
+
+        Raises:
+            ComplexityLimitExceeded: If the complexity limit is exceeded.
+            MutationLimitExceeded: If the mutation limit is exceeded.
+            aiohttp.ClientError: If there's a client-side error during the request.
         """
         for attempt in range(self.max_retries):
             try:
@@ -231,7 +261,7 @@ class MondayClient:
                             return {'error': response_data}
                         raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in)
                     if 'status_code' in response_data and int(response_data['status_code']) == 429:
-                        reset_in = self.rate_limit_seconds
+                        reset_in = self._rate_limit_seconds
                         raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in)
                     return {'error': response_data}
 
@@ -247,14 +277,26 @@ class MondayClient:
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
                     self.logger.warning("Attempt %d failed due to ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
-                    await asyncio.sleep(60)
+                    await asyncio.sleep(self._rate_limit_seconds)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
                     return {'error': f"Max retries reached. Last error: {str(e)}"}
 
         return {'error': f'Max retries reached: {response_data}'}
 
-    async def _execute_request(self, query: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_request(self, query: str) -> Dict[str, Any]:
+        """
+        Executes a single API request.
+
+        Args:
+            query: The GraphQL query to be executed.
+
+        Returns:
+            The JSON response from the API.
+
+        Raises:
+            aiohttp.ClientError: If there's a client-side error during the request.
+        """
         async with aiohttp.ClientSession() as session:
             async with session.post(self.url, json={'query': query}, headers=self.headers) as response:
                 return await response.json()

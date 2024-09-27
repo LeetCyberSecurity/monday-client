@@ -9,7 +9,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/LeetCyberSecurity/monday-client.svg)](https://github.com/LeetCyberSecurity/monday-client/issues)
 [![GitHub last commit](https://img.shields.io/github/last-commit/LeetCyberSecurity/monday-client.svg)](https://github.com/LeetCyberSecurity/monday-client/commits/main)
 
-This Python library provides an **asynchronous** client to interact with the [Monday.com API](https://api.developer.monday.com/docs).
+This Python library provides an **asynchronous** client to interact with the [Monday.com API](https://developer.monday.com/api-reference/reference/about-the-api-reference).
 
 ## Documentation
 

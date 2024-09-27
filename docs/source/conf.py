@@ -89,6 +89,7 @@ autodoc_default_options = {
     'undoc-members': True,
     'exclude-members': '__weakref__'
 }
+add_module_names = False
 
 # Napoleon settings
 napoleon_google_docstring = True

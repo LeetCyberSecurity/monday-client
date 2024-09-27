@@ -17,9 +17,9 @@
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 Boards
---------
+------
 
-.. autoclass:: monday.services.boards.Boards
+.. autoclass:: monday.Boards
    :members:
    :undoc-members:
    :show-inheritance:

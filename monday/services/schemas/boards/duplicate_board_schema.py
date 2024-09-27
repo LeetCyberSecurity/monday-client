@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Defines the schema for duplicating a board in the Monday service."""
+"""Defines the schema for duplicating a board."""
 
 from typing import Literal, Optional
 
@@ -23,12 +23,7 @@ from pydantic import BaseModel, field_validator
 
 
 class DuplicateBoardInput(BaseModel):
-    """
-    Input model for duplicating a board on Monday.com.
-
-    This model validates and normalizes the input parameters for the board duplication process.
-    It ensures that only one board is being duplicated and that all input values are in the correct format.
-    """
+    """Input model for duplicating a board."""
     board_id: int
     fields: str = 'id'
     board_name: Optional[str] = None

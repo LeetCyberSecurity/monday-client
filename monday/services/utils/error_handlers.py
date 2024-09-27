@@ -33,10 +33,10 @@ def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
     This function examines the query result dictionary for error indicators and handles them appropriately.
 
     Args:
-        query_result (Dict[str, Any]): The response dictionary from a Monday.com API query.
+        query_result: The response dictionary from a Monday.com API query.
 
     Returns:
-        Dict[str, Any]: The original query_result if no errors are found.
+        The original query_result if no errors are found.
 
     Raises:
         MondayAPIError: If an error is found in the query result or if the response structure is unexpected.
@@ -59,14 +59,14 @@ def check_schema(schema: Type[T], **kwargs) -> T:
     If validation fails, it raises a ValueError with detailed error messages.
 
     Args:
-        schema (Type[T]): A Pydantic model class to validate against. This should be a subclass of BaseModel
+        schema: A Pydantic model class to validate against. This should be a subclass of BaseModel
                           that defines the expected structure and validation rules for the input data.
                           Examples include CreateBoardInput, DuplicateBoardInput, QueryBoardInput, etc.
         **kwargs: Keyword arguments representing the data to be validated.
                   These should match the fields defined in the schema class.
 
     Returns:
-        T: An instance of the schema class if validation succeeds.
+        An instance of the schema class if validation succeeds.
 
     Raises:
         ValueError: If the input data fails validation, with detailed error messages.

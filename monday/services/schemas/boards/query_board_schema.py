@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Utility module for board configuration."""
+"""Defines the schema for board querying."""
 
 from typing import List, Literal, Optional, Union, get_args
 
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class QueryBoardInput(BaseModel):
-    """Configuration for board selection and filtering."""
+    """Input model for board querying."""
     board_ids: Optional[Union[int, List[int]]]
     fields: str = 'id name'
     board_kind: Literal['private', 'public', 'share', 'all'] = 'all'

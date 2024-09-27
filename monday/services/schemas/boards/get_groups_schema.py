@@ -15,13 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Utility module for board configuration."""
+"""Defines the schema for board group selection and filtering."""
 
 from pydantic import BaseModel, field_validator
 
 
 class GetGroupsInput(BaseModel):
-    """Configuration for board group selection and filtering."""
+    """Input model for board group selection and filtering."""
     board_id: int
     fields: str = 'title name'
 

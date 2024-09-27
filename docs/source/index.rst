@@ -38,7 +38,7 @@ This is the official documentation for the `monday-client` library. This documen
    readme
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: API Documentation
 
    mondayclient

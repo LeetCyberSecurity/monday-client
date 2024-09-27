@@ -15,7 +15,30 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Module for handling Monday.com item-related services."""
+"""
+Module for handling Monday.com item-related services.
+
+This module provides a comprehensive set of operations for managing items in
+Monday.com boards. It includes functionality for querying, creating, duplicating,
+moving, archiving, and deleting items, as well as clearing item updates and
+retrieving paginated lists of items based on various criteria.
+
+Key features:
+- Query items by ID
+- Create new items on boards
+- Duplicate existing items
+- Move items between groups and boards
+- Archive and delete items
+- Clear item updates
+- Retrieve paginated lists of items, including filtering by column values
+
+This module is part of the monday-client package and relies on the MondayClient
+for making API requests. It also utilizes various utility functions and schema
+validators to ensure proper data handling and error checking.
+
+Usage of this module requires proper authentication and initialization of the
+MondayClient instance.
+"""
 
 import json
 import logging
@@ -40,7 +63,18 @@ if TYPE_CHECKING:
 
 
 class Items:
-    """Handles operations related to Monday.com items."""
+    """
+    Handles operations related to Monday.com items.
+
+    This class provides a comprehensive set of methods for interacting with items
+    on Monday.com boards. It encapsulates functionality for creating, querying,
+    modifying, and deleting items, as well as managing their properties and relationships.
+
+    Each method in this class corresponds to a specific Monday.com API endpoint,
+    providing a pythonic interface for item-related operations.
+
+    Note: This class requires an initialized MondayClient instance for making API requests.
+    """
 
     logger = logging.getLogger(__name__)
 
@@ -49,7 +83,7 @@ class Items:
         Initialize an Items instance with specified parameters.
 
         Args:
-            client ('MondayClient'): The MondayClient instance to use for API requests.
+            client: The MondayClient instance to use for API requests.
         """
         self.client: 'MondayClient' = client
 
@@ -66,23 +100,23 @@ class Items:
         Query items to return metadata about one or multiple items.
 
         Args:
-            item_ids (Union[int, List[int]]): The ID or list of IDs of the specific items, subitems, or parent items to return. You can only return up to 100 IDs at a time.
-            limit (int): The maximum number of items to retrieve per page. Defaults to 25.
-            fields (str): The fields to include in the response. Defaults to 'name'.
-            page (int): The page number at which to start. Default to 1.
-            exclude_nonactive (bool): Excludes items that are inactive, deleted, or belong to deleted items. Defaults to False.
-            newest_first (bool): Lists the most recently created items at the top. Defaults to False.
+            item_ids: The ID or list of IDs of the specific items, subitems, or parent items to return. You can only return up to 100 IDs at a time.
+            limit: The maximum number of items to retrieve per page. Defaults to 25.
+            fields: The fields to include in the response. Defaults to 'name'.
+            page: The page number at which to start. Defaults to 1.
+            exclude_nonactive: Excludes items that are inactive, deleted, or belong to deleted items. Defaults to False.
+            newest_first: Lists the most recently created items at the top. Defaults to False.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the items retrieved.
+            A list of dictionaries containing the items retrieved.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
             ValueError: If input parameters are invalid.
 
         Note:
-            To return all items on a board, use Items.items_page() or Items.items_page_by_column_values() instead.
-       """
+            To return all items on a board, use :meth:`Items.items_page() <monday.services.items.Items.items_page>` or :meth:`Items.items_page_by_column_values() <monday.services.items.Items.items_page_by_column_values>` instead.
+        """
         input_data = check_schema(
             QueryItemInput,
             item_ids=item_ids,
@@ -123,25 +157,25 @@ class Items:
         relative_to: Optional[int] = None
     ) -> Dict[str, Any]:
         """
-        Query items to return metadata about one or multiple items.
+        Create a new item on a board.
 
         Args:
-            board_id (int): The ID of the board where the item will be created.
-            item_name (str): The name of the item.
-            column_values (Dict[str, Any]): Column values for the item. Defaults to None.
-            fields (str): Fields to query back from the created item. Defaults to 'id'.
-            group_id (str): The ID of the group where the item will be created. Defaults to None.
-            create_labels_if_missing (bool): Creates status/dropdown labels if they are missing. Defaults to False.
-            position_relative_method (Literal['before_at', 'after_at']): You can use this argument in conjunction with relative_to to specify which item you want to create the new item above or below.
-            relative_to (int): The ID of the item you want to create the new one in relation to.
+            board_id: The ID of the board where the item will be created.
+            item_name: The name of the item.
+            column_values: Column values for the item. Defaults to None.
+            fields: Fields to query back from the created item. Defaults to 'id'.
+            group_id: The ID of the group where the item will be created. Defaults to None.
+            create_labels_if_missing: Creates status/dropdown labels if they are missing. Defaults to False.
+            position_relative_method: Specify which item you want to create the new item above or below.
+            relative_to: The ID of the item you want to create the new one in relation to.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the new item.
+            Dictionary containing info for the new item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
             ValueError: If input parameters are invalid.
-       """
+        """
         input_data = check_schema(
             CreateItemInput,
             board_id=board_id,
@@ -173,18 +207,18 @@ class Items:
         Duplicate an item.
 
         Args:
-            item_id (int): The ID of the item to be duplicated.
-            board_id (int): The ID of the board where the item will be duplicated.
-            fields (str): Fields to query back from the duplicated item. Defaults to 'id'.
-            with_updates (bool): Duplicates the item with existing updates. Defaults to False.
+            item_id: The ID of the item to be duplicated.
+            board_id: The ID of the board where the item will be duplicated.
+            fields: Fields to query back from the duplicated item. Defaults to 'id'.
+            with_updates: Duplicates the item with existing updates. Defaults to False.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the duplicated item.
+            Dictionary containing info for the duplicated item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
             ValueError: If input parameters are invalid.
-       """
+        """
         input_data = check_schema(
             DuplicateItemInput,
             item_id=item_id,
@@ -211,12 +245,12 @@ class Items:
         Move an item to a different group.
 
         Args:
-            item_id (int): The ID of the item to be moved.
-            group_id (str): The ID of the group to move the item to.
-            fields (str): Fields to query back from the moved item. Defaults to 'id'.
+            item_id: The ID of the item to be moved.
+            group_id: The ID of the group to move the item to.
+            fields: Fields to query back from the moved item. Defaults to 'id'.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the moved item.
+            Dictionary containing info for the moved item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -250,15 +284,15 @@ class Items:
         Move an item to a different board.
 
         Args:
-            item_id (int): The ID of the item to be moved.
-            board_id (int): The ID of the board to move the item to.
-            group_id (str): The ID of the group to move the item to.
-            fields (str): Fields to query back from the moved item. Defaults to 'id'.
-            columns_mapping (List[Dict[str, str]]): Defines the column mapping between the original and target board.
-            subitems_columns_mapping (List[Dict[str, str]]): Defines the subitems' column mapping between the original and target board.
+            item_id: The ID of the item to be moved.
+            board_id: The ID of the board to move the item to.
+            group_id: The ID of the group to move the item to.
+            fields: Fields to query back from the moved item. Defaults to 'id'.
+            columns_mapping: Defines the column mapping between the original and target board.
+            subitems_columns_mapping: Defines the subitems' column mapping between the original and target board.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the moved item.
+            Dictionary containing info for the moved item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -291,11 +325,11 @@ class Items:
         Archive an item.
 
         Args:
-            item_id (int): The ID of the item to be archived.
-            fields (str): Fields to query back from the archived item. Defaults to 'id'.
+            item_id: The ID of the item to be archived.
+            fields: Fields to query back from the archived item. Defaults to 'id'.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the archived item.
+            Dictionary containing info for the archived item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -324,11 +358,11 @@ class Items:
         Delete an item.
 
         Args:
-            item_id (int): The ID of the item to be deleted.
-            fields (str): Fields to query back from the deleted item. Defaults to 'id'.
+            item_id: The ID of the item to be deleted.
+            fields: Fields to query back from the deleted item. Defaults to 'id'.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the deleted item.
+            Dictionary containing info for the deleted item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -357,11 +391,11 @@ class Items:
         Clear an item's updates.
 
         Args:
-            item_id (int): The ID of the item to be cleared.
-            fields (str): Fields to query back from the cleared item. Defaults to 'id'.
+            item_id: The ID of the item to be cleared.
+            fields: Fields to query back from the cleared item. Defaults to 'id'.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the cleared item.
+            Dictionary containing info for the cleared item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -393,14 +427,18 @@ class Items:
         Retrieves a paginated list of items from a specified board on Monday.com.
 
         Args:
-            board_id (int): The ID of the board from which to retrieve items.
-            columns (List[ColumnInput]): One or more columns and their values to search by.
-            limit (int): The maximum number of items to retrieve per page. Defaults to 25.
-            fields (str): The fields to include in the response. Defaults to 'id name'.
-            paginate_items (bool): Whether to paginate items. Defaults to True.
+            board_id: The ID of the board from which to retrieve items.
+            columns: One or more columns and their values to search by.
+            limit: The maximum number of items to retrieve per page. Defaults to 25.
+            fields: The fields to include in the response. Defaults to 'id name'.
+            paginate_items: Whether to paginate items. Defaults to True.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the combined items retrieved.
+            A list of dictionaries containing the combined items retrieved.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
         """
         input_data = check_schema(
             ItemsPageByColumnValuesInput,
@@ -434,19 +472,23 @@ class Items:
             paginate_items: bool = True
     ) -> List[Dict[str, Any]]:
         """
-        Retrieves a paginated list of items from specified boards on Monday.com.
+        Retrieves a paginated list of items from specified boards.
 
         Args:
-            board_ids (int): The ID or list of IDs of the boards from which to retrieve items.
-            query_params (str): A set of parameters to filter, sort, and control the scope of the underlying boards query.
-                                Use this to customize the results based on specific criteria. Defaults to None.
-            limit (int): The maximum number of items to retrieve per page. Must be > 0 and <= 500. Defaults to 25.
-            fields (str): The fields to include in the response. Defaults to 'id name'.
-            group_id (str): Only retrieve items from the specified group ID. Default is None.
-            paginate_items (bool): Whether to paginate items. Defaults to True.
+            board_ids: The ID or list of IDs of the boards from which to retrieve items.
+            query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query.
+                          Use this to customize the results based on specific criteria. Defaults to None.
+            limit: The maximum number of items to retrieve per page. Must be > 0 and <= 500. Defaults to 25.
+            fields: The fields to include in the response. Defaults to 'id name'.
+            group_id: Only retrieve items from the specified group ID. Default is None.
+            paginate_items: Whether to paginate items. Defaults to True.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing the board IDs and their combined items retrieved.
+            A list of dictionaries containing the board IDs and their combined items retrieved.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
         """
         input_data = check_schema(
             ItemsPageInput,
@@ -473,6 +515,16 @@ class Items:
         return data
 
     def _build_items_query_string(self, data: QueryItemInput, page: int) -> str:
+        """
+        Build GraphQL query string for querying items.
+
+        Args:
+            data: Query item input data.
+            page: Page number for pagination.
+
+        Returns:
+            Formatted GraphQL query string for querying items.
+        """
         args = {
             'ids': f"[{', '.join(map(str, data.item_ids))}]",
             'limit': data.limit,
@@ -491,6 +543,15 @@ class Items:
         """
 
     def _build_create_query_string(self, data: CreateItemInput) -> str:
+        """
+        Build GraphQL query string for creating an item.
+
+        Args:
+            data: Create item input data.
+
+        Returns:
+            Formatted GraphQL query string for creating an item.
+        """
         column_values = data.column_values or {}
         args = {
             'board_id': data.board_id,
@@ -512,6 +573,15 @@ class Items:
         """
 
     def _build_duplicate_query_string(self, data: DuplicateItemInput) -> str:
+        """
+        Build GraphQL query string for duplicating an item.
+
+        Args:
+            data: Duplicate item input data.
+
+        Returns:
+            Formatted GraphQL query string for duplicating an item.
+        """
         args = {
             'item_id': data.item_id,
             'board_id': data.board_id,
@@ -528,6 +598,15 @@ class Items:
         """
 
     def _build_move_to_group_query_string(self, data: MoveToGroupInput) -> str:
+        """
+        Build GraphQL query string for moving an item to a group.
+
+        Args:
+            data: Move to group input data.
+
+        Returns:
+            Formatted GraphQL query string for moving an item to a group.
+        """
         args = {
             'item_id': data.item_id,
             'group_id': f'"{data.group_id}"'
@@ -543,6 +622,15 @@ class Items:
         """
 
     def _build_move_to_board_query_string(self, data: MoveToBoardInput) -> str:
+        """
+        Build GraphQL query string for moving an item to a board.
+
+        Args:
+            data: Move to board input data.
+
+        Returns:
+            Formatted GraphQL query string for moving an item to a board.
+        """
         args = {
             'item_id': data.item_id,
             'board_id': data.board_id,
@@ -565,10 +653,10 @@ class Items:
         Build GraphQL query string for archiving an item.
 
         Args:
-            data (ArchiveItemInput): Item archive input data.
+            data: Item archive input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for archiving an item.
         """
         args = {
             'item_id': data.item_id
@@ -588,10 +676,10 @@ class Items:
         Build GraphQL query string for deleting an item.
 
         Args:
-            data (DeleteItemInput): Item delete input data.
+            data: Item delete input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for deleting an item.
         """
         args = {
             'item_id': data.item_id
@@ -611,10 +699,10 @@ class Items:
         Build GraphQL query string for clearing an item's updates.
 
         Args:
-            data (ClearItemUpdatesInput): Item clear updates input data.
+            data: Item clear updates input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for clearing an item's updates.
         """
         args = {
             'item_id': data.item_id
@@ -630,6 +718,15 @@ class Items:
         """
 
     def _build_by_column_values_query_string(self, data: ItemsPageByColumnValuesInput) -> str:
+        """
+        Build GraphQL query string for querying items by column values.
+
+        Args:
+            data: Items page by column values input data.
+
+        Returns:
+            Formatted GraphQL query string for querying items by column values.
+        """
         args = {
             'board_id': data.board_id,
             'limit': data.limit
@@ -655,6 +752,15 @@ class Items:
         """
 
     def _build_items_page_query_string(self, data: ItemsPageInput) -> str:
+        """
+        Build GraphQL query string for querying a page of items.
+
+        Args:
+            data: Items page input data.
+
+        Returns:
+            Formatted GraphQL query string for querying a page of items.
+        """
         args = {
             'limit': data.limit,
             'query_params': data.query_params

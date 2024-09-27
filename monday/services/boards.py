@@ -15,7 +15,31 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Module for handling Monday.com board operations."""
+"""
+Module for handling Monday.com board operations.
+
+This module provides a comprehensive set of functions and classes for interacting
+with Monday.com boards. It encapsulates various operations such as querying,
+creating, updating, duplicating, archiving, and deleting boards.
+
+Key features:
+- Query boards with customizable fields and pagination
+- Create new boards with specified attributes
+- Duplicate existing boards with various options
+- Update board properties (name, description, communication settings)
+- Archive and delete boards
+- Retrieve groups within a board
+
+The Boards class in this module serves as the main interface for these operations,
+providing methods that correspond to different Monday.com API endpoints related to boards.
+
+This module is part of the monday-client package and relies on the MondayClient
+for making API requests. It also utilizes various utility functions and schema
+validators to ensure proper data handling and error checking.
+
+Usage of this module requires proper authentication and initialization of the
+MondayClient instance.
+"""
 
 import json
 import logging
@@ -38,7 +62,18 @@ if TYPE_CHECKING:
 
 
 class Boards:
-    """Handles operations related to Monday.com boards."""
+    """
+    Handles operations related to Monday.com boards.
+
+    This class provides a comprehensive set of methods for interacting with boards
+    on Monday.com. It encapsulates functionality for creating, querying, modifying,
+    and deleting boards, as well as managing their properties and relationships.
+
+    Each method in this class corresponds to a specific Monday.com API endpoint,
+    providing a pythonic interface for board-related operations.
+
+    Note: This class requires an initialized MondayClient instance for making API requests.
+    """
 
     logger: logging.Logger = logging.getLogger(__name__)
 
@@ -47,7 +82,7 @@ class Boards:
         Initialize a Boards instance with specified parameters.
 
         Args:
-            client ('MondayClient'): The MondayClient instance to use for API requests.
+            client: The MondayClient instance to use for API requests.
         """
         self.client: 'MondayClient' = client
 
@@ -68,19 +103,19 @@ class Boards:
         Query boards to return metadata about one or multiple boards.
 
         Args:
-            board_ids (Union[int, List[int]]): The ID or list of IDs of the boards to query. Default is None.
-            fields (str): Fields to specify in the boards query. Default: 'id name'.
-            paginate_items (bool): Whether to paginate items if items_page is in fields. Default: True.
-            board_kind (Literal['private', 'public', 'share', 'all']): The kind of boards to include. Default: 'all'.
-            order_by (Literal['created_at', 'used_at']): The order in which to return the boards. Default: 'created_at'.
-            items_page_limit (int): The number of items to return per page when items_page is part of your fields. Must be > 0 and <= 500. Default: 25.
-            boards_limit (int): The number of boards to return per page. Must be > 0. Default: 25.
-            page (int): The page number to start from. Default: 1.
-            state (Literal['active', 'all', 'archived', 'deleted']): The state of the boards to include. Default: 'active'.
-            workspace_ids (Union[int, List[int]]): The ID or list of IDs of the workspaces to filter by. Default: None.
+            board_ids: The ID or list of IDs of the boards to query.
+            fields: Fields to specify in the boards query.
+            paginate_items: Whether to paginate items if items_page is in fields.
+            board_kind: The kind of boards to include.
+            order_by: The order in which to return the boards.
+            items_page_limit: The number of items to return per page when items_page is part of your fields.
+            boards_limit: The number of boards to return per page.
+            page: The page number to start from.
+            state: The state of the boards to include.
+            workspace_ids: The ID or list of IDs of the workspaces to filter by.
 
         Returns:
-            List[Dict[str, Any]]: List of dictionaries containing queried board data.
+            List of dictionaries containing queried board data.
 
         Raises:
             QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
@@ -147,22 +182,19 @@ class Boards:
         Create a new board.
 
         Args:
-            name (str): The name of the new board.
-            fields (str): Fields to query back from the created board. Defaults to 'id'.
-            kind (Literal['private', 'public', 'share']): The kind of board to create. Default is 'public'.
-            owner_ids (List[int]): List of user IDs to set as board owners. Default is None.
-                The user that creates the board will automatically be added as the board's owner
-                when creating a private or shareable board or if owners_ids is None.
-            subscriber_ids (List[int]): List of user IDs to set as board subscribers. Default is None.
-                The user that creates the board will automatically be added as a subscriber.
-            subscriber_teams_ids (List[int]): List of team IDs to set as board subscribers. Default is None.
-            description (str): Description of the board. Default is None.
-            folder_id (int): ID of the folder to place the board in. Default is None.
-            template_id (int): ID of the template to use for the board. Default is None.
-            workspace_id (int): ID of the workspace to create the board in. Default is None.
+            name: The name of the new board.
+            fields: Fields to query back from the created board.
+            kind: The kind of board to create.
+            owner_ids: List of user IDs to set as board owners.
+            subscriber_ids: List of user IDs to set as board subscribers.
+            subscriber_teams_ids: List of team IDs to set as board subscribers.
+            description: Description of the board.
+            folder_id: ID of the folder to place the board in.
+            template_id: ID of the template to use for the board.
+            workspace_id: ID of the workspace to create the board in.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the new board.
+            Dictionary containing info for the new board.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -201,22 +233,19 @@ class Boards:
         workspace_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        Duplicate a board on Monday.com.
+        Duplicate a board.
 
         Args:
-            board_id (int): The ID of the board to duplicate.
-            fields (str): Fields to query back from the duplicated board. Defaults to 'board { id }'.
-            board_name (str): The duplicated board's name. If omitted, it will be automatically generated.
-            duplicate_type (Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure']):
-                The duplication type. Defaults to 'duplicate_board_with_structure'.
-            folder_id (int): The destination folder within the destination workspace.
-                The folder_id is required if you are duplicating to another workspace, otherwise, it is optional.
-                If omitted, it will default to the original board's folder.
-            keep_subscribers (bool): Duplicate the subscribers to the new board. Defaults to False.
-            workspace_id (int): The destination workspace. If omitted, it will default to the original board's workspace.
+            board_id: The ID of the board to duplicate.
+            fields: Fields to query back from the duplicated board.
+            board_name: The duplicated board's name.
+            duplicate_type: The duplication type.
+            folder_id: The destination folder within the destination workspace.
+            keep_subscribers: Duplicate the subscribers to the new board.
+            workspace_id: The destination workspace.
 
         Returns:
-            Dict[str, Any]: Dictionary containing info for the new board.
+            Dictionary containing info for the new board.
 
         Raises:
             ValueError: If input parameters are invalid.
@@ -248,15 +277,15 @@ class Boards:
         new_value: str
     ) -> Dict[str, Any]:
         """
-        Update a board on Monday.com.
+        Update a board.
 
         Args:
-            board_id (int): The ID of the board to update.
-            board_attribute (Literal['communication', 'description', 'name']): The board's attribute to update.
-            new_value (str): The new attribute value.
+            board_id: The ID of the board to update.
+            board_attribute: The board's attribute to update.
+            new_value: The new attribute value.
 
         Returns:
-            Dict[str, Any]: Dictionary containing updated board info.
+            Dictionary containing updated board info.
 
         Raises:
             ValueError: If input parameters are invalid.
@@ -291,11 +320,11 @@ class Boards:
         Archive a board.
 
         Args:
-            board_id (int): The ID of the board to archive.
-            fields (str): Fields to query back from the archived board. Defaults to 'id'.
+            board_id: The ID of the board to archive.
+            fields: Fields to query back from the archived board.
 
         Returns:
-            Dict[str, Any]: Dictionary containing archived board info.
+            Dictionary containing archived board info.
 
         Raises:
             ValueError: If board_id is not a positive integer.
@@ -324,11 +353,11 @@ class Boards:
         Delete a board.
 
         Args:
-            board_id (int): The ID of the board to delete.
-            fields (str): Fields to query back from the deleted board. Defaults to 'id'.
+            board_id: The ID of the board to delete.
+            fields: Fields to query back from the deleted board.
 
         Returns:
-            Dict[str, Any]: Dictionary containing deleted board info.
+            Dictionary containing deleted board info.
 
         Raises:
             ValueError: If board_id is not a positive integer.
@@ -357,11 +386,11 @@ class Boards:
         Get all group names and IDs from a board ID.
 
         Args:
-            board_id (int): The ID of the board to query.
-            fields (str): Fields to query back from the groups. Defaults to 'title id'.
+            board_id: The ID of the board to query.
+            fields: Fields to query back from the groups.
 
         Returns:
-            List[Dict[str, Any]]: List of dictionaries containing group info.
+            List of dictionaries containing group info.
 
         Raises:
             ValueError: If board_id is not a positive integer.
@@ -383,20 +412,20 @@ class Boards:
 
     async def _paginate_items(
         self,
-        query_string: List[Dict[str, Any]],
-        boards: str,
+        query_string: str,
+        boards: List[Dict[str, Any]],
         limit: int
     ) -> List[Dict[str, Any]]:
         """
         Paginate items for each board.
 
         Args:
-            query_string (str): GraphQL query string.
-            boards (List[Dict[str, Any]]): List of board data.
-            limit (int): The amount of items to return per page.
+            query_string: GraphQL query string.
+            boards: List of board data.
+            limit: The number of items to return per page.
 
         Returns:
-            List[Dict[str, Any]]: Updated list of board data with paginated items.
+            Updated list of board data with paginated items.
 
         Raises:
             MondayAPIError: If API request fails.
@@ -417,10 +446,10 @@ class Boards:
         Build GraphQL query string for board creation.
 
         Args:
-            data (CreateBoardInput): Board creation input data.
+            data: Board creation input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for creating a board.
         """
         description = data.description.replace('"', '\\"') if data.description else None
         name = data.name.replace('"', '\\"')
@@ -450,10 +479,10 @@ class Boards:
         Build GraphQL query string for board duplication.
 
         Args:
-            data (DuplicateBoardInput): Board duplication input data.
+            data: Board duplication input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for duplicating a board.
         """
         board_name = data.board_name.replace('"', '\\"') if data.board_name else None
         args = {
@@ -479,10 +508,10 @@ class Boards:
         Build GraphQL query string for board update.
 
         Args:
-            data (UpdateBoardInput): Board update input data.
+            data: Board update input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for updating a board.
         """
         args = {
             'board_id': data.board_id,
@@ -502,10 +531,10 @@ class Boards:
         Build GraphQL query string for archiving a board.
 
         Args:
-            data (ArchiveBoardInput): Board archive input data.
+            data: Board archive input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for archiving a board.
         """
         args = {
             'board_id': data.board_id
@@ -522,13 +551,13 @@ class Boards:
 
     def _build_delete_query_string(self, data: DeleteBoardInput) -> str:
         """
-        Build GraphQL query string for archiving a board.
+        Build GraphQL query string for deleting a board.
 
         Args:
-            data (ArchiveBoardInput): Board archive input data.
+            data: Board delete input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for deleting a board.
         """
         args = {
             'board_id': data.board_id
@@ -548,11 +577,11 @@ class Boards:
         Build GraphQL query string for board queries.
 
         Args:
-            data (QueryBoardInput): Board query input data.
-            page (int): Page on which to begin query
+            data: Board query input data.
+            page: Page number for pagination.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for querying boards.
         """
         args = {
             'ids': f"[{', '.join(map(str, data.board_ids))}]",
@@ -578,10 +607,10 @@ class Boards:
         Build GraphQL query string for board group queries.
 
         Args:
-            data (GetGroupsInput): Board group query input data.
+            data: Board group query input data.
 
         Returns:
-            str: Formatted GraphQL query string.
+            Formatted GraphQL query string for querying board groups.
         """
 
         return f"""

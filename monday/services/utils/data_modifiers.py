@@ -17,8 +17,13 @@
 
 """Utility functions for modifying data structures."""
 
+from typing import Any, Callable, Dict, List, Union
 
-def update_items_page_in_place(data, modify_fn):
+
+def update_items_page_in_place(
+    data: Union[Dict[str, Any], List[Any]],
+    modify_fn: Callable[[Dict[str, Any]], None]
+) -> None:
     """
     Update items in a nested data structure in place.
 
@@ -26,8 +31,8 @@ def update_items_page_in_place(data, modify_fn):
     and applies the provided modify_fn to each item.
 
     Args:
-        data (dict or list): The nested data structure to be modified.
-        modify_fn (callable): A function that will be applied to each item.
+        data: The nested data structure to be modified.
+        modify_fn: A function that will be applied to each item.
 
     Returns:
         None. The function modifies the data structure in place.
