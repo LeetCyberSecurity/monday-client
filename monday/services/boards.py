@@ -275,7 +275,12 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return json.loads(data['data']['update_board'])
+        try:
+            data = json.loads(data['data']['update_board'])
+        except TypeError:
+            data = data['data']['update_board']
+
+        return data
 
     async def archive(
         self,

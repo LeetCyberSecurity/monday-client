@@ -7,14 +7,11 @@ packages = ["monday"]
 
 [project]
 name = "monday-client"
-version = "0.1.24"
+dynamic = ["version", "authors"]
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-authors = [
-    { name = "Dan Hollis", email = "dh@leetsys.com" }
-]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -25,13 +22,26 @@ classifiers = [
 ]
 dependencies = [
     "aiohttp",
-    "pydantic",
-    "requests"
+    "pydantic"
 ]
-keywords = ["monday", "api", "client", "async", "rate-limiting", "complexity-limiting"]
+keywords = ["monday", "api", "client", "async", "rate-limiting", "complexity-limiting", "monday.com"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/LeetCyberSecurity/monday-client"
 "Documentation" = "https://monday-client.readthedocs.io/"
 "Bug Reports" = "https://github.com/LeetCyberSecurity/monday-client/issues"
 "Source" = "https://github.com/LeetCyberSecurity/monday-client"
+
+[tool.setuptools.dynamic]
+version = {attr = "monday.__version__"}
+authors = {attr = "monday.__authors__"}
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

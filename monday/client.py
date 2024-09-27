@@ -19,6 +19,7 @@
 
 import asyncio
 import logging
+import math
 import re
 from typing import Any, Dict, Optional
 
@@ -222,9 +223,9 @@ class MondayClient:
 
                 if any('error' in key.lower() for key in response_data.keys()):
                     if 'error_code' in response_data and response_data['error_code'] == 'ComplexityException':
-                        reset_in_search = re.search(r'reset in (\d+) seconds', response_data['error_message'])
+                        reset_in_search = re.search(r'(\d+(?:\.\d+)?) seconds', response_data['error_message'])
                         if reset_in_search:
-                            reset_in = int(reset_in_search.group(1))
+                            reset_in = math.ceil(float(reset_in_search.group(1)))
                         else:
                             self.logger.error('error getting reset_in_x_seconds: %s', response_data)
                             return {'error': response_data}
@@ -242,14 +243,14 @@ class MondayClient:
                     await asyncio.sleep(e.reset_in)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': str(e)}
+                    return {'error': f"Max retries reached. Last error: {str(e)}"}
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
                     self.logger.warning("Attempt %d failed due to ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
                     await asyncio.sleep(60)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': str(e)}
+                    return {'error': f"Max retries reached. Last error: {str(e)}"}
 
         return {'error': f'Max retries reached: {response_data}'}
 

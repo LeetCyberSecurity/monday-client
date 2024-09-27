@@ -33,10 +33,12 @@ import sys
 
 sys.path.insert(0, os.path.abspath('../..'))
 
+from monday import __authors__, __version__  # noqa: E402
+
 project = 'monday-client'
 copyright = '2024, Leet Cyber Security'
-author = 'Dan Hollis'
-release = '0.1.24'
+author = ', '.join(f"{author['name']} <{author['email']}>" for author in __authors__)
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
