@@ -6,6 +6,7 @@
 # it under the terms of the GNU General Public License.
 
 # pylint: disable=redefined-outer-name
+# pylint: disable=protected-access
 
 from unittest.mock import AsyncMock, patch
 
@@ -19,7 +20,7 @@ from monday.client import MondayClient
 def client_instance():
     client = MondayClient("test_api_key")
     client.max_retries = 2
-    client.rate_limit_seconds = 1
+    client._rate_limit_seconds = 1
     return client
 
 
@@ -31,7 +32,7 @@ async def test_init():
         'Content-Type': 'application/json',
         'Authorization': 'test_api_key'
     }
-    assert client.rate_limit_seconds == 60
+    assert client._rate_limit_seconds == 60
     assert client.max_retries == 4
 
 
@@ -106,7 +107,7 @@ async def test_post_request_client_error_retry(client_instance):
             result = await client_instance.post_request("test_query")
 
     assert mock_sleep.call_count == 2
-    mock_sleep.assert_called_with(60)
+    mock_sleep.assert_called_with(1)
     assert result == {'data': {'some': 'data'}}
 
 

@@ -263,7 +263,7 @@ class MondayClient:
                     if 'status_code' in response_data and int(response_data['status_code']) == 429:
                         reset_in = self._rate_limit_seconds
                         raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in)
-                    return {'error': response_data}
+                    raise aiohttp.ClientError
 
                 return response_data
 
