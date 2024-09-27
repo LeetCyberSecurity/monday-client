@@ -23,6 +23,30 @@ Welcome to monday-client's documentation!
    :alt: monday-client Logo
    :align: center
 
+.. image:: https://readthedocs.org/projects/monday-client/badge/?version=latest
+   :target: https://monday-client.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
+.. image:: https://badge.fury.io/py/monday-client.svg
+   :target: https://badge.fury.io/py/monday-client
+   :alt: PyPI version
+
+.. image:: https://img.shields.io/pypi/pyversions/monday-client.svg
+   :target: https://pypi.org/project/monday-client/
+   :alt: Python Versions
+
+.. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
+   :target: https://www.gnu.org/licenses/gpl-3.0
+   :alt: License: GPL v3
+
+.. image:: https://img.shields.io/github/issues/LeetCyberSecurity/monday-client.svg
+   :target: https://github.com/LeetCyberSecurity/monday-client/issues
+   :alt: GitHub issues
+
+.. image:: https://img.shields.io/github/last-commit/LeetCyberSecurity/monday-client.svg
+   :target: https://github.com/LeetCyberSecurity/monday-client/commits/main
+   :alt: GitHub last commit
+
 Introduction
 ------------
 This is the official documentation for the `monday-client` library. This documentation will help you understand how to use the library to interact with the Monday.com API efficiently.
