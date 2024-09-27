@@ -1,6 +1,12 @@
 # Monday.com API Client
 
+[![Documentation Status](https://readthedocs.org/projects/monday-client/badge/?version=latest)](https://monday-client.readthedocs.io/en/latest/?badge=latest)
+
 This Python library provides an **asynchronous** client to interact with the [Monday.com API](https://api.developer.monday.com/docs).
+
+## Documentation
+
+For detailed documentation, please visit the [official documentation site](https://monday-client.readthedocs.io).
 
 ## Key Features
 
