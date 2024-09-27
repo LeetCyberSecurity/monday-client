@@ -14,7 +14,7 @@ authors = [
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "GNU General Public License v3 (GPLv3)" }
+license = { expression = "GPL-3.0-or-later" }
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -27,7 +27,15 @@ dependencies = [
     "aiohttp",
     "pydantic"
 ]
-keywords = ["monday", "api", "client", "async", "rate-limiting", "complexity-limiting", "monday.com"]
+keywords = [
+    "monday", 
+    "monday.com",
+    "api", 
+    "client", 
+    "async", 
+    "rate-limiting", 
+    "complexity-limiting", 
+]
 
 [project.optional-dependencies]
 dev = [
@@ -42,7 +50,7 @@ dev = [
 "Source" = "https://github.com/LeetCyberSecurity/monday-client"
 
 [tool.setuptools.dynamic]
-version = {attr = "monday.__version__"}
+version = { attr = "monday.__version__" }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
