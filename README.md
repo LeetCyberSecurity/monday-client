@@ -1,5 +1,7 @@
 # Monday.com API Client
 
+![Monday.com API Client Logo](https://raw.githubusercontent.com/LeetCyberSecurity/monday-client/main/docs/source/_static/leet_logo.png)
+
 [![Documentation Status](https://readthedocs.org/projects/monday-client/badge/?version=latest)](https://monday-client.readthedocs.io/en/latest/?badge=latest)
 
 This Python library provides an **asynchronous** client to interact with the [Monday.com API](https://api.developer.monday.com/docs).
