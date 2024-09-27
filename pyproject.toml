@@ -7,11 +7,14 @@ packages = ["monday"]
 
 [project]
 name = "monday-client"
-dynamic = ["version", "authors"]
+dynamic = ["version"]
+authors = [
+    { name = "Dan Hollis", email = "dh@leetsys.com" }
+]
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { file = "LICENSE" }
+license = { text = "GNU General Public License v3 (GPLv3)" }
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -40,7 +43,6 @@ dev = [
 
 [tool.setuptools.dynamic]
 version = {attr = "monday.__version__"}
-authors = {attr = "monday.__authors__"}
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
