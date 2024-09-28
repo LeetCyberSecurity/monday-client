@@ -91,6 +91,7 @@ async def test_post_request_max_retries_reached(client_instance):
             result = await client_instance.post_request("test_query")
 
     assert 'Max retries reached' in result['error']
+    assert 'data' in result
 
 
 @pytest.mark.asyncio
@@ -120,6 +121,7 @@ async def test_post_request_max_retries_client_error(client_instance):
             result = await client_instance.post_request("test_query")
 
     assert 'Max retries reached' in result['error']
+    assert '(aiohttp.ClientError)' in result['error']
 
 
 @pytest.mark.asyncio

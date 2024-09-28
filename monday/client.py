@@ -259,10 +259,10 @@ class MondayClient:
                         else:
                             self.logger.error('error getting reset_in_x_seconds: %s', response_data)
                             return {'error': response_data}
-                        raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in)
+                        raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in, json_data=response_data)
                     if 'status_code' in response_data and int(response_data['status_code']) == 429:
                         reset_in = self._rate_limit_seconds
-                        raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in)
+                        raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in, json_data=response_data)
                     raise aiohttp.ClientError
 
                 return response_data
@@ -273,14 +273,14 @@ class MondayClient:
                     await asyncio.sleep(e.reset_in)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': f"Max retries reached. Last error: {str(e)}"}
+                    return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json}
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
-                    self.logger.warning("Attempt %d failed due to ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
+                    self.logger.warning("Attempt %d failed due to aiohttp.ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
                     await asyncio.sleep(self._rate_limit_seconds)
                 else:
-                    self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': f"Max retries reached. Last error: {str(e)}"}
+                    self.logger.error("Max retries reached. Last error (aiohttp.ClientError): %s", str(e))
+                    return {'error': f"Max retries reached. Last error (aiohttp.ClientError): {str(e)}"}
 
         return {'error': f'Max retries reached: {response_data}'}
 

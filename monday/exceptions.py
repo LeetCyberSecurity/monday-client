@@ -20,20 +20,6 @@
 from typing import Any, Dict, Optional
 
 
-class ComplexityLimitExceeded(Exception):
-    """
-    Exception raised when the complexity limit is exceeded.
-
-    Attributes:
-        message (str): Explanation of the error.
-        reset_in (int): Time in seconds until the complexity limit is reset.
-    """
-
-    def __init__(self, message: str, reset_in: int):
-        super().__init__(message)
-        self.reset_in = reset_in
-
-
 class MondayAPIError(Exception):
     """
     Exception raised when an error occurs during API communication with Monday.com.
@@ -48,6 +34,21 @@ class MondayAPIError(Exception):
         self.json: Optional[Dict[str, Any]] = json_data
 
 
+class ComplexityLimitExceeded(Exception):
+    """
+    Exception raised when the complexity limit is exceeded.
+
+    Attributes:
+        message (str): Explanation of the error.
+        reset_in (int): Time in seconds until the complexity limit is reset.
+    """
+
+    def __init__(self, message: str, reset_in: int, json_data: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.reset_in = reset_in
+        self.json: Optional[Dict[str, Any]] = json_data
+
+
 class MutationLimitExceeded(Exception):
     """
     Exception raised when the mutation per minute limit is exceeded.
@@ -57,9 +58,10 @@ class MutationLimitExceeded(Exception):
         reset_in (int): Time in seconds until the rate limit is reset.
     """
 
-    def __init__(self, message: str, reset_in: int):
+    def __init__(self, message: str, reset_in: int, json_data: Optional[Dict[str, Any]] = None):
         super().__init__(message)
         self.reset_in = reset_in
+        self.json: Optional[Dict[str, Any]] = json_data
 
 
 class PaginationError(Exception):
