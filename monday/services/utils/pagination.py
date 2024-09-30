@@ -212,10 +212,12 @@ async def paginated_item_request(
         else:
             items = extract_items_from_response(data)
             if not items:
-                logger.error('Failed to extract items from response')
-                logger.error(json.dumps(response_data))
-                raise PaginationError('Item pagination failed')
-            combined_items.extend(items)
+                if 'data' not in data:
+                    logger.error('Failed to extract items from response')
+                    logger.error(json.dumps(response_data))
+                    raise PaginationError('Item pagination failed')
+            else:
+                combined_items.extend(items)
 
         cursor = extract_cursor_from_response(data)
         if not cursor:

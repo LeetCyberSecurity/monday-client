@@ -47,10 +47,11 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 
-from monday.exceptions import ComplexityLimitExceeded, MutationLimitExceeded
-from monday.services.boards import Boards
-from monday.services.items import Items
-from monday.services.utils.decorators import board_action, item_action
+from .exceptions import (ComplexityLimitExceeded, MondayAPIError,
+                         MutationLimitExceeded)
+from .services.boards import Boards
+from .services.items import Items
+from .services.utils.decorators import board_action, item_action
 
 
 class MondayClient:
@@ -263,7 +264,8 @@ class MondayClient:
                     if 'status_code' in response_data and int(response_data['status_code']) == 429:
                         reset_in = self._rate_limit_seconds
                         raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in, json_data=response_data)
-                    raise aiohttp.ClientError
+                    response_data['query'] = query
+                    raise MondayAPIError('Unhandled monday.com API error', json_data=response_data)
 
                 return response_data
 
@@ -274,6 +276,9 @@ class MondayClient:
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
                     return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json}
+            except MondayAPIError as e:
+                self.logger.error("Attempt %d failed: %s", attempt + 1, str(e))
+                return {'data': e.json}
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
                     self.logger.warning("Attempt %d failed due to aiohttp.ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
