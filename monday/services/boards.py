@@ -585,7 +585,7 @@ class Boards:
             Formatted GraphQL query string for querying boards.
         """
         args = {
-            'ids': f"[{', '.join(map(str, data.board_ids))}]",
+            'ids': f"[{', '.join(map(str, data.board_ids))}]" if data.board_ids else None,
             'board_kind': data.board_kind if data.board_kind != 'all' else None,
             'limit': data.boards_limit,
             'order_by': data.order_by,

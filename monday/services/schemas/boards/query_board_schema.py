@@ -37,7 +37,7 @@ class QueryBoardInput(BaseModel):
     @field_validator('board_ids', 'workspace_ids', mode='before')
     @classmethod
     def ensure_list_of_ints(cls, v, info):
-        """Ensure the input is a positive integer or list of positive integers."""
+        """Ensure the input is a positive integer or list of positive integers or None."""
         field_name = info.field_name
         if v is None:
             return v
