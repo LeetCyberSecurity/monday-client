@@ -47,10 +47,10 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 
-from .exceptions import ComplexityLimitExceeded, MutationLimitExceeded
-from .services.boards import Boards
-from .services.items import Items
-from .services.utils.decorators import board_action, item_action
+from monday.exceptions import ComplexityLimitExceeded, MutationLimitExceeded
+from monday.services.boards import Boards
+from monday.services.items import Items
+from monday.services.utils.decorators import board_action, item_action
 
 
 class MondayClient:
