@@ -241,12 +241,14 @@ class MondayClient:
             query: The GraphQL query string to be executed.
 
         Returns:
-            The response data from the API.
+            A dictionary containing either the successful response data from the API or error information.
+            In case of errors, the dictionary will include an 'error' key with a description of the error,
+            and potentially a 'data' key with additional error details.
 
-        Raises:
-            ComplexityLimitExceeded: If the complexity limit is exceeded.
-            MutationLimitExceeded: If the mutation limit is exceeded.
-            aiohttp.ClientError: If there's a client-side error during the request.
+        Note:
+            This method handles ComplexityLimitExceeded, MutationLimitExceeded, MondayAPIError, and
+            aiohttp.ClientError internally. Instead of raising these exceptions, it returns error
+            information in the response dictionary after max retries are exhausted.
         """
         for attempt in range(self.max_retries):
             try:

@@ -17,6 +17,7 @@
 
 """Utility functions for handling errors in Monday API interactions."""
 
+import logging
 from typing import Any, Dict, Type, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -24,6 +25,8 @@ from pydantic import BaseModel, ValidationError
 from ...exceptions import MondayAPIError
 
 T = TypeVar('T', bound=BaseModel)
+
+logger = logging.getLogger(__name__)
 
 
 def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -44,11 +47,15 @@ def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
     Example:
         result = check_query_result(api_response)
     """
-    if isinstance(query_result, dict) and any('error' in key.lower() for key in query_result.keys()):
-        raise MondayAPIError(f"API request failed: {query_result['error']}", json_data=query_result['error'])
-    if 'data' not in query_result:
-        raise MondayAPIError(f"Unexpected API response: {query_result}")
-    return query_result
+    try:
+        if isinstance(query_result, dict) and any('error' in key.lower() for key in query_result.keys()):
+            raise MondayAPIError("API request failed", json_data=query_result)
+        if 'data' not in query_result:
+            raise MondayAPIError("Unexpected API response", json_data=query_result)
+        return query_result
+    except MondayAPIError as e:
+        logger.error('MondayAPIError occurred: %s Data: %s', str(e), e.json)
+        raise
 
 
 def check_schema(schema: Type[T], **kwargs) -> T:
