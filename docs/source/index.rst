@@ -16,8 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-Welcome to monday-client's documentation!
-=========================================
+.. title:: monday-client Documentation
 
 .. image:: _static/leet_logo.png
    :alt: monday-client Logo
@@ -47,9 +46,11 @@ Welcome to monday-client's documentation!
    :target: https://github.com/LeetCyberSecurity/monday-client/commits/main
    :alt: GitHub last commit
 
+
 Introduction
-------------
+============
 This is the official documentation for the `monday-client` library. This documentation will help you understand how to use the library to interact with the Monday.com API efficiently.
+
 
 .. contents:: Table of Contents
    :depth: 3
@@ -57,9 +58,9 @@ This is the official documentation for the `monday-client` library. This documen
 
 .. toctree::
    :maxdepth: 3
-   :caption: README
+   :caption: Usage
 
-   readme
+   usage
 
 .. toctree::
    :maxdepth: 1
@@ -76,3 +77,8 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+License
+=======
+
+This project is licensed under the GNU General Public License v3.0 - see the `LICENSE <https://github.com/LeetCyberSecurity/monday-client/blob/main/LICENSE>`_ file for details.

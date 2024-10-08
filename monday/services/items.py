@@ -416,13 +416,13 @@ class Items:
 
         return data['data']['clear_item_updates']
 
-    async def items_page_by_column_values(
-            self,
-            board_id: int,
-            columns: List[ColumnInput],
-            limit: int = 25,
-            fields: str = 'id name',
-            paginate_items: bool = True
+    async def page_by_column_values(
+        self,
+        board_id: int,
+        columns: List[ColumnInput],
+        limit: int = 25,
+        fields: str = 'id name',
+        paginate_items: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Retrieves a paginated list of items from a specified board on Monday.com.
@@ -463,14 +463,14 @@ class Items:
 
         return data
 
-    async def items_page(
-            self,
-            board_ids: Union[int, List[int]],
-            query_params: Optional[str] = None,
-            limit: int = 25,
-            fields: str = 'id name',
-            group_id: Optional[str] = None,
-            paginate_items: bool = True
+    async def page(
+        self,
+        board_ids: Union[int, List[int]],
+        query_params: Optional[str] = None,
+        limit: int = 25,
+        fields: str = 'id name',
+        group_id: Optional[str] = None,
+        paginate_items: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Retrieves a paginated list of items from specified boards.
@@ -515,22 +515,99 @@ class Items:
 
         return data
 
-    def _build_items_query_string(self, data: QueryItemInput, page: int) -> str:
+    async def get_column_values(
+        self,
+        item_id: int,
+        *,
+        fields: str = 'id text',
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves a list of column values for a specific item.
+
+        Args:
+            item_id: The ID of the item.
+            fields: Additional fields to query from the item column values
+            **kwargs: Keyword arguments for the underlying :meth:`Items.query() <monday.Items.query>` call.
+
+        Returns:
+            A list of dictionaries containing the item column values.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
+        """
+        if not isinstance(item_id, int):
+            raise ValueError("item_id must be positive int")
+
+        input_data = check_schema(
+            QueryItemInput,
+            item_ids=item_id,
+            fields=fields,
+            **kwargs
+        )
+
+        input_data.fields = f'column_values {{ {fields} }}'
+
+        query_string = self._build_items_query_string(input_data)
+
+        data = await self.client.post_request(query_string)
+
+        return data['data']['items'][0]['column_values']
+
+    async def get_name(
+        self,
+        item_id: int,
+        **kwargs: Any
+    ) -> str:
+        """
+        Get an item name from an item ID.
+
+        Args:
+            item_id: The ID of the item.
+            fields: Additional fields to query from the item column values
+            **kwargs: Keyword arguments for the underlying :meth:`Items.query() <monday.Items.query>` call.
+
+        Returns:
+            The item name.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
+        """
+        if not isinstance(item_id, int):
+            raise ValueError("item_id must be positive int")
+
+        input_data = check_schema(
+            QueryItemInput,
+            item_ids=item_id,
+            **kwargs
+        )
+
+        input_data.fields = 'name'
+
+        query_string = self._build_items_query_string(input_data)
+
+        data = await self.client.post_request(query_string)
+
+        return data['data']['items'][0]['name']
+
+    def _build_items_query_string(self, input_data: QueryItemInput, page: Optional[int] = None) -> str:
         """
         Build GraphQL query string for querying items.
 
         Args:
-            data: Query item input data.
+            input_data: Query item input data.
             page: Page number for pagination.
 
         Returns:
             Formatted GraphQL query string for querying items.
         """
         args = {
-            'ids': f"[{', '.join(map(str, data.item_ids))}]",
-            'limit': data.limit,
-            'newest_first': str(data.newest_first).lower(),
-            'exclude_nonactive': str(data.exclude_nonactive).lower(),
+            'ids': f"[{', '.join(map(str, input_data.item_ids))}]",
+            'limit': input_data.limit,
+            'newest_first': str(input_data.newest_first).lower(),
+            'exclude_nonactive': str(input_data.exclude_nonactive).lower(),
             'page': page
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
@@ -538,203 +615,203 @@ class Items:
         return f"""
         	query {{
                     items ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_create_query_string(self, data: CreateItemInput) -> str:
+    def _build_create_query_string(self, input_data: CreateItemInput) -> str:
         """
         Build GraphQL query string for creating an item.
 
         Args:
-            data: Create item input data.
+            input_data: Create item input data.
 
         Returns:
             Formatted GraphQL query string for creating an item.
         """
-        column_values = data.column_values or {}
+        column_values = input_data.column_values or {}
         args = {
-            'board_id': data.board_id,
-            'item_name': f'"{data.item_name}"',
+            'board_id': input_data.board_id,
+            'item_name': f'"{input_data.item_name}"',
             'column_values': json.dumps(json.dumps(column_values)),
-            'group_id': f'"{data.group_id}"' if data.group_id else None,
-            'create_labels_if_missing': str(data.create_labels_if_missing).lower(),
-            'position_relative_method': data.position_relative_method,
-            'relative_to': data.relative_to
+            'group_id': f'"{input_data.group_id}"' if input_data.group_id else None,
+            'create_labels_if_missing': str(input_data.create_labels_if_missing).lower(),
+            'position_relative_method': input_data.position_relative_method,
+            'relative_to': input_data.relative_to
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
         return f"""
             mutation {{
                 create_item ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_duplicate_query_string(self, data: DuplicateItemInput) -> str:
+    def _build_duplicate_query_string(self, input_data: DuplicateItemInput) -> str:
         """
         Build GraphQL query string for duplicating an item.
 
         Args:
-            data: Duplicate item input data.
+            input_data: Duplicate item input data.
 
         Returns:
             Formatted GraphQL query string for duplicating an item.
         """
         args = {
-            'item_id': data.item_id,
-            'board_id': data.board_id,
-            'with_updates': str(data.with_updates).lower()
+            'item_id': input_data.item_id,
+            'board_id': input_data.board_id,
+            'with_updates': str(input_data.with_updates).lower()
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
         return f"""
             mutation {{
                 duplicate_item ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_move_to_group_query_string(self, data: MoveToGroupInput) -> str:
+    def _build_move_to_group_query_string(self, input_data: MoveToGroupInput) -> str:
         """
         Build GraphQL query string for moving an item to a group.
 
         Args:
-            data: Move to group input data.
+            input_data: Move to group input data.
 
         Returns:
             Formatted GraphQL query string for moving an item to a group.
         """
         args = {
-            'item_id': data.item_id,
-            'group_id': f'"{data.group_id}"'
+            'item_id': input_data.item_id,
+            'group_id': f'"{input_data.group_id}"'
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
 
         return f"""
             mutation {{
                 move_item_to_group ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_move_to_board_query_string(self, data: MoveToBoardInput) -> str:
+    def _build_move_to_board_query_string(self, input_data: MoveToBoardInput) -> str:
         """
         Build GraphQL query string for moving an item to a board.
 
         Args:
-            data: Move to board input data.
+            input_data: Move to board input data.
 
         Returns:
             Formatted GraphQL query string for moving an item to a board.
         """
         args = {
-            'item_id': data.item_id,
-            'board_id': data.board_id,
-            'group_id': f'"{data.group_id}"',
-            'columns_mapping': json.dumps(data.columns_mapping),
-            'subitems_columns_mapping': json.dumps(data.subitems_columns_mapping)
+            'item_id': input_data.item_id,
+            'board_id': input_data.board_id,
+            'group_id': f'"{input_data.group_id}"',
+            'columns_mapping': json.dumps(input_data.columns_mapping),
+            'subitems_columns_mapping': json.dumps(input_data.subitems_columns_mapping)
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
         return f"""
             mutation {{
                 move_item_to_board ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_archive_query_string(self, data: ArchiveItemInput) -> str:
+    def _build_archive_query_string(self, input_data: ArchiveItemInput) -> str:
         """
         Build GraphQL query string for archiving an item.
 
         Args:
-            data: Item archive input data.
+            input_data: Item archive input data.
 
         Returns:
             Formatted GraphQL query string for archiving an item.
         """
         args = {
-            'item_id': data.item_id
+            'item_id': input_data.item_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
 
         return f"""
             mutation {{
                 archive_item ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_delete_query_string(self, data: DeleteItemInput) -> str:
+    def _build_delete_query_string(self, input_data: DeleteItemInput) -> str:
         """
         Build GraphQL query string for deleting an item.
 
         Args:
-            data: Item delete input data.
+            input_data: Item delete input data.
 
         Returns:
             Formatted GraphQL query string for deleting an item.
         """
         args = {
-            'item_id': data.item_id
+            'item_id': input_data.item_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
 
         return f"""
             mutation {{
                 delete_item ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_clear_updates_query_string(self, data: ClearItemUpdatesInput) -> str:
+    def _build_clear_updates_query_string(self, input_data: ClearItemUpdatesInput) -> str:
         """
         Build GraphQL query string for clearing an item's updates.
 
         Args:
-            data: Item clear updates input data.
+            input_data: Item clear updates input data.
 
         Returns:
             Formatted GraphQL query string for clearing an item's updates.
         """
         args = {
-            'item_id': data.item_id
+            'item_id': input_data.item_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
 
         return f"""
             mutation {{
                 clear_item_updates ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_by_column_values_query_string(self, data: ItemsPageByColumnValuesInput) -> str:
+    def _build_by_column_values_query_string(self, input_data: ItemsPageByColumnValuesInput) -> str:
         """
         Build GraphQL query string for querying items by column values.
 
         Args:
-            data: Items page by column values input data.
+            input_data: Items page by column values input data.
 
         Returns:
             Formatted GraphQL query string for querying items by column values.
         """
         args = {
-            'board_id': data.board_id,
-            'limit': data.limit
+            'board_id': input_data.board_id,
+            'limit': input_data.limit
         }
 
         columns_list = []
-        for column in data.columns:
+        for column in input_data.columns:
             column_id_str = f'"{column.column_id}"'
             column_values_str = '[' + ', '.join(f'"{v}"' for v in column.column_values) + ']'
             columns_list.append(f'{{column_id: {column_id_str}, column_values: {column_values_str}}}')
@@ -747,31 +824,31 @@ class Items:
         	query {{
                 items_page_by_column_values ({args_str}) {{
                     cursor
-                    items {{ {data.fields} }}
+                    items {{ {input_data.fields} }}
                 }}
             }}
         """
 
-    def _build_items_page_query_string(self, data: ItemsPageInput) -> str:
+    def _build_items_page_query_string(self, input_data: ItemsPageInput) -> str:
         """
         Build GraphQL query string for querying a page of items.
 
         Args:
-            data: Items page input data.
+            input_data: Items page input data.
 
         Returns:
             Formatted GraphQL query string for querying a page of items.
         """
         args = {
-            'limit': data.limit,
-            'query_params': data.query_params
+            'limit': input_data.limit,
+            'query_params': input_data.query_params
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
-        board_ids_string = ', '.join(map(str, data.board_ids))
+        board_ids_string = ', '.join(map(str, input_data.board_ids))
 
-        group_query = f'groups (ids: "{data.group_id}") {{' if data.group_id else ''
-        group_query_end = '}' if data.group_id else ''
+        group_query = f'groups (ids: "{input_data.group_id}") {{' if input_data.group_id else ''
+        group_query_end = '}' if input_data.group_id else ''
 
         return f"""
             query {{
@@ -780,7 +857,7 @@ class Items:
                     {group_query}
                     items_page ({args_str}) {{
                         cursor
-                        items {{ {data.fields} }}
+                        items {{ {input_data.fields} }}
                     }}
                     {group_query_end}
                 }}

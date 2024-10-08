@@ -161,7 +161,7 @@ async def test_clear_updates(items_instance):
 
 
 @pytest.mark.asyncio
-async def test_items_page_by_column_values(items_instance):
+async def test_page_by_column_values(items_instance):
     mock_responses = [{
         'data': {
             'items_page_by_column_values': {
@@ -175,7 +175,7 @@ async def test_items_page_by_column_values(items_instance):
     }]
 
     items_instance.client.post_request = AsyncMock(side_effect=mock_responses)
-    result = await items_instance.items_page_by_column_values(
+    result = await items_instance.page_by_column_values(
         board_id=1,
         columns=[{'column_id': 'status', 'column_values': ['Done']}],
         limit=2
@@ -186,7 +186,7 @@ async def test_items_page_by_column_values(items_instance):
 
 
 @pytest.mark.asyncio
-async def test_items_page(items_instance):
+async def test_page(items_instance):
     mock_response = {
         'data': {
             'boards': [
@@ -205,7 +205,7 @@ async def test_items_page(items_instance):
     }
 
     items_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await items_instance.items_page(board_ids=1, limit=2)
+    result = await items_instance.page(board_ids=1, limit=2)
 
     assert result == [{'board_id': 1, 'items': [{'id': 1, 'name': 'Item 1'}, {'id': 2, 'name': 'Item 2'}]}]
     items_instance.client.post_request.assert_awaited_once()

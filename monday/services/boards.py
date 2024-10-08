@@ -50,7 +50,6 @@ from .schemas.boards.archive_board_schema import ArchiveBoardInput
 from .schemas.boards.create_board_schema import CreateBoardInput
 from .schemas.boards.delete_board_schema import DeleteBoardInput
 from .schemas.boards.duplicate_board_schema import DuplicateBoardInput
-from .schemas.boards.get_groups_schema import GetGroupsInput
 from .schemas.boards.query_board_schema import QueryBoardInput
 from .schemas.boards.update_board_schema import UpdateBoardInput
 from .utils.data_modifiers import update_items_page_in_place
@@ -328,7 +327,7 @@ class Boards:
             Dictionary containing archived board info.
 
         Raises:
-            ValueError: If board_id is not a positive integer.
+            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
         input_data = check_schema(
@@ -361,7 +360,7 @@ class Boards:
             Dictionary containing deleted board info.
 
         Raises:
-            ValueError: If board_id is not a positive integer.
+            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
         input_data = check_schema(
@@ -381,35 +380,134 @@ class Boards:
     async def get_groups(
         self,
         board_id: int,
-        fields: str = 'title id'
+        *,
+        group_name: Optional[Union[str, List[str]]] = None,
+        group_id: Optional[Union[str, List[str]]] = None,
+        **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """
-        Get all group names and IDs from a board ID.
+        Get group names and IDs from a board ID. Optionally specify the group names and/or IDs to filter by.
 
         Args:
             board_id: The ID of the board to query.
-            fields: Fields to query back from the groups.
+            group_name: A single group name or list of group names.
+            group_id: A single group ID or list of group IDs.
+            **kwargs: Keyword arguments for the underlying :meth:`Boards.query() <monday.Boards.query>` call.
 
         Returns:
             List of dictionaries containing group info.
 
         Raises:
-            ValueError: If board_id is not a positive integer.
+            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
+
+        if not isinstance(board_id, int):
+            raise ValueError("board_id must be positive int")
+
         input_data = check_schema(
-            GetGroupsInput,
-            board_id=board_id,
-            fields=fields
+            QueryBoardInput,
+            board_ids=board_id,
+            group_name=group_name,
+            group_id=group_id,
+            **kwargs
         )
 
-        query_string = self._build_get_groups_query_string(input_data)
+        input_data.group_id = [f'"{i}"' for i in input_data.group_id] if input_data.group_id else None
+        fields = f"""
+            groups {f"(ids: [{', '.join(input_data.group_id)}])" if input_data.group_id else ""} {{
+                title
+                id
+            }}
+        """
+        input_data.fields = fields
+
+        query_string = self._build_boards_query_string(input_data)
 
         query_result = await self.client.post_request(query_string)
 
         data = check_query_result(query_result)
 
-        return data['data']['boards'][0]['groups']
+        groups = data['data']['boards'][0]['groups']
+
+        if group_name:
+            groups = []
+            for group in data['data']['boards'][0]['groups']:
+                if group['title'] in group_name:
+                    groups.append(group)
+
+        return groups
+
+    async def get_group_items_by_name(
+        self,
+        board_id: int,
+        group_id: str,
+        item_name: str,
+        *,
+        fields: str = 'id name',
+        **kwargs: Any
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all items from a group with names that match item_name
+
+        Args:
+            board_id: The ID of the board to query.
+            group_id: A single group ID.
+            item_name: The name of the item to match.
+            fields: Additional fields to query from the matched items.
+            **kwargs: Keyword arguments for the underlying :meth:`Boards.query() <monday.Boards.query>` call.
+
+        Returns:
+            List of dictionaries containing item info.
+
+        Raises:
+            ValueError: If input parameters are invalid.
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+        if not isinstance(board_id, int):
+            raise ValueError("board_id must be positive int")
+
+        if not isinstance(group_id, str):
+            raise ValueError("group_id must be str")
+
+        input_data = check_schema(
+            QueryBoardInput,
+            board_ids=board_id,
+            item_name=item_name,
+            group_id=group_id,
+            fields=fields,
+            **kwargs
+        )
+
+        fields = f"""
+            groups (ids: "{group_id}") {{
+               items_page (
+                   query_params: {{
+                       rules: [
+                           {{
+                               column_id: "name",
+                               compare_value: ["{item_name}"]
+                           }}
+                       ]
+                   }}
+               ) {{
+                   cursor
+                   items {{
+                       {fields}
+                   }}
+               }}
+            }}
+        """
+        input_data.fields = fields
+
+        query_string = self._build_boards_query_string(input_data)
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['boards'][0]['groups'][0]['items_page']['items']
 
     async def _paginate_items(
         self,
@@ -442,82 +540,112 @@ class Boards:
             board = update_items_page_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
         return boards_list
 
-    def _build_create_query_string(self, data: CreateBoardInput) -> str:
+    def _build_boards_query_string(self, input_data: QueryBoardInput, page: Optional[int] = None) -> str:
+        """
+        Build GraphQL query string for board queries.
+
+        Args:
+            input_data: Board query input data.
+            page: Page number for pagination.
+
+        Returns:
+            Formatted GraphQL query string for querying boards.
+        """
+        args = {
+            'ids': f"[{', '.join(map(str, input_data.board_ids))}]" if input_data.board_ids else None,
+            'board_kind': input_data.board_kind if input_data.board_kind != 'all' else None,
+            'limit': input_data.boards_limit,
+            'order_by': input_data.order_by,
+            'page': page,
+            'state': input_data.state,
+            'workspace_ids': f"[{', '.join(map(str, input_data.workspace_ids))}]" if input_data.workspace_ids else None,
+        }
+        args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
+
+        return f"""
+            query {{
+                boards ({args_str}) {{
+                    {input_data.fields}
+                }}
+            }}
+        """
+
+    def _build_create_query_string(self, input_data: CreateBoardInput) -> str:
         """
         Build GraphQL query string for board creation.
 
         Args:
-            data: Board creation input data.
+            input_data: Board creation input data.
 
         Returns:
             Formatted GraphQL query string for creating a board.
         """
-        description = data.description.replace('"', '\\"') if data.description else None
-        name = data.name.replace('"', '\\"')
+        description = input_data.description.replace('"', '\\"') if input_data.description else None
+        name = input_data.name.replace('"', '\\"')
         args = {
             'board_name': f'"{name}"',
-            'board_kind': data.kind if data.kind != 'all' else None,
-            'board_owner_ids': f"[{', '.join(map(str, data.owner_ids))}]" if data.owner_ids else None,
-            'board_subscriber_ids': f"[{', '.join(map(str, data.subscriber_ids))}]" if data.subscriber_ids else None,
-            'board_subscriber_teams_ids': f"[{', '.join(map(str, data.subscriber_teams_ids))}]" if data.subscriber_teams_ids else None,
+            'board_kind': input_data.kind if input_data.kind != 'all' else None,
+            'board_owner_ids': f"[{', '.join(map(str, input_data.owner_ids))}]" if input_data.owner_ids else None,
+            'board_subscriber_ids': f"[{', '.join(map(str, input_data.subscriber_ids))}]" if input_data.subscriber_ids else None,
+            'board_subscriber_teams_ids': f"[{', '.join(map(str, input_data.subscriber_teams_ids))}]" if input_data.subscriber_teams_ids else None,
             'description': f'"{description}"' if description else None,
-            'folder_id': data.folder_id,
-            'template_id': data.template_id,
-            'workspace_id': data.workspace_id
+            'folder_id': input_data.folder_id,
+            'template_id': input_data.template_id,
+            'workspace_id': input_data.workspace_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
         return f"""
             mutation {{
                 create_board ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_duplicate_query_string(self, data: DuplicateBoardInput) -> str:
+    def _build_duplicate_query_string(self, input_data: DuplicateBoardInput) -> str:
         """
         Build GraphQL query string for board duplication.
 
         Args:
-            data: Board duplication input data.
+            input_data: Board duplication input data.
 
         Returns:
             Formatted GraphQL query string for duplicating a board.
         """
-        board_name = data.board_name.replace('"', '\\"') if data.board_name else None
+        board_name = input_data.board_name.replace('"', '\\"') if input_data.board_name else None
         args = {
-            'board_id': data.board_id,
+            'board_id': input_data.board_id,
             'board_name': f'"{board_name}"' if board_name else None,
-            'duplicate_type': data.duplicate_type,
-            'folder_id': data.folder_id,
-            'keep_subscribers': str(data.keep_subscribers).lower(),
-            'workspace_id': data.workspace_id
+            'duplicate_type': input_data.duplicate_type,
+            'folder_id': input_data.folder_id,
+            'keep_subscribers': str(input_data.keep_subscribers).lower(),
+            'workspace_id': input_data.workspace_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
         return f"""
             mutation {{
                 duplicate_board ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_update_query_string(self, data: UpdateBoardInput) -> str:
+    def _build_update_query_string(self, input_data: UpdateBoardInput) -> str:
         """
         Build GraphQL query string for board update.
 
         Args:
-            data: Board update input data.
+            input_data: Board update input data.
 
         Returns:
             Formatted GraphQL query string for updating a board.
         """
         args = {
-            'board_id': data.board_id,
-            'board_attribute': data.board_attribute,
-            'new_value': f'"{data.new_value}"'
+            'board_id': input_data.board_id,
+            'board_attribute': input_data.board_attribute,
+            'new_value': f'"{input_data.new_value}"'
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
 
@@ -527,99 +655,48 @@ class Boards:
             }}
         """
 
-    def _build_archive_query_string(self, data: ArchiveBoardInput) -> str:
+    def _build_archive_query_string(self, input_data: ArchiveBoardInput) -> str:
         """
         Build GraphQL query string for archiving a board.
 
         Args:
-            data: Board archive input data.
+            input_data: Board archive input data.
 
         Returns:
             Formatted GraphQL query string for archiving a board.
         """
         args = {
-            'board_id': data.board_id
+            'board_id': input_data.board_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
 
         return f"""
             mutation {{
                 archive_board ({args_str}) {{
-                    {data.fields}
+                    {input_data.fields}
                 }}
             }}
         """
 
-    def _build_delete_query_string(self, data: DeleteBoardInput) -> str:
+    def _build_delete_query_string(self, input_data: DeleteBoardInput) -> str:
         """
         Build GraphQL query string for deleting a board.
 
         Args:
-            data: Board delete input data.
+            input_data: Board delete input data.
 
         Returns:
             Formatted GraphQL query string for deleting a board.
         """
         args = {
-            'board_id': data.board_id
+            'board_id': input_data.board_id
         }
         args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
 
         return f"""
             mutation {{
                 delete_board ({args_str}) {{
-                    {data.fields}
-                }}
-            }}
-        """
-
-    def _build_boards_query_string(self, data: QueryBoardInput, page: int) -> str:
-        """
-        Build GraphQL query string for board queries.
-
-        Args:
-            data: Board query input data.
-            page: Page number for pagination.
-
-        Returns:
-            Formatted GraphQL query string for querying boards.
-        """
-        args = {
-            'ids': f"[{', '.join(map(str, data.board_ids))}]" if data.board_ids else None,
-            'board_kind': data.board_kind if data.board_kind != 'all' else None,
-            'limit': data.boards_limit,
-            'order_by': data.order_by,
-            'page': page,
-            'state': data.state,
-            'workspace_ids': f"[{', '.join(map(str, data.workspace_ids))}]" if data.workspace_ids else None,
-        }
-        args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
-
-        return f"""
-            query {{
-                boards ({args_str}) {{
-                    {data.fields}
-                }}
-            }}
-        """
-
-    def _build_get_groups_query_string(self, data: GetGroupsInput) -> str:
-        """
-        Build GraphQL query string for board group queries.
-
-        Args:
-            data: Board group query input data.
-
-        Returns:
-            Formatted GraphQL query string for querying board groups.
-        """
-
-        return f"""
-            query {{
-                boards (ids: {data.board_id}) {{
-                    groups {{
-                        {data.fields}
-                    }}
+                    {input_data.fields}
                 }}
             }}
         """

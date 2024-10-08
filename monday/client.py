@@ -51,6 +51,7 @@ from .exceptions import (ComplexityLimitExceeded, MondayAPIError,
                          MutationLimitExceeded)
 from .services.boards import Boards
 from .services.items import Items
+from .services.users import Users
 from .services.utils.decorators import board_action, item_action
 
 
@@ -117,6 +118,7 @@ class MondayClient:
         self.max_retries = int(max_retries)
         self.boards = Boards(self)
         self.items = Items(self)
+        self.users = Users(self)
         self._rate_limit_seconds = 60
 
     @board_action('query')

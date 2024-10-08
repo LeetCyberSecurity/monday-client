@@ -16,8 +16,11 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-Items
------
+.. title:: Items
+
+.. raw:: html
+
+   <h1>Items</h1>
 
 .. autoclass:: monday.Items
    :members:

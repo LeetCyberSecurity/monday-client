@@ -33,6 +33,9 @@ class QueryBoardInput(BaseModel):
     page: int = Field(default=1, gt=0)
     state: Literal['active', 'all', 'archived', 'deleted'] = 'active'
     workspace_ids: Optional[Union[int, List[int]]] = None
+    group_name: Optional[Union[str, List[str]]] = None
+    group_id: Optional[Union[str, List[str]]] = None
+    item_name: Optional[str] = None
 
     @field_validator('board_ids', 'workspace_ids', mode='before')
     @classmethod
@@ -88,10 +91,13 @@ class QueryBoardInput(BaseModel):
         except ValueError:
             raise ValueError(f"{field_name} must be a valid integer") from None
 
-    @field_validator('fields')
+    @field_validator('fields', 'item_name')
     @classmethod
-    def ensure_string(cls, v):
+    def ensure_string(cls, v, info):
         """Ensure the input is a non-empty string."""
+        field_name = info.field_name
+        if field_name == 'item_name' and v is None:
+            return v
         try:
             v = str(v).strip()
             if not v:
@@ -99,6 +105,32 @@ class QueryBoardInput(BaseModel):
             return v
         except AttributeError:
             raise ValueError("fields must be a string") from None
+
+    @field_validator('group_name', 'group_id')
+    @classmethod
+    def validate_group_name(cls, v):
+        """Validate that the input is a non-empty string or a list of non-empty strings."""
+        if v is None:
+            return v
+
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                raise ValueError("group_name string must not be empty")
+            return [v]
+
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if not isinstance(item, str):
+                    raise ValueError("All items in group_name list must be strings")
+                item = item.strip()
+                if not item:
+                    raise ValueError("group_name list must not contain empty strings")
+                result.append(item)
+            return result
+
+        raise ValueError("group_name must be a string or a list of strings")
 
     model_config = {
         'strict': True,

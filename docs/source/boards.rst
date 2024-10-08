@@ -16,8 +16,11 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-Boards
-------
+.. title:: Boards
+
+.. raw:: html
+
+   <h1>Boards</h1>
 
 .. autoclass:: monday.Boards
    :members:
