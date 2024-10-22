@@ -50,9 +50,9 @@ import aiohttp
 from .exceptions import (ComplexityLimitExceeded, MondayAPIError,
                          MutationLimitExceeded)
 from .services.boards import Boards
+from .services.groups import Groups
 from .services.items import Items
 from .services.users import Users
-from .services.utils.decorators import board_action, item_action
 
 
 class MondayClient:
@@ -117,123 +117,10 @@ class MondayClient:
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
         self.max_retries = int(max_retries)
         self.boards = Boards(self)
+        self.groups = Groups(self, self.boards)
         self.items = Items(self)
         self.users = Users(self)
         self._rate_limit_seconds = 60
-
-    @board_action('query')
-    async def query_board(self, **kwargs) -> Dict[str, Any]:
-        """
-        Query boards to return metadata about one or multiple boards.
-
-        This method is a wrapper for the :meth:`Boards.query() <monday.Boards.query>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.query() <monday.Boards.query>` method documentation.
-
-        Returns:
-            Dictionary containing queried board data.
-
-        Raises:
-            QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
-            MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
-            PaginationError: If item pagination fails during the request.
-        """
-
-    @board_action('create')
-    async def create_board(self, **kwargs) -> Dict[str, Any]:
-        """
-        Create a new board.
-
-        This method is a wrapper for the :meth:`Boards.create() <monday.Boards.create>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.create() <monday.Boards.create>` method documentation.
-
-        Returns:
-            Dictionary containing info for the new board.
-
-        Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
-        """
-
-    @board_action('duplicate')
-    async def duplicate_board(self, **kwargs) -> Dict[str, Any]:
-        """
-        Duplicate a board.
-
-        This method is a wrapper for the :meth:`Boards.duplicate() <monday.Boards.duplicate>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.duplicate() <monday.Boards.duplicate>` method documentation.
-
-        Returns:
-            Dictionary containing info for the new board.
-
-        Raises:
-            ValueError: If input parameters are invalid.
-            MondayAPIError: If API request fails or returns unexpected format.
-        """
-
-    @board_action('update')
-    async def update_board(self, **kwargs) -> Dict[str, Any]:
-        """
-        Update a board.
-
-        This method is a wrapper for the :meth:`Boards.update() <monday.Boards.update>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.update() <monday.Boards.update>` method documentation.
-
-        Returns:
-            Dictionary containing updated board info.
-
-        Raises:
-            ValueError: If input parameters are invalid.
-            MondayAPIError: If API request fails or returns unexpected format.
-        """
-
-    @board_action('archive')
-    async def archive_board(self, **kwargs) -> Dict[str, Any]:
-        """
-        Archive a board.
-
-        This method is a wrapper for the :meth:`Boards.archive() <monday.Boards.archive>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.archive() <monday.Boards.archive>` method documentation.
-
-        Returns:
-            Dictionary containing archived board info.
-
-        Raises:
-            ValueError: If board_id is not a positive integer.
-            MondayAPIError: If API request fails or returns unexpected format.
-        """
-
-    @board_action('delete')
-    async def delete_board(self, **kwargs) -> Dict[str, Any]:
-        """
-        Delete a board.
-
-        This method is a wrapper for the :meth:`Boards.delete() <monday.Boards.delete>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Boards.delete() <monday.Boards.delete>` method documentation.
-
-        Returns:
-            Dictionary containing deleted board info.
-
-        Raises:
-            ValueError: If board_id is not a positive integer.
-            MondayAPIError: If API request fails or returns unexpected format.
-        """
-
-    @item_action('items_page_by_column_values')
-    async def items_page_by_column_values(self, **kwargs) -> Dict[str, Any]:
-        """
-        Query paginated items by their column values.
-
-        This method is a wrapper for the :meth:`Items.items_page_by_column_values() <monday.Items.items_page_by_column_values>` method.
-        For detailed information on parameters and usage, refer to the :meth:`Items.items_page_by_column_values() <monday.Items.items_page_by_column_values>` method documentation.
-
-        Returns:
-            Dictionary containing the items retrieved.
-
-        Raises:
-            ValueError: If board_id is not a positive integer.
-            MondayAPIError: If API request fails or returns unexpected format.
-        """
 
     async def post_request(self, query: str) -> Dict[str, Any]:
         """

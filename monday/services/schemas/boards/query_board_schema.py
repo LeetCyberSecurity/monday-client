@@ -34,7 +34,7 @@ class QueryBoardInput(BaseModel):
     state: Literal['active', 'all', 'archived', 'deleted'] = 'active'
     workspace_ids: Optional[Union[int, List[int]]] = None
     group_name: Optional[Union[str, List[str]]] = None
-    group_id: Optional[Union[str, List[str]]] = None
+    group_ids: Optional[Union[str, List[str]]] = None
     item_name: Optional[str] = None
 
     @field_validator('board_ids', 'workspace_ids', mode='before')
@@ -106,7 +106,7 @@ class QueryBoardInput(BaseModel):
         except AttributeError:
             raise ValueError("fields must be a string") from None
 
-    @field_validator('group_name', 'group_id')
+    @field_validator('group_name', 'group_ids')
     @classmethod
     def validate_group_name(cls, v):
         """Validate that the input is a non-empty string or a list of non-empty strings."""

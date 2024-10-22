@@ -124,25 +124,3 @@ async def test_delete(boards_instance):
 
     assert result == {'id': 1, 'state': 'deleted'}
     boards_instance.client.post_request.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_get_groups(boards_instance):
-    mock_response = {
-        'data': {
-            'boards': [
-                {
-                    'groups': [
-                        {'id': 'group1', 'title': 'Group 1'},
-                        {'id': 'group2', 'title': 'Group 2'}
-                    ]
-                }
-            ]
-        }
-    }
-
-    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await boards_instance.get_groups(board_id=1)
-
-    assert result == [{'id': 'group1', 'title': 'Group 1'}, {'id': 'group2', 'title': 'Group 2'}]
-    boards_instance.client.post_request.assert_awaited_once()

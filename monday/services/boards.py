@@ -377,73 +377,11 @@ class Boards:
 
         return data['data']['delete_board']
 
-    async def get_groups(
-        self,
-        board_id: int,
-        *,
-        group_name: Optional[Union[str, List[str]]] = None,
-        group_id: Optional[Union[str, List[str]]] = None,
-        **kwargs: Any
-    ) -> List[Dict[str, Any]]:
-        """
-        Get group names and IDs from a board ID. Optionally specify the group names and/or IDs to filter by.
-
-        Args:
-            board_id: The ID of the board to query.
-            group_name: A single group name or list of group names.
-            group_id: A single group ID or list of group IDs.
-            **kwargs: Keyword arguments for the underlying :meth:`Boards.query() <monday.Boards.query>` call.
-
-        Returns:
-            List of dictionaries containing group info.
-
-        Raises:
-            ValueError: If input parameters are invalid.
-            MondayAPIError: If API request fails or returns unexpected format.
-        """
-
-        if not isinstance(board_id, int):
-            raise ValueError("board_id must be positive int")
-
-        input_data = check_schema(
-            QueryBoardInput,
-            board_ids=board_id,
-            group_name=group_name,
-            group_id=group_id,
-            **kwargs
-        )
-
-        input_data.group_id = [f'"{i}"' for i in input_data.group_id] if input_data.group_id else None
-        fields = f"""
-            groups {f"(ids: [{', '.join(input_data.group_id)}])" if input_data.group_id else ""} {{
-                title
-                id
-            }}
-        """
-        input_data.fields = fields
-
-        query_string = self._build_boards_query_string(input_data)
-
-        query_result = await self.client.post_request(query_string)
-
-        data = check_query_result(query_result)
-
-        groups = data['data']['boards'][0]['groups']
-
-        if group_name:
-            groups = []
-            for group in data['data']['boards'][0]['groups']:
-                if group['title'] in group_name:
-                    groups.append(group)
-
-        return groups
-
     async def get_group_items_by_name(
         self,
         board_id: int,
         group_id: str,
         item_name: str,
-        *,
         fields: str = 'id name',
         **kwargs: Any
     ) -> List[Dict[str, Any]]:
