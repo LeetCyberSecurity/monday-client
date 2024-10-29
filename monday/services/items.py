@@ -581,7 +581,7 @@ class Items:
 
         data = await self.client.post_request(query_string)
 
-        return data['change_multiple_column_values']
+        return data['data']['change_multiple_column_values']
 
     async def get_name(
         self,
