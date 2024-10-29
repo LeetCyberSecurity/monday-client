@@ -44,17 +44,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
-from .schemas.items.archive_item_schema import ArchiveItemInput
-from .schemas.items.clear_item_updates_schema import ClearItemUpdatesInput
-from .schemas.items.create_item_schema import CreateItemInput
-from .schemas.items.delete_item_schema import DeleteItemInput
-from .schemas.items.duplicate_item_schema import DuplicateItemInput
-from .schemas.items.items_page_by_column_values_schema import (
-    ColumnInput, ItemsPageByColumnValuesInput)
-from .schemas.items.items_page_schema import ItemsPageInput
-from .schemas.items.move_item_to_board_schema import MoveToBoardInput
-from .schemas.items.move_item_to_group_schema import MoveToGroupInput
-from .schemas.items.query_item_schema import QueryItemInput
+from .schemas.items import *  # pylint: disable=wildcard-import
 from .utils.error_handlers import check_query_result, check_schema
 from .utils.pagination import paginated_item_request
 
@@ -116,7 +106,7 @@ class Items:
             ValueError: If input parameters are invalid.
 
         Note:
-            To return all items on a board, use :meth:`Items.items_page() <monday.Items.items_page>` or :meth:`Items.items_page_by_column_values() <monday.Items.items_page_by_column_values>` instead.
+            To return all items on a board, use :meth:`Items.page() <monday.Items.page>` or :meth:`Items.page_by_column_values() <monday.Items.page_by_column_values>` instead.
         """
         input_data = check_schema(
             QueryItemInput,
@@ -518,7 +508,6 @@ class Items:
     async def get_column_values(
         self,
         item_id: int,
-        *,
         fields: str = 'id text',
         **kwargs: Any
     ) -> List[Dict[str, Any]]:
@@ -554,6 +543,45 @@ class Items:
         data = await self.client.post_request(query_string)
 
         return data['data']['items'][0]['column_values']
+
+    async def change_column_values(
+        self,
+        item_id: int,
+        column_values: Dict[str, Any],
+        create_labels_if_missing: bool = False,
+        fields: str = 'id',
+    ) -> List[Dict[str, Any]]:
+        """
+        Change an item's column values.
+
+        Args:
+            item_id: The ID of the item.
+            column_values: The updated column values.
+            fields: Additional fields to query.
+
+        Returns:
+            A list of dictionaries containing the item column values.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+            ValueError: If input parameters are invalid.
+        """
+        input_data = check_schema(
+            ChangeColumnValuesInput,
+            item_id=item_id,
+            column_values=column_values,
+            create_labels_if_missing=create_labels_if_missing,
+            fields=fields
+        )
+
+        board_id_query = await self.query(input_data.item_id, fields='board { id }')
+        board_id = int(board_id_query[0]['board']['id'])
+
+        query_string = self._build_change_column_values_query_string(input_data, board_id)
+
+        data = await self.client.post_request(query_string)
+
+        return data
 
     async def get_name(
         self,
@@ -860,6 +888,36 @@ class Items:
                         items {{ {input_data.fields} }}
                     }}
                     {group_query_end}
+                }}
+            }}
+        """
+
+    def _build_change_column_values_query_string(
+        self,
+        input_data: ChangeColumnValuesInput,
+        board_id: int
+    ) -> str:
+        """
+        Build GraphQL query string for updating column values.
+
+        Args:
+            input_data: Items page input data.
+
+        Returns:
+            Formatted GraphQL query string for updating column values.
+        """
+        args = {
+            'item_id': input_data.item_id,
+            'board_id': board_id,
+            'column_values': json.dumps(json.dumps(input_data.column_values)),
+            'create_labels_if_missing': str(input_data.create_labels_if_missing).lower()
+        }
+        args_str = ', '.join(f"{k}: {v}" for k, v in args.items())
+
+        return f"""
+            mutation {{
+                change_multiple_column_values ({args_str}) {{
+                    {input_data.fields}
                 }}
             }}
         """
