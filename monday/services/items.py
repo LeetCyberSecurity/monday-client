@@ -550,7 +550,7 @@ class Items:
         column_values: Dict[str, Any],
         create_labels_if_missing: bool = False,
         fields: str = 'id',
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         Change an item's column values.
 
@@ -560,7 +560,7 @@ class Items:
             fields: Additional fields to query.
 
         Returns:
-            A list of dictionaries containing the item column values.
+            Dictionary containing info for the updated columns.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
@@ -581,7 +581,7 @@ class Items:
 
         data = await self.client.post_request(query_string)
 
-        return data
+        return data['change_multiple_column_values']
 
     async def get_name(
         self,
@@ -901,7 +901,7 @@ class Items:
         Build GraphQL query string for updating column values.
 
         Args:
-            input_data: Items page input data.
+            input_data: Change column values input data.
 
         Returns:
             Formatted GraphQL query string for updating column values.
