@@ -509,6 +509,7 @@ class Items:
         self,
         item_id: int,
         fields: str = 'id text',
+        column_ids: Optional[List[str]] = None,
         **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """
@@ -516,7 +517,8 @@ class Items:
 
         Args:
             item_id: The ID of the item.
-            fields: Additional fields to query from the item column values
+            fields: Additional fields to query from the item column values.
+            column_ids: The specific column IDs to return. Will return all columns if no IDs specified.
             **kwargs: Keyword arguments for the underlying :meth:`Items.query() <monday.Items.query>` call.
 
         Returns:
@@ -533,14 +535,23 @@ class Items:
             QueryItemInput,
             item_ids=item_id,
             fields=fields,
+            column_ids=column_ids,
             **kwargs
         )
 
-        input_data.fields = f'column_values {{ {fields} }}'
+        column_ids = [f'"{i}"' for i in column_ids] if column_ids else None
+
+        input_data.fields = f"""
+            column_values {f"(ids: {', '.join(column_ids)})" if column_ids else ""} {{ 
+                {fields} 
+            }}
+        """
 
         query_string = self._build_items_query_string(input_data)
 
-        data = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
 
         return data['data']['items'][0]['column_values']
 

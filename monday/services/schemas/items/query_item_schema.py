@@ -18,7 +18,7 @@
 """Defines the schema for querying items."""
 
 
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -31,6 +31,7 @@ class QueryItemInput(BaseModel):
     page: int = Field(default=1, gt=0)
     exclude_nonactive: bool = False
     newest_first: bool = False
+    column_ids: Optional[List[str]] = None
 
     @field_validator('item_ids')
     @classmethod
@@ -92,6 +93,27 @@ class QueryItemInput(BaseModel):
         if not isinstance(v, bool):
             raise ValueError(f"{field_name} must be a boolean")
         return v
+
+    @field_validator('column_ids')
+    @classmethod
+    def validate_column_ids(cls, v):
+        """Validate that column_ids is None or a list of non-empty strings."""
+        if v is None:
+            return v
+        if not isinstance(v, list):
+            raise ValueError("column_ids must be a list of strings")
+        if not v:
+            raise ValueError("column_ids must not be empty when provided")
+        validated = []
+        for item in v:
+            try:
+                str_item = str(item).strip()
+                if not str_item:
+                    raise ValueError("column_ids must contain non-empty strings")
+                validated.append(str_item)
+            except (AttributeError, TypeError):
+                raise ValueError("column_ids must contain string values") from None
+        return validated
 
     model_config = {
         'strict': True,

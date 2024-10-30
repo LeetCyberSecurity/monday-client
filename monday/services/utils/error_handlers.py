@@ -52,6 +52,8 @@ def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
             raise MondayAPIError("API request failed", json_data=query_result)
         if 'data' not in query_result:
             raise MondayAPIError("Unexpected API response", json_data=query_result)
+        if 'data' in query_result and any('error' in key.lower() for key in query_result['data'].keys()):
+            raise MondayAPIError("API request failed", json_data=query_result)
         return query_result
     except MondayAPIError as e:
         logger.error('MondayAPIError occurred: %s Data: %s', str(e), e.json)
