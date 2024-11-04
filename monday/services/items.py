@@ -542,7 +542,7 @@ class Items:
         column_ids = [f'"{i}"' for i in column_ids] if column_ids else None
 
         input_data.fields = f"""
-            column_values {f"(ids: {', '.join(column_ids)})" if column_ids else ""} {{ 
+            column_values {f"(ids: [{', '.join(column_ids)}])" if column_ids else ""} {{ 
                 {fields} 
             }}
         """
