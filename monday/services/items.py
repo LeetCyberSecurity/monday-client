@@ -590,7 +590,9 @@ class Items:
 
         query_string = self._build_change_column_values_query_string(input_data, board_id)
 
-        data = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
 
         return data['data']['change_multiple_column_values']
 
