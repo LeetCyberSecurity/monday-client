@@ -44,6 +44,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
+from ..exceptions import MondayAPIError
 from .schemas.items import *  # pylint: disable=wildcard-import
 from .utils.error_handlers import check_query_result, check_schema
 from .utils.pagination import paginated_item_request
@@ -553,7 +554,12 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['items'][0]['column_values']
+        try:
+            items = data['data']['items'][0]
+        except IndexError as e:
+            raise MondayAPIError from e
+
+        return items['column_values']
 
     async def change_column_values(
         self,
