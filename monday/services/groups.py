@@ -102,6 +102,14 @@ class Groups:
         group_ids_list = [group_ids] if isinstance(group_ids, str) else group_ids
         group_ids_quoted = [f'"{i}"' for i in group_ids_list] if group_ids_list else None
 
+        fields_set = set(fields.split())
+        original_fields_had_title = 'title' in fields_set
+
+        if group_name:
+            fields_set.add('title')
+
+        fields = ' '.join(fields_set)
+
         group_fields = f"""
             id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ""} {{
                 {fields}
@@ -118,6 +126,8 @@ class Groups:
             board_groups = board.get('groups', [])
             if group_name:
                 board_groups = [group for group in board_groups if group['title'] in (group_name if isinstance(group_name, list) else [group_name])]
+                if not original_fields_had_title:
+                    board_groups = [{k: v for k, v in group.items() if k != 'title'} for group in board_groups]
             groups.append({
                 'id': board['id'],
                 'groups': board_groups
