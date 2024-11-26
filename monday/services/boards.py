@@ -87,7 +87,6 @@ class Boards:
     async def query(
         self,
         board_ids: Optional[Union[int, List[int]]] = None,
-        fields: str = 'id name',
         paginate_items: bool = True,
         board_kind: Literal['private', 'public', 'share', 'all'] = 'all',
         order_by: Literal['created_at', 'used_at'] = 'created_at',
@@ -95,14 +94,14 @@ class Boards:
         boards_limit: int = 25,
         page: int = 1,
         state: Literal['active', 'all', 'archived', 'deleted'] = 'active',
-        workspace_ids: Optional[Union[int, List[int]]] = None
+        workspace_ids: Optional[Union[int, List[int]]] = None,
+        fields: str = 'id name',
     ) -> List[Dict[str, Any]]:
         """
         Query boards to return metadata about one or multiple boards.
 
         Args:
             board_ids: The ID or list of IDs of the boards to query.
-            fields: Fields to specify in the boards query.
             paginate_items: Whether to paginate items if items_page is in fields.
             board_kind: The kind of boards to include.
             order_by: The order in which to return the boards.
@@ -111,6 +110,7 @@ class Boards:
             page: The page number to start from.
             state: The state of the boards to include.
             workspace_ids: The ID or list of IDs of the workspaces to filter by.
+            fields: Fields to specify in the boards query.
 
         Returns:
             List of dictionaries containing queried board data.
@@ -118,7 +118,6 @@ class Boards:
         Raises:
             QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
             PaginationError: If item pagination fails during the request.
         """
 
@@ -133,13 +132,13 @@ class Boards:
 
         args = {
             'ids': board_ids,
-            'fields': fields,
             'board_kind': board_kind if board_kind != 'all' else None,
             'order_by': order_by,
             'limit': boards_limit,
             'page': page,
             'state': state,
-            'workspace_ids': workspace_ids
+            'workspace_ids': workspace_ids,
+            'fields': fields
         }
 
         boards_data = []
@@ -172,7 +171,6 @@ class Boards:
     async def create(
         self,
         name: str,
-        fields: str = 'id',
         board_kind: Optional[Literal['private', 'public', 'share']] = 'public',
         owner_ids: Optional[List[int]] = None,
         subscriber_ids: Optional[List[int]] = None,
@@ -181,6 +179,7 @@ class Boards:
         folder_id: Optional[int] = None,
         template_id: Optional[int] = None,
         workspace_id: Optional[int] = None,
+        fields: str = 'id'
     ) -> Dict[str, Any]:
         """
         Create a new board.
@@ -202,12 +201,10 @@ class Boards:
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
 
         args = {
             'name': name,
-            'fields': fields,
             'board_kind ': board_kind,
             'owner_ids': owner_ids,
             'subscriber_ids': subscriber_ids,
@@ -215,7 +212,8 @@ class Boards:
             'description': description,
             'folder_id': folder_id,
             'template_id': template_id,
-            'workspace_id': workspace_id
+            'workspace_id': workspace_id,
+            'fields': fields
         }
 
         query_string = GraphQLQueryBuilder.build_query(
@@ -233,41 +231,40 @@ class Boards:
     async def duplicate(
         self,
         board_id: int,
-        fields: str = 'board { id }',
         board_name: Optional[str] = None,
         duplicate_type: Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure'] = 'duplicate_board_with_structure',
         folder_id: Optional[int] = None,
         keep_subscribers: bool = False,
         workspace_id: Optional[int] = None,
+        fields: str = 'board { id }'
     ) -> Dict[str, Any]:
         """
         Duplicate a board.
 
         Args:
             board_id: The ID of the board to duplicate.
-            fields: Fields to query back from the duplicated board.
             board_name: The duplicated board's name.
             duplicate_type: The duplication type.
             folder_id: The destination folder within the destination workspace.
             keep_subscribers: Duplicate the subscribers to the new board.
             workspace_id: The destination workspace.
+            fields: Fields to query back from the duplicated board.
 
         Returns:
             Dictionary containing info for the new board.
 
         Raises:
-            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
         args = {
             'board_id': board_id,
-            'fields': fields,
             'board_name ': board_name,
             'duplicate_type ': duplicate_type,
             'folder_id': folder_id,
             'keep_subscribers': keep_subscribers,
-            'workspace_id': workspace_id
+            'workspace_id': workspace_id,
+            'fields': fields
         }
 
         query_string = GraphQLQueryBuilder.build_query(
@@ -300,7 +297,6 @@ class Boards:
             Dictionary containing updated board info.
 
         Raises:
-            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
@@ -343,7 +339,6 @@ class Boards:
             Dictionary containing archived board info.
 
         Raises:
-            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
@@ -380,7 +375,6 @@ class Boards:
             Dictionary containing deleted board info.
 
         Raises:
-            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
@@ -421,7 +415,6 @@ class Boards:
             List of dictionaries containing item info.
 
         Raises:
-            ValueError: If input parameters are invalid.
             MondayAPIError: If API request fails or returns unexpected format.
         """
 

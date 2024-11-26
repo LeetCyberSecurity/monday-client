@@ -73,7 +73,6 @@ class Users:
 
     async def query(
         self,
-        fields: str = 'id',
         emails: Optional[Union[str, List[str]]] = None,
         ids: Optional[Union[int, List[int]]] = None,
         name: Optional[str] = None,
@@ -82,13 +81,13 @@ class Users:
         non_active: bool = False,
         limit: int = 50,
         page: int = 1,
-        paginate: bool = True
+        paginate: bool = True,
+        fields: str = 'id'
     ) -> List[Dict[str, Any]]:
         """
         Query users to return metadata about one or multiple users.
 
         Args:
-            fields: Fields to return from the users query.
             emails: The specific user emails to return.
             ids: The IDs of the specific users to return.
             name: A fuzzy search of users by name.
@@ -98,16 +97,15 @@ class Users:
             limit: The number of users to get per page.
             page: The page number to start from.
             paginate: Whether to paginate results or just return the first page.
+            fields: Fields to return from the users query.
 
         Returns:
             List of dictionaries containing queried user data.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
-            'fields': fields,
             'emails': emails,
             'ids': ids,
             'name': name,
@@ -115,7 +113,8 @@ class Users:
             'newest_first': newest_first,
             'non_active': non_active,
             'limit': limit,
-            'page': page
+            'page': page,
+            'fields': fields
         }
 
         query_string = GraphQLQueryBuilder.build_query(

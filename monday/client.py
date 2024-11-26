@@ -115,7 +115,7 @@ class MondayClient:
         self.max_retries = int(max_retries)
         self.boards = Boards(self)
         self.items = Items(self, self.boards)
-        self.groups = Groups(self, self.boards, self.items)
+        self.groups = Groups(self, self.boards)
         self.users = Users(self)
         self._rate_limit_seconds = 60
         self._query_errors = {
@@ -152,13 +152,13 @@ class MondayClient:
                         else:
                             self.logger.error('error getting reset_in_x_seconds: %s', response_data)
                             return {'error': response_data}
-                        raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in, json_data=response_data)
+                        raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in, json=response_data)
                     if 'status_code' in response_data and int(response_data['status_code']) == 429:
                         reset_in = self._rate_limit_seconds
-                        raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in, json_data=response_data)
+                        raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in, json=response_data)
                     if any(c in self._query_errors for c in [e['extensions']['code'] for e in response_data['errors']]):
-                        raise QueryFormatError('Invalid monday.com GraphQL query', json_data=response_data)
-                    raise MondayAPIError('Unhandled monday.com API error', json_data=response_data)
+                        raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
+                    raise MondayAPIError('Unhandled monday.com API error', json=response_data)
 
                 return response_data
 
@@ -168,7 +168,7 @@ class MondayClient:
                     await asyncio.sleep(e.reset_in)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json_data}
+                    return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json}
             except MondayAPIError as e:
                 self.logger.error("Attempt %d failed: %s", attempt + 1, str(e))
                 return {'data': e.json}

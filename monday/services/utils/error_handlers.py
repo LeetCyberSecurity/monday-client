@@ -51,6 +51,6 @@ def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
 
     for condition in error_conditions:
         if condition(query_result):
-            raise MondayAPIError("API request failed", json_data=query_result)
+            raise MondayAPIError("API request failed", json=query_result)
 
     return query_result

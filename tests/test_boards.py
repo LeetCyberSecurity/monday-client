@@ -72,7 +72,7 @@ async def test_query_with_api_error(boards_instance):
     boards_instance.client.post_request = AsyncMock(return_value=error_response)
     with pytest.raises(MondayAPIError) as exc_info:
         await boards_instance.query(board_ids=[1])
-    assert exc_info.value.json_data == error_response
+    assert exc_info.value.json == error_response
 
 
 @pytest.mark.asyncio

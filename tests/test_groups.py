@@ -46,8 +46,8 @@ def mock_items():
 
 
 @pytest.fixture(scope="module")
-def groups_instance(mock_client, mock_boards, mock_items):
-    return Groups(mock_client, mock_boards, mock_items)
+def groups_instance(mock_client, mock_boards):
+    return Groups(mock_client, mock_boards)
 
 
 @pytest.mark.asyncio
@@ -107,8 +107,8 @@ async def test_query_with_api_error(groups_instance, mock_boards):
         }]
     }
 
-    mock_boards.query.side_effect = MondayAPIError("API Error", json_data=error_response)
+    mock_boards.query.side_effect = MondayAPIError("API Error", json=error_response)
 
     with pytest.raises(MondayAPIError) as exc_info:
         await groups_instance.query(board_ids=1)
-    assert exc_info.value.json_data == error_response
+    assert exc_info.value.json == error_response

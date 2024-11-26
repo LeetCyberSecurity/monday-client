@@ -88,28 +88,27 @@ class Items:
         self,
         item_ids: Union[int, List[int]],
         limit: int = 25,
-        fields: str = 'id',
         page: int = 1,
         exclude_nonactive: bool = False,
-        newest_first: bool = False
+        newest_first: bool = False,
+        fields: str = 'id'
     ) -> List[Dict[str, Any]]:
         """
         Query items to return metadata about one or multiple items.
 
         Args:
             item_ids: The ID or list of IDs of the specific items, subitems, or parent items to return. You can only return up to 100 IDs at a time.
-            limit: The maximum number of items to retrieve per page. Defaults to 25.
-            fields: The fields to include in the response. Defaults to 'id'.
-            page: The page number at which to start. Defaults to 1.
-            exclude_nonactive: Excludes items that are inactive, deleted, or belong to deleted items. Defaults to False.
-            newest_first: Lists the most recently created items at the top. Defaults to False.
+            limit: The maximum number of items to retrieve per page.
+            page: The page number at which to start.
+            exclude_nonactive: Excludes items that are inactive, deleted, or belong to deleted items.
+            newest_first: Lists the most recently created items at the top.
+            fields: The fields to include in the response.
 
         Returns:
             A list of dictionaries containing the items retrieved.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
 
         Note:
             To return all items on a board, use :meth:`Items.page() <monday.Items.page>` or :meth:`Items.page_by_column_values() <monday.Items.page_by_column_values>` instead.
@@ -118,10 +117,10 @@ class Items:
         args = {
             'ids': item_ids,
             'limit': limit,
-            'fields': fields,
             'page': page,
             'exclude_nonactive': exclude_nonactive,
-            'newest_first': newest_first
+            'newest_first': newest_first,
+            'fields': fields
         }
 
         items_data = []
@@ -151,11 +150,11 @@ class Items:
         board_id: int,
         item_name: str,
         column_values: Optional[Dict[str, Any]] = None,
-        fields: str = 'id',
         group_id: Optional[str] = None,
         create_labels_if_missing: bool = False,
         position_relative_method: Optional[Literal['before_at', 'after_at']] = None,
-        relative_to: Optional[int] = None
+        relative_to: Optional[int] = None,
+        fields: str = 'id'
     ) -> Dict[str, Any]:
         """
         Create a new item on a board.
@@ -163,30 +162,29 @@ class Items:
         Args:
             board_id: The ID of the board where the item will be created.
             item_name: The name of the item.
-            column_values: Column values for the item. Defaults to None.
-            fields: Fields to query back from the created item. Defaults to 'id'.
-            group_id: The ID of the group where the item will be created. Defaults to None.
-            create_labels_if_missing: Creates status/dropdown labels if they are missing. Defaults to False.
-            position_relative_method: Specify which item you want to create the new item above or below.
+            column_values: Column values for the item.
+            group_id: The ID of the group where the item will be created.
+            create_labels_if_missing: Creates status/dropdown labels if they are missing.
+            position_relative_method: Specify whether you want to create the new item above or below the item given to relative_to.
             relative_to: The ID of the item you want to create the new one in relation to.
+            fields: Fields to query back from the created item.
 
         Returns:
             Dictionary containing info for the new item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
 
         args = {
             'board_id': board_id,
             'item_name': item_name,
             'column_values': column_values,
-            'fields': fields,
             'group_id': group_id,
             'create_labels_if_missing': create_labels_if_missing,
             'position_relative_method': position_relative_method,
-            'relative_to': relative_to
+            'relative_to': relative_to,
+            'fields': fields
         }
 
         query_string = GraphQLQueryBuilder.build_query(
@@ -205,8 +203,8 @@ class Items:
         self,
         item_id: int,
         board_id: int,
-        fields: str = 'id',
-        with_updates: bool = False
+        with_updates: bool = False,
+        fields: str = 'id'
     ) -> Dict[str, Any]:
         """
         Duplicate an item.
@@ -214,21 +212,20 @@ class Items:
         Args:
             item_id: The ID of the item to be duplicated.
             board_id: The ID of the board where the item will be duplicated.
-            fields: Fields to query back from the duplicated item. Defaults to 'id'.
-            with_updates: Duplicates the item with existing updates. Defaults to False.
+            with_updates: Duplicates the item with existing updates.
+            fields: Fields to query back from the duplicated item.
 
         Returns:
             Dictionary containing info for the duplicated item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'item_id': item_id,
             'board_id': board_id,
-            'fields': fields,
-            'with_updates': with_updates
+            'with_updates': with_updates,
+            'fields': fields
         }
 
         query_string = GraphQLQueryBuilder.build_query(
@@ -255,14 +252,13 @@ class Items:
         Args:
             item_id: The ID of the item to be moved.
             group_id: The ID of the group to move the item to.
-            fields: Fields to query back from the moved item. Defaults to 'id'.
+            fields: Fields to query back from the moved item.
 
         Returns:
             Dictionary containing info for the moved item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'item_id': item_id,
@@ -287,9 +283,9 @@ class Items:
         item_id: int,
         board_id: int,
         group_id: str,
-        fields: str = 'id',
         columns_mapping: Optional[List[Dict[str, str]]] = None,
-        subitems_columns_mapping: Optional[List[Dict[str, str]]] = None
+        subitems_columns_mapping: Optional[List[Dict[str, str]]] = None,
+        fields: str = 'id'
     ) -> Dict[str, Any]:
         """
         Move an item to a different board.
@@ -298,24 +294,23 @@ class Items:
             item_id: The ID of the item to be moved.
             board_id: The ID of the board to move the item to.
             group_id: The ID of the group to move the item to.
-            fields: Fields to query back from the moved item. Defaults to 'id'.
             columns_mapping: Defines the column mapping between the original and target board.
             subitems_columns_mapping: Defines the subitems' column mapping between the original and target board.
+            fields: Fields to query back from the moved item.
 
         Returns:
             Dictionary containing info for the moved item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'item_id': item_id,
             'board_id': board_id,
             'group_id': group_id,
-            'fields': fields,
             'columns_mapping': columns_mapping,
-            'subitems_columns_mapping': subitems_columns_mapping
+            'subitems_columns_mapping': subitems_columns_mapping,
+            'fields': fields
         }
 
         query_string = GraphQLQueryBuilder.build_query(
@@ -340,14 +335,13 @@ class Items:
 
         Args:
             item_id: The ID of the item to be archived.
-            fields: Fields to query back from the archived item. Defaults to 'id'.
+            fields: Fields to query back from the archived item.
 
         Returns:
             Dictionary containing info for the archived item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'item_id': item_id,
@@ -376,14 +370,13 @@ class Items:
 
         Args:
             item_id: The ID of the item to be deleted.
-            fields: Fields to query back from the deleted item. Defaults to 'id'.
+            fields: Fields to query back from the deleted item.
 
         Returns:
             Dictionary containing info for the deleted item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'item_id': item_id,
@@ -412,14 +405,13 @@ class Items:
 
         Args:
             item_id: The ID of the item to be cleared.
-            fields: Fields to query back from the cleared item. Defaults to 'id'.
+            fields: Fields to query back from the cleared item.
 
         Returns:
             Dictionary containing info for the cleared item.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'item_id': item_id,
@@ -443,8 +435,8 @@ class Items:
         board_id: int,
         columns: List[Dict[str, Any]],
         limit: int = 25,
-        fields: str = 'id',
-        paginate_items: bool = True
+        paginate_items: bool = True,
+        fields: str = 'id'
     ) -> List[Dict[str, Any]]:
         """
         Retrieves a paginated list of items from a specified board on Monday.com.
@@ -452,16 +444,15 @@ class Items:
         Args:
             board_id: The ID of the board from which to retrieve items.
             columns: One or more columns and their values to search by.
-            limit: The maximum number of items to retrieve per page. Defaults to 25.
-            fields: The fields to include in the response. Defaults to 'id'.
-            paginate_items: Whether to paginate items. Defaults to True.
+            limit: The maximum number of items to retrieve per page.
+            paginate_items: Whether to paginate items.
+            fields: The fields to include in the response.
 
         Returns:
             A list of dictionaries containing the combined items retrieved.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
         args = {
             'board_id': board_id,
@@ -495,9 +486,9 @@ class Items:
         board_ids: Union[int, List[int]],
         query_params: Optional[str] = None,
         limit: int = 25,
-        fields: str = 'id',
         group_id: Optional[str] = None,
-        paginate_items: bool = True
+        paginate_items: bool = True,
+        fields: str = 'id'
     ) -> List[Dict[str, Any]]:
         """
         Retrieves a paginated list of items from specified boards.
@@ -505,18 +496,17 @@ class Items:
         Args:
             board_ids: The ID or list of IDs of the boards from which to retrieve items.
             query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query.
-                          Use this to customize the results based on specific criteria. Defaults to None.
-            limit: The maximum number of items to retrieve per page. Must be > 0 and <= 500. Defaults to 25.
-            fields: The fields to include in the response. Defaults to 'id name'.
-            group_id: Only retrieve items from the specified group ID. Default is None.
-            paginate_items: Whether to paginate items. Defaults to True.
+                          Use this to customize the results based on specific criteria.
+            limit: The maximum number of items to retrieve per page. Must be > 0 and <= 500.
+            group_id: Only retrieve items from the specified group ID.
+            paginate_items: Whether to paginate items.
+            fields: The fields to include in the response.
 
         Returns:
             A list of dictionaries containing the board IDs and their combined items retrieved.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
 
         group_query = f'groups (ids: "{group_id}") {{' if group_id else ''
@@ -546,23 +536,22 @@ class Items:
     async def get_column_values(
         self,
         item_id: int,
-        fields: str = 'id',
-        column_ids: Optional[List[str]] = None
+        column_ids: Optional[List[str]] = None,
+        fields: str = 'id'
     ) -> List[Dict[str, Any]]:
         """
         Retrieves a list of column values for a specific item.
 
         Args:
             item_id: The ID of the item.
-            fields: Additional fields to query from the item column values.
             column_ids: The specific column IDs to return. Will return all columns if no IDs specified.
+            fields: Additional fields to query from the item column values.
 
         Returns:
             A list of dictionaries containing the item column values.
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
 
         column_ids = [f'"{i}"' for i in column_ids] if column_ids else None
@@ -615,7 +604,6 @@ class Items:
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
 
         board_id_query = await self.query(item_id, fields='board { id }')
@@ -656,7 +644,6 @@ class Items:
 
         Raises:
             MondayAPIError: If API request fails or returns unexpected format.
-            ValueError: If input parameters are invalid.
         """
 
         args = {

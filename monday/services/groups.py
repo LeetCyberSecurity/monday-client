@@ -37,7 +37,9 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
+
+from monday.services.utils import GraphQLQueryBuilder, check_query_result
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -61,8 +63,7 @@ class Groups:
     def __init__(
         self,
         client: 'MondayClient',
-        boards: 'Boards',
-        items: 'Items'
+        boards: 'Boards'
     ):
         """
         Initialize a Groups instance with specified parameters.
@@ -70,11 +71,9 @@ class Groups:
         Args:
             client: The MondayClient instance to use for API requests.
             boards: The Boards instance to use for board-related operations.
-            items: The Items instance to use for item-related operations.
         """
         self.client: 'MondayClient' = client
         self.boards: 'Boards' = boards
-        self.items: 'Items' = items
 
     async def query(
         self,
@@ -125,3 +124,51 @@ class Groups:
             })
 
         return groups
+
+    async def create(
+        self,
+        board_id: int,
+        group_name: str,
+        group_color: Optional[str] = None,
+        relative_to: Optional[int] = None,
+        position_relative_method: Optional[Literal['before_at', 'after_at']] = None,
+        fields: str = 'id'
+    ) -> Dict[str, Any]:
+        """
+        Create a new group on a board.
+
+        Args:
+            board_id: The ID of the board where the group will be created.
+            group_name: The new group's name.
+            group_color: The new group's HEX code color.
+            relative_to: The ID of the group you want to create the new one in relation to.
+            position_relative_method: Specify whether you want to create the new item above or below the item given to relative_to
+            fields: Additional fields to return from the created group.
+
+        Returns:
+            Dictionary containing info for the new group.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+        args = {
+            'board_id': board_id,
+            'group_name': group_name,
+            'group_color': group_color,
+            'relative_to': relative_to,
+            'position_relative_method': position_relative_method,
+            'fields': fields,
+        }
+
+        query_string = GraphQLQueryBuilder.build_query(
+            'create_group',
+            'mutation',
+            args
+        )
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['create_group']

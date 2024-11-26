@@ -71,7 +71,7 @@ async def test_query_with_api_error(items_instance):
     items_instance.client.post_request = AsyncMock(return_value=error_response)
     with pytest.raises(MondayAPIError) as exc_info:
         await items_instance.query(item_ids=[1])
-    assert exc_info.value.json_data == error_response
+    assert exc_info.value.json == error_response
 
 
 @pytest.mark.asyncio
@@ -86,7 +86,7 @@ async def test_query_with_complexity_error(items_instance):
     items_instance.client.post_request = AsyncMock(side_effect=[error_response, {'data': {'items': []}}])
     with pytest.raises(MondayAPIError) as exc_info:
         await items_instance.query(item_ids=[1])
-    assert exc_info.value.json_data == error_response
+    assert exc_info.value.json == error_response
 
 
 @pytest.mark.asyncio
@@ -102,7 +102,7 @@ async def test_query_with_rate_limit_error(items_instance):
     items_instance.client.post_request = AsyncMock(side_effect=[error_response, {'data': {'items': []}}])
     with pytest.raises(MondayAPIError) as exc_info:
         await items_instance.query(item_ids=[1])
-    assert exc_info.value.json_data == error_response
+    assert exc_info.value.json == error_response
 
 
 @pytest.mark.asyncio
@@ -133,7 +133,7 @@ async def test_create_with_invalid_input(items_instance):
     items_instance.client.post_request = AsyncMock(return_value=error_response)
     with pytest.raises(MondayAPIError) as exc_info:
         await items_instance.create(board_id=1, item_name="Test")
-    assert exc_info.value.json_data == error_response
+    assert exc_info.value.json == error_response
 
 
 @pytest.mark.asyncio
@@ -318,7 +318,7 @@ async def test_page_with_max_retries_exceeded(items_instance):
     # Mock to always return error (exceeding max retries)
     items_instance.client.post_request = AsyncMock(return_value=error_response)
     items_instance.client.max_retries = 2
-    items_instance.boards.query = AsyncMock(side_effect=MondayAPIError("Max retries reached", json_data=error_response))
+    items_instance.boards.query = AsyncMock(side_effect=MondayAPIError("Max retries reached", json=error_response))
 
     with pytest.raises(MondayAPIError) as exc_info:
         await items_instance.page(board_ids=1)
