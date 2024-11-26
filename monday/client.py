@@ -47,12 +47,9 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 
-from .exceptions import (ComplexityLimitExceeded, MondayAPIError,
-                         MutationLimitExceeded)
-from .services.boards import Boards
-from .services.groups import Groups
-from .services.items import Items
-from .services.users import Users
+from monday.exceptions import (ComplexityLimitExceeded, MondayAPIError,
+                               MutationLimitExceeded, QueryFormatError)
+from monday.services import Boards, Groups, Items, Users
 
 
 class MondayClient:
@@ -117,10 +114,13 @@ class MondayClient:
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
         self.max_retries = int(max_retries)
         self.boards = Boards(self)
-        self.groups = Groups(self, self.boards)
-        self.items = Items(self)
+        self.items = Items(self, self.boards)
+        self.groups = Groups(self, self.boards, self.items)
         self.users = Users(self)
         self._rate_limit_seconds = 60
+        self._query_errors = {
+            'argumentLiteralsIncompatible'
+        }
 
     async def post_request(self, query: str) -> Dict[str, Any]:
         """
@@ -144,6 +144,7 @@ class MondayClient:
                 response_data = await self._execute_request(query)
 
                 if any('error' in key.lower() for key in response_data.keys()):
+                    response_data['query'] = ' '.join(query.split())
                     if 'error_code' in response_data and response_data['error_code'] == 'ComplexityException':
                         reset_in_search = re.search(r'(\d+(?:\.\d+)?) seconds', response_data['error_message'])
                         if reset_in_search:
@@ -155,7 +156,8 @@ class MondayClient:
                     if 'status_code' in response_data and int(response_data['status_code']) == 429:
                         reset_in = self._rate_limit_seconds
                         raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in, json_data=response_data)
-                    response_data['query'] = query
+                    if any(c in self._query_errors for c in [e['extensions']['code'] for e in response_data['errors']]):
+                        raise QueryFormatError('Invalid monday.com GraphQL query', json_data=response_data)
                     raise MondayAPIError('Unhandled monday.com API error', json_data=response_data)
 
                 return response_data
@@ -166,7 +168,7 @@ class MondayClient:
                     await asyncio.sleep(e.reset_in)
                 else:
                     self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json}
+                    return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json_data}
             except MondayAPIError as e:
                 self.logger.error("Attempt %d failed: %s", attempt + 1, str(e))
                 return {'data': e.json}

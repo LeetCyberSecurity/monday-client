@@ -21,11 +21,11 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from ...exceptions import PaginationError
-from .error_handlers import check_query_result
+from monday.exceptions import PaginationError
+from monday.services.utils import check_query_result
 
 if TYPE_CHECKING:
-    from ...client import MondayClient
+    from monday import MondayClient
 
 logger = logging.getLogger(__name__)
 

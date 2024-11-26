@@ -18,13 +18,9 @@
 """Utility functions for handling errors in Monday API interactions."""
 
 import logging
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict
 
-from pydantic import BaseModel, ValidationError
-
-from ...exceptions import MondayAPIError
-
-T = TypeVar('T', bound=BaseModel)
+from monday.exceptions import MondayAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -47,48 +43,14 @@ def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
     Example:
         result = check_query_result(api_response)
     """
-    try:
-        if isinstance(query_result, dict) and any('error' in key.lower() for key in query_result.keys()):
+    error_conditions = [
+        lambda x: isinstance(x, dict) and any('error' in k.lower() for k in x),
+        lambda x: 'data' not in x,
+        lambda x: 'data' in x and any('error' in k.lower() for k in x['data'])
+    ]
+
+    for condition in error_conditions:
+        if condition(query_result):
             raise MondayAPIError("API request failed", json_data=query_result)
-        if 'data' not in query_result:
-            raise MondayAPIError("Unexpected API response", json_data=query_result)
-        if 'data' in query_result and any('error' in key.lower() for key in query_result['data'].keys()):
-            raise MondayAPIError("API request failed", json_data=query_result)
-        return query_result
-    except MondayAPIError as e:
-        logger.error('MondayAPIError occurred: %s Data: %s', str(e), e.json)
-        raise
 
-
-def check_schema(schema: Type[T], **kwargs) -> T:
-    """
-    Validate input data against a given Pydantic schema.
-
-    This function attempts to create an instance of the provided schema using the given keyword arguments.
-    If validation fails, it raises a ValueError with detailed error messages.
-
-    Args:
-        schema: A Pydantic model class to validate against. This should be a subclass of BaseModel
-                          that defines the expected structure and validation rules for the input data.
-                          Examples include CreateBoardInput, DuplicateBoardInput, QueryBoardInput, etc.
-        **kwargs: Keyword arguments representing the data to be validated.
-                  These should match the fields defined in the schema class.
-
-    Returns:
-        An instance of the schema class if validation succeeds.
-
-    Raises:
-        ValueError: If the input data fails validation, with detailed error messages.
-
-    Example:
-        validated_data = check_schema(UserSchema, name="John Doe", age=30)
-    """
-    try:
-        input_data = schema(**kwargs)
-    except ValidationError as e:
-        error_messages = [
-            f"{' -> '.join(str(loc) for loc in m['loc'])}: {m['msg'].strip()}"
-            for m in e.errors()
-        ]
-        raise ValueError("Validation error\n" + "\n".join(error_messages)) from None
-    return input_data
+    return query_result

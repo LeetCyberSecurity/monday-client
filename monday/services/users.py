@@ -39,11 +39,10 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
-from .schemas.users.query_user_schema import QueryUserInput
-from .utils.error_handlers import check_query_result, check_schema
+from monday.services.utils import GraphQLQueryBuilder, check_query_result
 
 if TYPE_CHECKING:
-    from ..client import MondayClient
+    from monday import MondayClient
 
 
 class Users:
@@ -74,7 +73,7 @@ class Users:
 
     async def query(
         self,
-        fields: str = 'id email',
+        fields: str = 'id',
         emails: Optional[Union[str, List[str]]] = None,
         ids: Optional[Union[int, List[int]]] = None,
         name: Optional[str] = None,
@@ -107,24 +106,26 @@ class Users:
             MondayAPIError: If API request fails or returns unexpected format.
             ValueError: If input parameters are invalid.
         """
-        input_data = check_schema(
-            QueryUserInput,
-            fields=fields,
-            emails=emails,
-            ids=ids,
-            name=name,
-            kind=kind,
-            newest_first=newest_first,
-            non_active=non_active,
-            limit=limit,
-            page=page,
-            paginate=paginate
+        args = {
+            'fields': fields,
+            'emails': emails,
+            'ids': ids,
+            'name': name,
+            'kind': kind,
+            'newest_first': newest_first,
+            'non_active': non_active,
+            'limit': limit,
+            'page': page
+        }
+
+        query_string = GraphQLQueryBuilder.build_query(
+            'users',
+            'query',
+            args
         )
 
-        page = input_data.page
         users_data = []
         while True:
-            query_string = self._build_users_query_string(input_data, page)
 
             query_result = await self.client.post_request(query_string)
 
@@ -138,38 +139,6 @@ class Users:
             if not paginate:
                 break
 
-            page += 1
+            args['page'] += 1
 
         return users_data
-
-    def _build_users_query_string(self, input_data: QueryUserInput, page: Optional[int] = None) -> str:
-        """
-        Build GraphQL query string for user queries.
-
-        Args:
-            input_data: User query input data.
-            page: Page number for pagination.
-
-        Returns:
-            Formatted GraphQL query string for querying users.
-        """
-        input_data.emails = [f'"{i}"' for i in input_data.emails] if input_data.emails else None
-        args = {
-            'emails': f"[{', '.join(input_data.emails)}]" if input_data.emails else None,
-            'ids': f"[{', '.join(map(str, input_data.ids))}]" if input_data.ids else None,
-            'name': f'"{input_data.name}"' if input_data.name else None,
-            'kind': input_data.kind,
-            'newest_first': str(input_data.newest_first).lower(),
-            'non_active': str(input_data.non_active).lower(),
-            'limit': input_data.limit,
-            'page': page,
-        }
-        args_str = ', '.join(f"{k}: {v}" for k, v in args.items() if v is not None)
-
-        return f"""
-            query {{
-                users ({args_str}) {{
-                    {input_data.fields}
-                }}
-            }}
-        """

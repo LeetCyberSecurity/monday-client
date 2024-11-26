@@ -15,15 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Monday API client and related utilities."""
+"""Monday API client"""
 
-__version__ = "0.1.52"
+__version__ = "0.1.53"
 __authors__ = [
     {"name": "Dan Hollis", "email": "dh@leetsys.com"}
 ]
 
-from .client import MondayClient
-from .exceptions import (ComplexityLimitExceeded, MondayAPIError,
-                         MutationLimitExceeded, PaginationError,
-                         QueryFormatError)
-from .services import Boards, Items
+from monday.client import MondayClient

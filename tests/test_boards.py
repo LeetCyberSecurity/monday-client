@@ -17,12 +17,12 @@
 
 # pylint: disable=redefined-outer-name
 
-import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from monday.client import MondayClient
+from monday.exceptions import MondayAPIError, QueryFormatError
 from monday.services.boards import Boards
 
 
@@ -52,6 +52,30 @@ async def test_query(boards_instance):
 
 
 @pytest.mark.asyncio
+async def test_query_with_invalid_pagination(boards_instance):
+    """Test query with invalid pagination parameters."""
+    with pytest.raises(QueryFormatError) as exc_info:
+        await boards_instance.query(fields="items_page { items { id } }", paginate_items=True)
+    assert "Pagination requires a cursor" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_query_with_api_error(boards_instance):
+    """Test handling of API errors in query method."""
+    error_response = {
+        'errors': [{
+            'message': 'API Error',
+            'extensions': {'code': 'SomeError'}
+        }]
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=error_response)
+    with pytest.raises(MondayAPIError) as exc_info:
+        await boards_instance.query(board_ids=[1])
+    assert exc_info.value.json_data == error_response
+
+
+@pytest.mark.asyncio
 async def test_create(boards_instance):
     mock_response = {
         'data': {
@@ -70,14 +94,14 @@ async def test_create(boards_instance):
 async def test_duplicate(boards_instance):
     mock_response = {
         'data': {
-            'duplicate_board': {'id': 2, 'name': 'Board 1 (copy)'}
+            'duplicate_board': {'board': {'id': 2}}
         }
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.duplicate(board_id=1)
 
-    assert result == {'id': 2, 'name': 'Board 1 (copy)'}
+    assert result == {'board': {'id': 2}}
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -85,7 +109,7 @@ async def test_duplicate(boards_instance):
 async def test_update(boards_instance):
     mock_response = {
         'data': {
-            'update_board': json.dumps({'id': 1, 'name': 'Updated Board'})
+            'update_board': '{"id": 1, "name": "Updated Board"}'
         }
     }
 
@@ -123,4 +147,29 @@ async def test_delete(boards_instance):
     result = await boards_instance.delete(board_id=1)
 
     assert result == {'id': 1, 'state': 'deleted'}
+    boards_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_group_items_by_name(boards_instance):
+    mock_response = {
+        'data': {
+            'boards': [{
+                'groups': [{
+                    'items_page': {
+                        'items': [{'id': 1, 'name': 'Test Item'}]
+                    }
+                }]
+            }]
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await boards_instance.get_group_items_by_name(
+        board_id=1,
+        group_id="group1",
+        item_name="Test Item"
+    )
+
+    assert result == [{'id': 1, 'name': 'Test Item'}]
     boards_instance.client.post_request.assert_awaited_once()

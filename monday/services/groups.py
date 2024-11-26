@@ -16,22 +16,17 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Module for handling Monday.com board operations.
+Module for handling Monday.com group operations.
 
 This module provides a comprehensive set of functions and classes for interacting
-with Monday.com boards. It encapsulates various operations such as querying,
-creating, updating, duplicating, archiving, and deleting boards.
+with Monday.com groups. It encapsulates various operations such as querying,
+creating, updating, duplicating, archiving, and deleting groups.
 
 Key features:
-- Query boards with customizable fields and pagination
-- Create new boards with specified attributes
-- Duplicate existing boards with various options
-- Update board properties (name, description, communication settings)
-- Archive and delete boards
-- Retrieve groups within a board
+- Query groups with customizable fields and pagination
 
-The Boards class in this module serves as the main interface for these operations,
-providing methods that correspond to different Monday.com API endpoints related to boards.
+The Groups class in this module serves as the main interface for these operations,
+providing methods that correspond to different Monday.com API endpoints related to groups.
 
 This module is part of the monday-client package and relies on the MondayClient
 for making API requests. It also utilizes various utility functions and schema
@@ -44,12 +39,9 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from .schemas.boards.query_board_schema import QueryBoardInput
-from .utils.error_handlers import check_schema
-
 if TYPE_CHECKING:
-    from ..client import MondayClient
-    from .boards import Boards
+    from monday import MondayClient
+    from monday.services import Boards, Items
 
 
 class Groups:
@@ -66,24 +58,30 @@ class Groups:
 
     logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient', boards: 'Boards'):
+    def __init__(
+        self,
+        client: 'MondayClient',
+        boards: 'Boards',
+        items: 'Items'
+    ):
         """
         Initialize a Groups instance with specified parameters.
 
         Args:
             client: The MondayClient instance to use for API requests.
             boards: The Boards instance to use for board-related operations.
+            items: The Items instance to use for item-related operations.
         """
         self.client: 'MondayClient' = client
         self.boards: 'Boards' = boards
+        self.items: 'Items' = items
 
     async def query(
         self,
         board_ids: Union[int, List[int]],
         group_ids: Optional[Union[str, List[str]]] = None,
         group_name: Optional[Union[str, List[str]]] = None,
-        fields: str = 'id title',
-        **kwargs
+        fields: str = 'id'
     ) -> List[Dict[str, Any]]:
         """
         Query groups from boards. Optionally specify the group names and/or IDs to filter by.
@@ -93,7 +91,6 @@ class Groups:
             group_ids: The ID or list of IDs of the specific groups to return.
             group_name: A single group name or list of group names.
             fields: Additional fields to return from the groups.
-            **kwargs: Keyword arguments for the underlying :meth:`Boards.query() <monday.Boards.query>` call.
 
         Returns:
             List of dictionaries containing group info.
@@ -103,28 +100,18 @@ class Groups:
             MondayAPIError: If API request fails or returns unexpected format.
         """
 
-        if not board_ids:
-            raise ValueError("board_ids must be int or list of ints")
+        group_ids_list = [group_ids] if isinstance(group_ids, str) else group_ids
+        group_ids_quoted = [f'"{i}"' for i in group_ids_list] if group_ids_list else None
 
-        input_data = check_schema(
-            QueryBoardInput,
-            board_ids=board_ids,
-            group_ids=group_ids,
-            group_name=group_name,
-            **kwargs
-        )
-
-        group_ids_list = [f'"{i}"' for i in input_data.group_ids] if input_data.group_ids else None  # pylint: disable=not-an-iterable
         group_fields = f"""
-            id groups {f"(ids: [{', '.join(group_ids_list)}])" if group_ids_list else ""} {{
+            id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ""} {{
                 {fields}
             }}
         """
 
         boards_data = await self.boards.query(
             board_ids=board_ids,
-            fields=group_fields,
-            **kwargs
+            fields=group_fields
         )
 
         groups = []

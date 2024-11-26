@@ -20,8 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-    "aiohttp",
-    "pydantic"
+    "aiohttp"
 ]
 keywords = [
     "monday", 
