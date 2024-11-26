@@ -172,3 +172,171 @@ class Groups:
         data = check_query_result(query_result)
 
         return data['data']['create_group']
+
+    async def update(
+        self,
+        board_id: int,
+        group_id: str,
+        group_attribute: Literal['color', 'position', 'relative_position_after', 'relative_position_before', 'title'],
+        new_value: str,
+        fields: str = 'id'
+    ) -> Dict[str, Any]:
+        """
+        Update a group.
+
+        Args:
+            board_id: The ID of the board where the group will be updated.
+            group_id: The ID of the group to update.
+            group_attribute: The group attribute to update.
+            new_value: The ID of the group you want to create the new one in relation to.
+            fields: Additional fields to return from the updated group.
+
+        Returns:
+            Dictionary containing info for the updated group.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+        args = {
+            'board_id': board_id,
+            'group_id': group_id,
+            'group_attribute': group_attribute,
+            'new_value': new_value,
+            'fields': fields,
+        }
+
+        query_string = GraphQLQueryBuilder.build_query(
+            'update_group',
+            'mutation',
+            args
+        )
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['update_group']
+
+    async def duplicate(
+        self,
+        board_id: int,
+        group_id: str,
+        add_to_top: bool = False,
+        group_title: Optional[str] = None,
+        fields: str = 'id'
+    ) -> Dict[str, Any]:
+        """
+        Duplicate a group.
+
+        Args:
+            board_id: The ID of the board where the group will be duplicated.
+            group_id: The ID of the group to duplicate.
+            add_to_top: Whether to add the new group to the top of the board.
+            group_title: The new group's title.
+            fields: Additional fields to return from the duplicated group.
+
+        Returns:
+            Dictionary containing info for the duplicated group.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+        args = {
+            'board_id': board_id,
+            'group_id': group_id,
+            'add_to_top': add_to_top,
+            'group_title': group_title,
+            'fields': fields,
+        }
+
+        query_string = GraphQLQueryBuilder.build_query(
+            'duplicate_group',
+            'mutation',
+            args
+        )
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['duplicate_group']
+
+    async def archive(
+        self,
+        board_id: int,
+        group_id: str,
+        fields: str = 'id'
+    ) -> Dict[str, Any]:
+        """
+        Archive a group.
+
+        Args:
+            board_id: The ID of the board where the group will be archived.
+            group_id: The ID of the group to archive.
+            fields: Additional fields to return from the archived group.
+
+        Returns:
+            Dictionary containing info for the archived group.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+        args = {
+            'board_id': board_id,
+            'group_id': group_id,
+            'fields': fields,
+        }
+
+        query_string = GraphQLQueryBuilder.build_query(
+            'archive_group',
+            'mutation',
+            args
+        )
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['archive_group']
+
+    async def delete(
+        self,
+        board_id: int,
+        group_id: str,
+        fields: str = 'id'
+    ) -> Dict[str, Any]:
+        """
+        Delete a group.
+
+        Args:
+            board_id: The ID of the board where the group will be deleted.
+            group_id: The ID of the group to delete.
+            fields: Additional fields to return from the deleted group.
+
+        Returns:
+            Dictionary containing info for the deleted group.
+
+        Raises:
+            MondayAPIError: If API request fails or returns unexpected format.
+        """
+
+        args = {
+            'board_id': board_id,
+            'group_id': group_id,
+            'fields': fields,
+        }
+
+        query_string = GraphQLQueryBuilder.build_query(
+            'delete_group',
+            'mutation',
+            args
+        )
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['delete_group']

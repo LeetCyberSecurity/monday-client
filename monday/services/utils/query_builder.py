@@ -54,6 +54,7 @@ class GraphQLQueryBuilder:
             'board_kind',
             'duplicate_type',
             'fields',
+            'group_attribute',
             'kind',
             'order_by',
             'query_params',
