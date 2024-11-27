@@ -101,7 +101,7 @@ class Items:
             aiohttp.ClientError: When there's a client-side network or connection error.
 
         Note:
-            To return all items on a board, use :meth:`Items.page() <monday.Items.page>` or :meth:`Items.page_by_column_values() <monday.Items.page_by_column_values>` instead.
+            To return all items on a board, use :meth:`Items.page() <monday.services.Items.page>` or :meth:`Items.page_by_column_values() <monday.services.Items.page_by_column_values>` instead.
         """
 
         args = {
