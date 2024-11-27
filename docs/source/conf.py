@@ -108,7 +108,10 @@ napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
 # Intersphinx mapping
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'aiohttp': ('https://docs.aiohttp.org/en/stable/', None)
+}
 
 # Todo configuration
 todo_include_todos = True
