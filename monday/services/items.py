@@ -19,22 +19,11 @@
 Module for handling Monday.com item-related services.
 
 This module provides a comprehensive set of operations for managing items in
-Monday.com boards. It includes functionality for querying, creating, duplicating,
-moving, archiving, and deleting items, as well as clearing item updates and
-retrieving paginated lists of items based on various criteria.
-
-Key features:
-- Query items by ID
-- Create new items on boards
-- Duplicate existing items
-- Move items between groups and boards
-- Archive and delete items
-- Clear item updates
-- Retrieve paginated lists of items, including filtering by column values
+Monday.com boards.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions and schema
-validators to ensure proper data handling and error checking.
+for making API requests. It also utilizes various utility functions to ensure proper 
+data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
 MondayClient instance.
@@ -57,17 +46,15 @@ class Items:
     Handles operations related to Monday.com items.
 
     This class provides a comprehensive set of methods for interacting with items
-    on Monday.com boards. It encapsulates functionality for creating, querying,
-    modifying, and deleting items, as well as managing their properties and relationships.
-
-    Each method in this class corresponds to a specific Monday.com API endpoint,
-    providing a pythonic interface for item-related operations.
+    on Monday.com boards.
+    It encapsulates functionality for querying and managing items, always in the
+    context of their parent boards.
 
     Note:
         This class requires an initialized MondayClient instance for making API requests.
     """
 
-    logger = logging.getLogger(__name__)
+    logger: logging.Logger = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -108,7 +95,10 @@ class Items:
             A list of dictionaries containing the items retrieved.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
 
         Note:
             To return all items on a board, use :meth:`Items.page() <monday.Items.page>` or :meth:`Items.page_by_column_values() <monday.Items.page_by_column_values>` instead.
@@ -173,7 +163,10 @@ class Items:
             Dictionary containing info for the new item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -219,7 +212,10 @@ class Items:
             Dictionary containing info for the duplicated item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'item_id': item_id,
@@ -258,7 +254,10 @@ class Items:
             Dictionary containing info for the moved item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'item_id': item_id,
@@ -302,7 +301,10 @@ class Items:
             Dictionary containing info for the moved item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'item_id': item_id,
@@ -341,7 +343,10 @@ class Items:
             Dictionary containing info for the archived item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'item_id': item_id,
@@ -376,7 +381,10 @@ class Items:
             Dictionary containing info for the deleted item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'item_id': item_id,
@@ -411,7 +419,10 @@ class Items:
             Dictionary containing info for the cleared item.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'item_id': item_id,
@@ -452,7 +463,11 @@ class Items:
             A list of dictionaries containing the combined items retrieved.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
+            PaginationError: If pagination fails.
         """
         args = {
             'board_id': board_id,
@@ -497,7 +512,7 @@ class Items:
             board_ids: The ID or list of IDs of the boards from which to retrieve items.
             query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query.
                           Use this to customize the results based on specific criteria.
-            limit: The maximum number of items to retrieve per page. Must be > 0 and <= 500.
+            limit: The maximum number of items to retrieve per page.
             group_id: Only retrieve items from the specified group ID.
             paginate_items: Whether to paginate items.
             fields: The fields to include in the response.
@@ -506,23 +521,26 @@ class Items:
             A list of dictionaries containing the board IDs and their combined items retrieved.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         group_query = f'groups (ids: "{group_id}") {{' if group_id else ''
         group_query_end = '}' if group_id else ''
-        fields = f'''
+        fields = f"""
             id 
             {group_query} 
             items_page (
                 limit: {limit} 
-                {f', query_params: {query_params}' if query_params else ""}
+                {f', query_params: {query_params}' if query_params else ''}
             ) {{
                 cursor
                 items {{ {fields} }}
             }}
             {group_query_end}
-        '''
+        """
 
         data = await self.boards.query(
             board_ids,
@@ -551,13 +569,16 @@ class Items:
             A list of dictionaries containing the item column values.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         column_ids = [f'"{i}"' for i in column_ids] if column_ids else None
 
         fields = f"""
-            column_values {f"(ids: [{', '.join(column_ids)}])" if column_ids else ""} {{ 
+            column_values {f"(ids: [{', '.join(column_ids)}])" if column_ids else ''} {{ 
                 {fields} 
             }}
         """
@@ -603,7 +624,10 @@ class Items:
             Dictionary containing info for the updated columns.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         board_id_query = await self.query(item_id, fields='board { id }')
@@ -643,7 +667,10 @@ class Items:
             The item name.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {

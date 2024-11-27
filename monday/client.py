@@ -20,13 +20,13 @@ Client module for interacting with the Monday.com API.
 
 This module provides a comprehensive client for interacting with the Monday.com GraphQL API.
 It includes the MondayClient class, which handles authentication, rate limiting, pagination,
-and various API operations for boards and items.
+and various API operations.
 
 Key features:
 - Asynchronous API requests using aiohttp
 - Rate limiting and automatic retries
 - Error handling for API-specific exceptions
-- Convenient methods for common board and item operations
+- Convenient methods for common API operations
 - Logging support for debugging and monitoring
 
 Classes:
@@ -65,10 +65,11 @@ class MondayClient:
         max_retries (int): Maximum number of retry attempts for API requests.
         boards (Boards): Service for board-related operations.
         items (Items): Service for item-related operations.
-        _rate_limit_seconds (int): Rate limit in seconds for API requests.
+        groups (Groups): Service for group-related operations.
+        users (Users): Service for user-related operations.
     """
 
-    logger = logging.getLogger(__name__)
+    logger: logging.Logger = logging.getLogger(__name__)
     """
     Class-level logger named 'monday_client' for all logging operations.
 
@@ -106,9 +107,9 @@ class MondayClient:
 
         Args:
             api_key: The API key for authenticating with the Monday.com API.
-            url: The endpoint URL for the Monday.com API. Defaults to 'https://api.monday.com/v2'.
-            headers: Additional HTTP headers used for API requests. Defaults to None.
-            max_retries: Maximum amount of retry attempts before raising an error. Defaults to 4.
+            url: The endpoint URL for the Monday.com API.
+            headers: Additional HTTP headers used for API requests.
+            max_retries: Maximum amount of retry attempts before raising an error.
         """
         self.url = url
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
@@ -122,7 +123,10 @@ class MondayClient:
             'argumentLiteralsIncompatible'
         }
 
-    async def post_request(self, query: str) -> Dict[str, Any]:
+    async def post_request(
+        self,
+        query: str
+    ) -> Dict[str, Any]:
         """
         Executes an asynchronous post request to the Monday.com API with rate limiting and retry logic.
 
@@ -130,14 +134,14 @@ class MondayClient:
             query: The GraphQL query string to be executed.
 
         Returns:
-            A dictionary containing either the successful response data from the API or error information.
-            In case of errors, the dictionary will include an 'error' key with a description of the error,
-            and potentially a 'data' key with additional error details.
+            A dictionary containing the response data from the API.
 
-        Note:
-            This method handles ComplexityLimitExceeded, MutationLimitExceeded, MondayAPIError, and
-            aiohttp.ClientError internally. Instead of raising these exceptions, it returns error
-            information in the response dictionary after max retries are exhausted.
+        Raises:
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            MutationLimitExceeded: When the API rate limit is exceeded.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         for attempt in range(self.max_retries):
             try:
@@ -164,25 +168,30 @@ class MondayClient:
 
             except (ComplexityLimitExceeded, MutationLimitExceeded) as e:
                 if attempt < self.max_retries - 1:
-                    self.logger.warning("Attempt %d failed: %s. Retrying...", attempt + 1, str(e))
+                    self.logger.warning('Attempt %d failed: %s. Retrying...', attempt + 1, str(e))
                     await asyncio.sleep(e.reset_in)
                 else:
-                    self.logger.error("Max retries reached. Last error: %s", str(e))
-                    return {'error': f"Max retries reached. Last error: {str(e)}", 'data': e.json}
+                    self.logger.error('Max retries reached. Last error: %s', str(e), exc_info=True)
+                    e.args = (f'Max retries ({self.max_retries}) reached',)
+                    raise
             except MondayAPIError as e:
-                self.logger.error("Attempt %d failed: %s", attempt + 1, str(e))
-                return {'data': e.json}
+                self.logger.error('Attempt %d failed: %s', attempt + 1, str(e), exc_info=True)
+                raise
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
-                    self.logger.warning("Attempt %d failed due to aiohttp.ClientError: %s. Retrying after 60 seconds...", attempt + 1, str(e))
+                    self.logger.warning('Attempt %d failed due to aiohttp.ClientError: %s. Retrying after 60 seconds...', attempt + 1, str(e))
                     await asyncio.sleep(self._rate_limit_seconds)
                 else:
-                    self.logger.error("Max retries reached. Last error (aiohttp.ClientError): %s", str(e))
-                    return {'error': f"Max retries reached. Last error (aiohttp.ClientError): {str(e)}"}
+                    self.logger.error('Max retries reached. Last error (aiohttp.ClientError): %s', str(e), exc_info=True)
+                    e.args = (f'Max retries ({self.max_retries}) reached',)
+                    raise
 
         return {'error': f'Max retries reached: {response_data}'}
 
-    async def _execute_request(self, query: str) -> Dict[str, Any]:
+    async def _execute_request(
+        self,
+        query: str
+    ) -> Dict[str, Any]:
         """
         Executes a single API request.
 

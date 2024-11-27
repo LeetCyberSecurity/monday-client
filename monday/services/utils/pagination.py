@@ -19,7 +19,7 @@
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from monday.exceptions import PaginationError
 from monday.services.utils import check_query_result
@@ -27,10 +27,12 @@ from monday.services.utils import check_query_result
 if TYPE_CHECKING:
     from monday import MondayClient
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
-def extract_items_page_value(data):
+def extract_items_page_value(
+    data: Union[Dict[str, Any], List]
+) -> Optional[Any]:
     """
     Recursively extract the 'items_page' value from a nested dictionary or list.
 
@@ -56,7 +58,9 @@ def extract_items_page_value(data):
     return None
 
 
-def extract_cursor_from_response(response_data: Dict[str, Any]) -> Optional[str]:
+def extract_cursor_from_response(
+    response_data: Dict[str, Any]
+) -> Optional[str]:
     """
     Recursively extract the 'cursor' value from the response data.
 
@@ -64,7 +68,7 @@ def extract_cursor_from_response(response_data: Dict[str, Any]) -> Optional[str]
         response_data: The response data containing the cursor information.
 
     Returns:
-       The extracted cursor value, or None if not found.
+        The extracted cursor value, or None if not found.
     """
     if isinstance(response_data, dict):
         for key, value in response_data.items():
@@ -82,7 +86,9 @@ def extract_cursor_from_response(response_data: Dict[str, Any]) -> Optional[str]
     return None
 
 
-def extract_items_from_response(data: Any) -> List[Dict[str, Any]]:
+def extract_items_from_response(
+    data: Any
+) -> List[Dict[str, Any]]:
     """
     Recursively extract items from the response data.
 
@@ -107,7 +113,9 @@ def extract_items_from_response(data: Any) -> List[Dict[str, Any]]:
     return items
 
 
-def extract_items_from_query(query: str) -> Optional[str]:
+def extract_items_from_query(
+    query: str
+) -> Optional[str]:
     """
     Extract the items block from the query string.
 
@@ -153,7 +161,7 @@ async def paginated_item_request(
     client: 'MondayClient',
     query: str,
     limit: int = 25,
-    _cursor: Optional[str] = None
+    cursor: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Executes a paginated request to retrieve items from Monday.com.
@@ -161,8 +169,8 @@ async def paginated_item_request(
     Args:
         client: The MondayClient instance to execute the request.
         query: The GraphQL query string.
-        limit: Maximum items per page. Defaults to 25.
-        _cursor: Starting cursor for pagination. Defaults to None.
+        limit: Maximum items per page.
+        cursor: Starting cursor for pagination.
 
     Returns:
         A dictionary containing the list of retrieved items.
@@ -171,7 +179,7 @@ async def paginated_item_request(
         PaginationError: If item extraction fails.
     """
     combined_items = []
-    cursor = _cursor or 'start'
+    cursor = cursor or 'start'
 
     while True:
         if cursor == 'start':

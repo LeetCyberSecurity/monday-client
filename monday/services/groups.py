@@ -19,18 +19,11 @@
 Module for handling Monday.com group operations.
 
 This module provides a comprehensive set of functions and classes for interacting
-with Monday.com groups. It encapsulates various operations such as querying,
-creating, updating, duplicating, archiving, and deleting groups.
-
-Key features:
-- Query groups with customizable fields and pagination
-
-The Groups class in this module serves as the main interface for these operations,
-providing methods that correspond to different Monday.com API endpoints related to groups.
+with Monday.com groups.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions and schema
-validators to ensure proper data handling and error checking.
+for making API requests. It also utilizes various utility functions to ensure proper 
+data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
 MondayClient instance.
@@ -43,7 +36,7 @@ from monday.services.utils import GraphQLQueryBuilder, check_query_result
 
 if TYPE_CHECKING:
     from monday import MondayClient
-    from monday.services import Boards, Items
+    from monday.services import Boards
 
 
 class Groups:
@@ -95,8 +88,10 @@ class Groups:
             List of dictionaries containing group info.
 
         Raises:
-            ValueError: If input parameters are invalid.
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         group_ids_list = [group_ids] if isinstance(group_ids, str) else group_ids
@@ -111,7 +106,7 @@ class Groups:
         fields = ' '.join(fields_set)
 
         group_fields = f"""
-            id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ""} {{
+            id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ''} {{
                 {fields}
             }}
         """
@@ -159,7 +154,10 @@ class Groups:
             Dictionary containing info for the new group.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -205,7 +203,10 @@ class Groups:
             Dictionary containing info for the updated group.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -250,7 +251,11 @@ class Groups:
             Dictionary containing info for the duplicated group.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            MutationLimitExceeded: When the mutation API rate limit is exceeded.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -291,7 +296,10 @@ class Groups:
             Dictionary containing info for the archived group.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -330,7 +338,10 @@ class Groups:
             Dictionary containing info for the deleted group.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {

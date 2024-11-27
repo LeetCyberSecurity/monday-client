@@ -69,7 +69,10 @@ This is the official documentation for the `monday-client` library. This documen
    mondayclient
    items
    boards
+   groups
+   users
    exceptions
+   utils
 
 Indices and tables
 ==================

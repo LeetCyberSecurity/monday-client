@@ -16,9 +16,12 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-Exceptions
-----------
+.. title:: Groups
 
-.. automodule:: monday.exceptions
+.. raw:: html
+
+   <h1>Groups</h1>
+
+.. autoclass:: monday.services.Groups
    :members:
    :show-inheritance:

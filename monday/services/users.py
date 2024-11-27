@@ -53,16 +53,16 @@ class Users:
     on Monday.com. It encapsulates functionality for creating, querying, modifying,
     and deleting users, as well as managing their properties and relationships.
 
-    Each method in this class corresponds to a specific Monday.com API endpoint,
-    providing a pythonic interface for user-related operations.
-
     Note:
         This class requires an initialized MondayClient instance for making API requests.
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient'):
+    def __init__(
+        self,
+        client: 'MondayClient'
+    ):
         """
         Initialize a Users instance with specified parameters.
 
@@ -103,7 +103,10 @@ class Users:
             List of dictionaries containing queried user data.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
         args = {
             'emails': emails,

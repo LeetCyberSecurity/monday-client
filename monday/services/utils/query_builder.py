@@ -65,7 +65,7 @@ class GraphQLQueryBuilder:
 
         # Special handling for common field types
         for key, value in args.items():
-            if value is None:
+            if not value:
                 continue
             elif isinstance(value, bool):
                 processed_args[key] = str(value).lower()
@@ -81,11 +81,11 @@ class GraphQLQueryBuilder:
 
         fields = processed_args.pop('fields', 'id')
 
-        args_str = ', '.join(f"{k}: {v}" for k, v in processed_args.items() if v)
+        args_str = ', '.join(f'{k}: {v}' for k, v in processed_args.items() if v)
 
         return f"""
             {query_type} {{
-                {operation} ({args_str}) {{
+                {operation} {f'({args_str})' if args_str else ''} {{
                     {fields}
                 }}
             }}

@@ -94,6 +94,22 @@ async def test_query_with_name_filter(groups_instance, mock_boards):
     ]
 
     result = await groups_instance.query(board_ids=1, group_name='Group 1')
+    assert result == [{'id': 1, 'groups': [{'id': 'group1'}]}]
+
+
+@pytest.mark.asyncio
+async def test_query_with_name_filter_and_title(groups_instance, mock_boards):
+    mock_boards.query.return_value = [
+        {
+            'id': 1,
+            'groups': [
+                {'id': 'group1', 'title': 'Group 1'},
+                {'id': 'group2', 'title': 'Group 2'}
+            ]
+        }
+    ]
+
+    result = await groups_instance.query(board_ids=1, group_name='Group 1', fields='id title')
     assert result == [{'id': 1, 'groups': [{'id': 'group1', 'title': 'Group 1'}]}]
 
 

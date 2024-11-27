@@ -98,10 +98,11 @@ async def test_post_request_max_retries_reached(client_instance):
 
     with patch.object(client_instance, '_execute_request', side_effect=error_responses):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock):
-            result = await client_instance.post_request("test_query")
+            with pytest.raises(Exception) as exc_info:
+                await client_instance.post_request("test_query")
 
-    assert 'Max retries reached' in result['error']
-    assert 'data' in result
+    expected_error = f'Max retries ({client_instance.max_retries}) reached'
+    assert str(exc_info.value) == expected_error
 
 
 @pytest.mark.asyncio
@@ -124,14 +125,16 @@ async def test_post_request_client_error_retry(client_instance):
 
 @pytest.mark.asyncio
 async def test_post_request_max_retries_client_error(client_instance):
+    client_instance.max_retries = 1
     client_error = aiohttp.ClientError('Client error occurred')
 
     with patch.object(client_instance, '_execute_request', side_effect=client_error):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock):
-            result = await client_instance.post_request("test_query")
+            with pytest.raises(Exception) as exc_info:
+                await client_instance.post_request("test_query")
 
-    assert 'Max retries reached' in result['error']
-    assert '(aiohttp.ClientError)' in result['error']
+    expected_error = f'Max retries ({client_instance.max_retries}) reached'
+    assert str(exc_info.value) == expected_error
 
 
 @pytest.mark.asyncio

@@ -22,7 +22,6 @@
 
    <h1>Boards</h1>
 
-.. autoclass:: monday.Boards
+.. autoclass:: monday.services.Boards
    :members:
-   :undoc-members:
    :show-inheritance:

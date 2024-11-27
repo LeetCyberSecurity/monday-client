@@ -25,8 +25,8 @@ class MondayAPIError(Exception):
     Exception raised when an error occurs during API communication with Monday.com.
 
     Attributes:
-        message (str): Explanation of the error.
-        json (Dict[str, Any]): JSON data returned by the API, if available.
+        message: Explanation of the error.
+        json: JSON data returned by the API, if available.
     """
 
     def __init__(
@@ -43,9 +43,9 @@ class ComplexityLimitExceeded(Exception):
     Exception raised when the complexity limit is exceeded.
 
     Attributes:
-        message (str): Explanation of the error.
-        reset_in (int): Time in seconds until the complexity limit is reset.
-        json (Dict[str, Any]): JSON data returned by the API, if available.
+        message: Explanation of the error.
+        reset_in: Time in seconds until the complexity limit is reset.
+        json: JSON data returned by the API, if available.
     """
 
     def __init__(
@@ -64,9 +64,9 @@ class MutationLimitExceeded(Exception):
     Exception raised when the mutation per minute limit is exceeded.
 
     Attributes:
-        message (str): Explanation of the error.
-        reset_in (int): Time in seconds until the rate limit is reset.
-        json (Dict[str, Any]): JSON data returned by the API, if available.
+        message: Explanation of the error.
+        reset_in: Time in seconds until the rate limit is reset.
+        json: JSON data returned by the API, if available.
     """
 
     def __init__(
@@ -85,7 +85,7 @@ class PaginationError(Exception):
     Exception raised when item pagination fails.
 
     Attributes:
-        message (str): Explanation of the error.
+        message: Explanation of the error.
     """
 
     def __init__(
@@ -100,8 +100,8 @@ class QueryFormatError(Exception):
     Exception raised when a query is improperly formatted.
 
     Attributes:
-        message (str): Explanation of the error.
-        json (Dict[str, Any]): JSON data returned by the API, if available.
+        message: Explanation of the error.
+        json: JSON data returned by the API, if available.
     """
 
     def __init__(

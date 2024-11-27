@@ -22,7 +22,6 @@
 
    <h1>Items</h1>
 
-.. autoclass:: monday.Items
+.. autoclass:: monday.services.Items
    :members:
-   :undoc-members:
    :show-inheritance:

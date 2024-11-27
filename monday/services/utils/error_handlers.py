@@ -22,10 +22,12 @@ from typing import Any, Dict
 
 from monday.exceptions import MondayAPIError
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
-def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
+def check_query_result(
+    query_result: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Check if the query result contains an error and raise MondayAPIError if found.
 
@@ -51,6 +53,6 @@ def check_query_result(query_result: Dict[str, Any]) -> Dict[str, Any]:
 
     for condition in error_conditions:
         if condition(query_result):
-            raise MondayAPIError("API request failed", json=query_result)
+            raise MondayAPIError('API request failed', json=query_result)
 
     return query_result

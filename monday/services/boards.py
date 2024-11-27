@@ -18,24 +18,12 @@
 """
 Module for handling Monday.com board operations.
 
-This module provides a comprehensive set of functions and classes for interacting
-with Monday.com boards. It encapsulates various operations such as querying,
-creating, updating, duplicating, archiving, and deleting boards.
-
-Key features:
-- Query boards with customizable fields and pagination
-- Create new boards with specified attributes
-- Duplicate existing boards with various options
-- Update board properties (name, description, communication settings)
-- Archive and delete boards
-- Retrieve groups within a board
-
 The Boards class in this module serves as the main interface for these operations,
 providing methods that correspond to different Monday.com API endpoints related to boards.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions and schema
-validators to ensure proper data handling and error checking.
+for making API requests. It also utilizes various utility functions to ensure proper 
+data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
 MondayClient instance.
@@ -49,7 +37,7 @@ from monday.exceptions import QueryFormatError
 from monday.services.utils import (GraphQLQueryBuilder, check_query_result,
                                    extract_items_page_value,
                                    paginated_item_request,
-                                   update_items_page_in_place)
+                                   update_data_in_place)
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -60,11 +48,7 @@ class Boards:
     Handles operations related to Monday.com boards.
 
     This class provides a comprehensive set of methods for interacting with boards
-    on Monday.com. It encapsulates functionality for creating, querying, modifying,
-    and deleting boards, as well as managing their properties and relationships.
-
-    Each method in this class corresponds to a specific Monday.com API endpoint,
-    providing a pythonic interface for board-related operations.
+    on Monday.com.
 
     Note:
         This class requires an initialized MondayClient instance for making API requests.
@@ -116,9 +100,10 @@ class Boards:
             List of dictionaries containing queried board data.
 
         Raises:
-            QueryFormatError: If 'items_page' is in fields but 'cursor' is not, when paginate_items is True.
-            MondayAPIError: If API request fails or returns unexpected format.
-            PaginationError: If item pagination fails during the request.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         if paginate_items and 'items_page' in fields and 'cursor' not in fields:
@@ -200,7 +185,11 @@ class Boards:
             Dictionary containing info for the new board.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            MutationLimitExceeded: When the mutation API rate limit is exceeded.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -254,7 +243,11 @@ class Boards:
             Dictionary containing info for the new board.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            MutationLimitExceeded: When the mutation API rate limit is exceeded.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -297,7 +290,10 @@ class Boards:
             Dictionary containing updated board info.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -339,7 +335,10 @@ class Boards:
             Dictionary containing archived board info.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -375,7 +374,10 @@ class Boards:
             Dictionary containing deleted board info.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         args = {
@@ -415,7 +417,10 @@ class Boards:
             List of dictionaries containing item info.
 
         Raises:
-            MondayAPIError: If API request fails or returns unexpected format.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
         """
 
         fields = f"""
@@ -473,15 +478,18 @@ class Boards:
             Updated list of board data with paginated items.
 
         Raises:
-            MondayAPIError: If API request fails.
-            PaginationError: If pagination fails for a board.
+            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled Monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
+            PaginationError: If pagination fails.
         """
         boards_list = boards
         for board in boards_list:
             items_page = extract_items_page_value(board)
             if items_page['cursor']:
-                query_result = await paginated_item_request(self.client, query_string, limit=limit, _cursor=items_page['cursor'])
+                query_result = await paginated_item_request(self.client, query_string, limit=limit, cursor=items_page['cursor'])
                 items_page['items'].extend(query_result['items'])
             del items_page['cursor']
-            board = update_items_page_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
+            board = update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
         return boards_list
