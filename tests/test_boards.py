@@ -101,7 +101,7 @@ async def test_duplicate(boards_instance):
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.duplicate(board_id=1)
 
-    assert result == {'board': {'id': 2}}
+    assert result == {'id': 2}
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -147,29 +147,4 @@ async def test_delete(boards_instance):
     result = await boards_instance.delete(board_id=1)
 
     assert result == {'id': 1, 'state': 'deleted'}
-    boards_instance.client.post_request.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_get_group_items_by_name(boards_instance):
-    mock_response = {
-        'data': {
-            'boards': [{
-                'groups': [{
-                    'items_page': {
-                        'items': [{'id': 1, 'name': 'Test Item'}]
-                    }
-                }]
-            }]
-        }
-    }
-
-    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await boards_instance.get_group_items_by_name(
-        board_id=1,
-        group_id="group1",
-        item_name="Test Item"
-    )
-
-    assert result == [{'id': 1, 'name': 'Test Item'}]
     boards_instance.client.post_request.assert_awaited_once()

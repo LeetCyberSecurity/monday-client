@@ -66,13 +66,20 @@ This is the official documentation for the `monday-client` library. This documen
    :maxdepth: 1
    :caption: API Documentation
 
-   mondayclient
+   monday_client
    items
    boards
    groups
    users
+   types
    exceptions
    utils
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Design References
+
+   colors
 
 Indices and tables
 ==================

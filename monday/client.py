@@ -16,34 +16,18 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Client module for interacting with the Monday.com API.
+Client module for interacting with the monday.com API.
 
-This module provides a comprehensive client for interacting with the Monday.com GraphQL API.
+This module provides a comprehensive client for interacting with the monday.com GraphQL API.
 It includes the MondayClient class, which handles authentication, rate limiting, pagination,
 and various API operations.
-
-Key features:
-- Asynchronous API requests using aiohttp
-- Rate limiting and automatic retries
-- Error handling for API-specific exceptions
-- Convenient methods for common API operations
-- Logging support for debugging and monitoring
-
-Classes:
-    MondayClient: The main client class for interacting with the Monday.com API.
-
-Usage:
-    from monday.client import MondayClient
-
-    client = MondayClient(api_key='your_api_key')
-    # Use client methods to interact with the Monday.com API
 """
 
 import asyncio
 import logging
 import math
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import aiohttp
 
@@ -54,15 +38,12 @@ from monday.services import Boards, Groups, Items, Users
 
 class MondayClient:
     """
-    Client for interacting with the Monday.com API.
-    This client handles API requests, rate limiting, and pagination for Monday.com's GraphQL API.
+    Client for interacting with the monday.com API.
+    This client handles API requests, rate limiting, and pagination for monday.com's GraphQL API.
 
     It uses a class-level logger named 'monday_client' for all logging operations.
 
     Attributes:
-        url (str): The endpoint URL for the Monday.com API.
-        headers (Dict[str, str]): HTTP headers used for API requests, including authentication.
-        max_retries (int): Maximum number of retry attempts for API requests.
         boards (Boards): Service for board-related operations.
         items (Items): Service for item-related operations.
         groups (Groups): Service for group-related operations.
@@ -99,15 +80,15 @@ class MondayClient:
         self,
         api_key: str,
         url: str = 'https://api.monday.com/v2',
-        headers: Optional[Dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         max_retries: int = 4
     ):
         """
         Initialize the MondayClient with the provided API key.
 
         Args:
-            api_key: The API key for authenticating with the Monday.com API.
-            url: The endpoint URL for the Monday.com API.
+            api_key: The API key for authenticating with the monday.com API.
+            url: The endpoint URL for the monday.com API.
             headers: Additional HTTP headers used for API requests.
             max_retries: Maximum amount of retry attempts before raising an error.
         """
@@ -126,9 +107,9 @@ class MondayClient:
     async def post_request(
         self,
         query: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
-        Executes an asynchronous post request to the Monday.com API with rate limiting and retry logic.
+        Executes an asynchronous post request to the monday.com API with rate limiting and retry logic.
 
         Args:
             query: The GraphQL query string to be executed.
@@ -137,11 +118,36 @@ class MondayClient:
             A dictionary containing the response data from the API.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             MutationLimitExceeded: When the API rate limit is exceeded.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.post_request(
+                ...      query='query { boards (ids: 987654321) { id name } }'
+                ... )
+                {
+                    "data": {
+                        "boards": [
+                            {
+                                "id": "987654321",
+                                "name": "Board 1"
+                            }
+                        ]
+                    },
+                    "account_id": 1234567
+                }
+
+        Note:
+            This is a low-level method that directly executes GraphQL queries. In most cases, you should use the higher-level
+            methods provided by the service classes (boards, items, groups, users) instead, as they handle query construction
+            and provide a more user-friendly interface.
         """
         for attempt in range(self.max_retries):
             try:
@@ -155,11 +161,17 @@ class MondayClient:
                             reset_in = math.ceil(float(reset_in_search.group(1)))
                         else:
                             self.logger.error('error getting reset_in_x_seconds: %s', response_data)
-                            return {'error': response_data}
+                            raise MondayAPIError('Error getting reset_in_x_seconds', json=response_data)
                         raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in, json=response_data)
-                    if 'status_code' in response_data and int(response_data['status_code']) == 429:
-                        reset_in = self._rate_limit_seconds
-                        raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {reset_in} seconds...', reset_in, json=response_data)
+                    if 'status_code' in response_data:
+                        if int(response_data['status_code']) == 429:
+                            raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {self._rate_limit_seconds} seconds...', self._rate_limit_seconds, json=response_data)
+                        else:
+                            if 'mapping is not in the expected format' in response_data['error_message'] and 'move_item_to_board' in query:
+                                raise QueryFormatError('Columns mapping is not in the expected format. Verify all of your columns are mapped and you do not have formula columns mapped.', json=response_data)
+                            raise MondayAPIError(f'Received status code {response_data["status_code"]}: {response_data["error_message"]}', json=response_data)
+                    if any('Parse error on' in e['message'] for e in response_data['errors']):
+                        raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
                     if any(c in self._query_errors for c in [e['extensions']['code'] for e in response_data['errors']]):
                         raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
                     raise MondayAPIError('Unhandled monday.com API error', json=response_data)
@@ -174,12 +186,12 @@ class MondayClient:
                     self.logger.error('Max retries reached. Last error: %s', str(e), exc_info=True)
                     e.args = (f'Max retries ({self.max_retries}) reached',)
                     raise
-            except MondayAPIError as e:
+            except (MondayAPIError, QueryFormatError) as e:
                 self.logger.error('Attempt %d failed: %s', attempt + 1, str(e), exc_info=True)
                 raise
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
-                    self.logger.warning('Attempt %d failed due to aiohttp.ClientError: %s. Retrying after 60 seconds...', attempt + 1, str(e))
+                    self.logger.warning('Attempt %d failed due to aiohttp.ClientError: %s. Retrying after %d seconds...', attempt + 1, str(e), self._rate_limit_seconds)
                     await asyncio.sleep(self._rate_limit_seconds)
                 else:
                     self.logger.error('Max retries reached. Last error (aiohttp.ClientError): %s', str(e), exc_info=True)
@@ -191,7 +203,7 @@ class MondayClient:
     async def _execute_request(
         self,
         query: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Executes a single API request.
 

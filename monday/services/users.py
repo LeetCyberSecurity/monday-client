@@ -16,30 +16,23 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Module for handling Monday.com user operations.
+Module for handling monday.com user operations.
 
 This module provides a comprehensive set of functions and classes for interacting
-with Monday.com users. It encapsulates various operations such as querying, adding,
-and deleting users.
-
-Key features:
-- Query users with customizable fields and pagination
-
-The Users class in this module serves as the main interface for these operations,
-providing methods that correspond to different Monday.com API endpoints related to users.
+with monday.com users.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions and schema
-validators to ensure proper data handling and error checking.
+for making API requests. It also utilizes various utility functions to ensure proper 
+data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
 MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.services.utils import GraphQLQueryBuilder, check_query_result
+from monday.services.utils import build_graphql_query, check_query_result
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -47,14 +40,10 @@ if TYPE_CHECKING:
 
 class Users:
     """
-    Handles operations related to Monday.com users.
-
-    This class provides a comprehensive set of methods for interacting with users
-    on Monday.com. It encapsulates functionality for creating, querying, modifying,
-    and deleting users, as well as managing their properties and relationships.
+    Handles operations related to monday.com users.
 
     Note:
-        This class requires an initialized MondayClient instance for making API requests.
+        This class requires an initialized :meth:`MondayClient <monday.MondayClient>` instance for making API requests.
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
@@ -73,8 +62,8 @@ class Users:
 
     async def query(
         self,
-        emails: Optional[Union[str, List[str]]] = None,
-        ids: Optional[Union[int, List[int]]] = None,
+        emails: Optional[Union[str, list[str]]] = None,
+        ids: Optional[Union[int, list[int]]] = None,
         name: Optional[str] = None,
         kind: Literal['all', 'guests', 'non_guests', 'non_pending'] = 'all',
         newest_first: bool = False,
@@ -83,7 +72,7 @@ class Users:
         page: int = 1,
         paginate: bool = True,
         fields: str = 'id'
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Query users to return metadata about one or multiple users.
 
@@ -97,16 +86,39 @@ class Users:
             limit: The number of users to get per page.
             page: The page number to start from.
             paginate: Whether to paginate results or just return the first page.
-            fields: Fields to return from the users query.
+            fields: Fields to return from the queried users.
 
         Returns:
-            List of dictionaries containing queried user data.
+            List of dictionaries containing info for the queried users.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.users.query(
+                ...     emails=[
+                ...         'user1@domain.com',
+                ...         'user2@domain.com'
+                ...     ],
+                ...     fields='id name'
+                ... )
+                [
+                    {
+                        "id": "12345678",
+                        "name": "User One"
+                    },
+                    {
+                        "id": "01234567",
+                        "name": "User Two"
+                    }
+                ]
         """
         args = {
             'emails': emails,
@@ -120,27 +132,46 @@ class Users:
             'fields': fields
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'users',
             'query',
             args
         )
 
         users_data = []
+        last_response = None
+
         while True:
-
             query_result = await self.client.post_request(query_string)
-
             data = check_query_result(query_result)
 
-            if not data['data']['users']:
+            current_users = data['data']['users']
+            if not current_users:
                 break
 
-            users_data.extend(data['data']['users'])
+            if current_users == last_response:
+                self.logger.debug('Received duplicate page of users, stopping pagination')
+                break
+
+            users_data.extend(current_users)
+            last_response = current_users
+
+            if len(current_users) < limit:
+                self.logger.debug('Received fewer results than limit, reached last page')
+                break
 
             if not paginate:
                 break
 
             args['page'] += 1
+            query_string = build_graphql_query('users', 'query', args)
 
-        return users_data
+        # Unique the users by ID before returning
+        seen_ids = set()
+        unique_users = []
+        for user in users_data:
+            if user['id'] not in seen_ids:
+                seen_ids.add(user['id'])
+                unique_users.append(user)
+
+        return unique_users

@@ -253,7 +253,7 @@ async def test_page_by_column_values(items_instance):
         limit=2
     )
 
-    assert result == {'items': [{'id': 1, 'name': 'Item 1'}, {'id': 2, 'name': 'Item 2'}]}
+    assert result == [{'id': 1, 'name': 'Item 1'}, {'id': 2, 'name': 'Item 2'}]
     items_instance.client.post_request.assert_awaited_once()
 
 

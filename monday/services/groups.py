@@ -16,10 +16,10 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Module for handling Monday.com group operations.
+Module for handling monday.com group operations.
 
 This module provides a comprehensive set of functions and classes for interacting
-with Monday.com groups.
+with groups on monday.com boards.
 
 This module is part of the monday-client package and relies on the MondayClient
 for making API requests. It also utilizes various utility functions to ensure proper 
@@ -30,9 +30,11 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.services.utils import GraphQLQueryBuilder, check_query_result
+from monday.services.utils import (add_temp_fields, build_graphql_query,
+                                   check_query_result, manage_temp_fields,
+                                   map_color_to_hex)
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -41,14 +43,10 @@ if TYPE_CHECKING:
 
 class Groups:
     """
-    Handles operations related to Monday.com groups within boards.
-
-    This class provides methods for interacting with groups on Monday.com boards.
-    It encapsulates functionality for querying and managing groups, always in the
-    context of their parent boards.
+    Handles operations related to monday.com groups within boards.
 
     Note:
-        This class requires initialized MondayClient and Boards instances for making API requests.
+        This class requires initialized :meth:`MondayClient <monday.MondayClient>` and :meth:`Boards <monday.services.Boards>` instances for making API requests.
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
@@ -70,11 +68,11 @@ class Groups:
 
     async def query(
         self,
-        board_ids: Union[int, List[int]],
-        group_ids: Optional[Union[str, List[str]]] = None,
-        group_name: Optional[Union[str, List[str]]] = None,
+        board_ids: Union[int, list[int]],
+        group_ids: Optional[Union[str, list[str]]] = None,
+        group_name: Optional[Union[str, list[str]]] = None,
         fields: str = 'id'
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Query groups from boards. Optionally specify the group names and/or IDs to filter by.
 
@@ -82,32 +80,52 @@ class Groups:
             board_ids: The ID or list of IDs of the boards to query.
             group_ids: The ID or list of IDs of the specific groups to return.
             group_name: A single group name or list of group names.
-            fields: Additional fields to return from the groups.
+            fields: Fields to return from the queried groups.
 
         Returns:
-            List of dictionaries containing group info.
+            List of dictionaries containing group info for each board.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.query(
+                ...     board_id=987654321,
+                ...     fields='id title'
+                ... )
+                [
+                    {
+                        "id": "987654321",
+                        "groups": [
+                            {
+                                "id": "group",
+                                "title": "Group Name"
+                            },
+                            {
+                                "id": "group_2",
+                                "title": "Group Name"
+                            }
+                        ]
+                    }
+                ]
         """
 
         group_ids_list = [group_ids] if isinstance(group_ids, str) else group_ids
         group_ids_quoted = [f'"{i}"' for i in group_ids_list] if group_ids_list else None
 
-        fields_set = set(fields.split())
-        original_fields_had_title = 'title' in fields_set
-
-        if group_name:
-            fields_set.add('title')
-
-        fields = ' '.join(fields_set)
+        temp_fields = ['title'] if group_name else []
+        query_fields = add_temp_fields(fields, temp_fields)
 
         group_fields = f"""
             id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ''} {{
-                {fields}
+                {query_fields}
             }}
         """
 
@@ -120,15 +138,17 @@ class Groups:
         for board in boards_data:
             board_groups = board.get('groups', [])
             if group_name:
-                board_groups = [group for group in board_groups if group['title'] in (group_name if isinstance(group_name, list) else [group_name])]
-                if not original_fields_had_title:
-                    board_groups = [{k: v for k, v in group.items() if k != 'title'} for group in board_groups]
+                board_groups = [
+                    group for group in board_groups
+                    if group['title'] in (group_name if isinstance(group_name, list) else [group_name])
+                ]
             groups.append({
                 'id': board['id'],
                 'groups': board_groups
             })
 
-        return groups
+        # Clean temporary fields from results
+        return manage_temp_fields(groups, fields, temp_fields)
 
     async def create(
         self,
@@ -136,9 +156,9 @@ class Groups:
         group_name: str,
         group_color: Optional[str] = None,
         relative_to: Optional[int] = None,
-        position_relative_method: Optional[Literal['before_at', 'after_at']] = None,
+        position_relative_method: Optional[Literal['before', 'after']] = None,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new group on a board.
 
@@ -148,16 +168,36 @@ class Groups:
             group_color: The new group's HEX code color.
             relative_to: The ID of the group you want to create the new one in relation to.
             position_relative_method: Specify whether you want to create the new item above or below the item given to relative_to
-            fields: Additional fields to return from the created group.
+            fields: Fields to return from the created group.
 
         Returns:
             Dictionary containing info for the new group.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.create(
+                ...     board_id=987654321,
+                ...     group_name='Group Name',
+                ...     group_color='#0086c0',
+                ...     fields='id title'
+                ... )
+                {
+                    "id": "group",
+                    "title": "Group Name",
+                    "color": "#0086c0"
+                }
+
+        Note:
+            See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`
         """
 
         args = {
@@ -165,11 +205,11 @@ class Groups:
             'group_name': group_name,
             'group_color': group_color,
             'relative_to': relative_to,
-            'position_relative_method': position_relative_method,
+            'position_relative_method': f'{position_relative_method}_at' if position_relative_method else None,
             'fields': fields,
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'create_group',
             'mutation',
             args
@@ -185,39 +225,65 @@ class Groups:
         self,
         board_id: int,
         group_id: str,
-        group_attribute: Literal['color', 'position', 'relative_position_after', 'relative_position_before', 'title'],
+        attribute: Literal['color', 'position', 'relative_position_after', 'relative_position_before', 'title'],
         new_value: str,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update a group.
 
         Args:
             board_id: The ID of the board where the group will be updated.
             group_id: The ID of the group to update.
-            group_attribute: The group attribute to update.
+            attribute: The group attribute to update.
             new_value: The ID of the group you want to create the new one in relation to.
-            fields: Additional fields to return from the updated group.
+            fields: Fields to return from the updated group.
 
         Returns:
             Dictionary containing info for the updated group.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.update(
+                ...     board_id=987654321,
+                ...     group_id='group',
+                ...     attribute='color',
+                ...     new_value='#7f5347',
+                ...     fields='id title color'
+                ... )
+                {
+                    "id": "group",
+                    "title": "Group Name",
+                    "color": "#7F5347"
+                }
+
+        Note:
+            When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`
+
+            When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below. 
         """
+
+        if attribute == 'color':
+            new_value = map_color_to_hex(new_value)
 
         args = {
             'board_id': board_id,
             'group_id': group_id,
-            'group_attribute': group_attribute,
+            'group_attribute': attribute,
             'new_value': new_value,
             'fields': fields,
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'update_group',
             'mutation',
             args
@@ -236,7 +302,7 @@ class Groups:
         add_to_top: bool = False,
         group_title: Optional[str] = None,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Duplicate a group.
 
@@ -245,17 +311,32 @@ class Groups:
             group_id: The ID of the group to duplicate.
             add_to_top: Whether to add the new group to the top of the board.
             group_title: The new group's title.
-            fields: Additional fields to return from the duplicated group.
+            fields: Fields to return from the duplicated group.
 
         Returns:
             Dictionary containing info for the duplicated group.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             MutationLimitExceeded: When the mutation API rate limit is exceeded.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.duplicate(
+                ...     board_id=987654321,
+                ...     group_id='group',
+                ...     fields='id title'
+                ... )
+                {
+                    "id": "group_2",
+                    "title": "Duplicate of Group Name"
+                }
         """
 
         args = {
@@ -266,7 +347,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'duplicate_group',
             'mutation',
             args
@@ -283,23 +364,39 @@ class Groups:
         board_id: int,
         group_id: str,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Archive a group.
 
         Args:
             board_id: The ID of the board where the group will be archived.
             group_id: The ID of the group to archive.
-            fields: Additional fields to return from the archived group.
+            fields: Fields to return from the archived group.
 
         Returns:
             Dictionary containing info for the archived group.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.archive(
+                ...     board_id=987654321,
+                ...     group_id='group',
+                ...     fields='id title archived'
+                ... )
+                {
+                    "id": "group",
+                    "title": "Group Name",
+                    "archived": true
+                }
         """
 
         args = {
@@ -308,7 +405,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'archive_group',
             'mutation',
             args
@@ -325,23 +422,39 @@ class Groups:
         board_id: int,
         group_id: str,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete a group.
 
         Args:
             board_id: The ID of the board where the group will be deleted.
             group_id: The ID of the group to delete.
-            fields: Additional fields to return from the deleted group.
+            fields: Fields to return from the deleted group.
 
         Returns:
             Dictionary containing info for the deleted group.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.delete(
+                ...     board_id=987654321,
+                ...     group_id='group',
+                ...     fields='id title deleted'
+                ... )
+                {
+                    "id": "group",
+                    "title": "Group Name",
+                    "deleted": true
+                }
         """
 
         args = {
@@ -350,7 +463,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'delete_group',
             'mutation',
             args
@@ -361,3 +474,88 @@ class Groups:
         data = check_query_result(query_result)
 
         return data['data']['delete_group']
+
+    async def items_by_name(
+        self,
+        board_id: int,
+        group_id: str,
+        item_name: str,
+        fields: str = 'id',
+    ) -> list[dict[str, Any]]:
+        """
+        Get all items from a group with names that match item_name
+
+        Args:
+            board_id: The ID of the board to query.
+            group_id: A single group ID.
+            item_name: The name of the item to match.
+            fields: Fields to return from the matched items.
+
+        Returns:
+            List of dictionaries containing item info.
+
+        Raises:
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.groups.items_by_name(
+                ...     board_id=987654321,
+                ...     group_id='group',
+                ...     item_name='Item Name',
+                ...     fields='id name'
+                ... )
+                [
+                    {
+                        "id": "123456789",
+                        "name": "Item Name"
+                    },
+                    {
+                        "id": "012345678",
+                        "name": "Item Name"
+                    }
+                ]
+        """
+
+        fields = f"""
+            groups (ids: "{group_id}") {{
+                items_page (
+                    query_params: {{
+                        rules: [
+                            {{
+                                column_id: "name",
+                                compare_value: ["{item_name}"]
+                            }}
+                        ]
+                    }}
+                ) {{
+                    cursor
+                    items {{
+                        {fields}
+                    }}
+                }}
+            }}
+        """
+
+        args = {
+            'ids': board_id,
+            'fields': fields
+        }
+
+        query_string = build_graphql_query(
+            'boards',
+            'query',
+            args
+        )
+
+        query_result = await self.client.post_request(query_string)
+
+        data = check_query_result(query_result)
+
+        return data['data']['boards'][0]['groups'][0]['items_page']['items']

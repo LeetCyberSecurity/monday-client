@@ -18,7 +18,7 @@
 """Utility functions for handling errors in Monday API interactions."""
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from monday.exceptions import MondayAPIError
 
@@ -26,15 +26,17 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def check_query_result(
-    query_result: Dict[str, Any]
-) -> Dict[str, Any]:
+    query_result: dict[str, Any],
+    errors_only: bool = False
+) -> dict[str, Any]:
     """
     Check if the query result contains an error and raise MondayAPIError if found.
 
     This function examines the query result dictionary for error indicators and handles them appropriately.
 
     Args:
-        query_result: The response dictionary from a Monday.com API query.
+        query_result: The response dictionary from a monday.com API query.
+        errors_only: Only check for errors, not the presence of the data key.
 
     Returns:
         The original query_result if no errors are found.
@@ -47,7 +49,7 @@ def check_query_result(
     """
     error_conditions = [
         lambda x: isinstance(x, dict) and any('error' in k.lower() for k in x),
-        lambda x: 'data' not in x,
+        lambda x: 'data' not in x and not errors_only,
         lambda x: 'data' in x and any('error' in k.lower() for k in x['data'])
     ]
 

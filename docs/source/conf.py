@@ -17,19 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
 import os
 import sys
 
@@ -42,9 +29,6 @@ copyright = '2024, Leet Cyber Security'
 author = ', '.join(f"{author['name']} <{author['email']}>" for author in __authors__)
 release = __version__
 
-# -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
@@ -54,6 +38,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx_rtd_theme',
     'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
     'sphinx_autodoc_typehints',
     'myst_parser'
 ]
@@ -66,14 +51,10 @@ source_suffix = {
 templates_path = ['_templates']
 exclude_patterns = []
 
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_css_files = []
-html_js_files = []
+html_js_files = ['custom.js']
 html_theme_options = {
     'navigation_depth': 4,
     'collapse_navigation': False,
@@ -93,7 +74,6 @@ autodoc_default_options = {
 }
 add_module_names = False
 
-# Napoleon settings
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 napoleon_include_init_with_doc = False
@@ -109,14 +89,11 @@ napoleon_preprocess_types = False
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
-# Intersphinx mapping
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'aiohttp': ('https://docs.aiohttp.org/en/stable/', None)
 }
 
-# Todo configuration
 todo_include_todos = True
 
-# AutoSummary
 autosummary_generate = True

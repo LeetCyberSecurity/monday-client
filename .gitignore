@@ -25,6 +25,7 @@ docs/Makefile
 env-test/
 fake_client.py
 monday-env/
+notes.txt
 old/
 services/models
 setup.py

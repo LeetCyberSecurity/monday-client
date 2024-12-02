@@ -17,12 +17,15 @@
 
 """Utility functions for modifying data structures."""
 
-from typing import Any, Callable, Dict, List, Union
+import logging
+from typing import Any, Callable, Union
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def update_data_in_place(
-    data: Union[Dict[str, Any], List[Any]],
-    modify_fn: Callable[[Dict[str, Any]], None]
+    data: Union[dict[str, Any], list[Any]],
+    modify_fn: Callable[[dict[str, Any]], None]
 ) -> None:
     """
     Update items in a nested data structure in place.

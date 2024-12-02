@@ -73,11 +73,6 @@ async def test_query_with_filters(users_instance):
             'data': {
                 'users': [{'id': 1, 'email': 'test@example.com'}]
             }
-        },
-        {
-            'data': {
-                'users': []  # Empty response to end pagination
-            }
         }
     ]
 
@@ -90,4 +85,4 @@ async def test_query_with_filters(users_instance):
     )
 
     assert result == [{'id': 1, 'email': 'test@example.com'}]
-    assert users_instance.client.post_request.await_count == 2
+    assert users_instance.client.post_request.await_count == 1

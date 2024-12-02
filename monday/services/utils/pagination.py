@@ -19,7 +19,7 @@
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from monday.exceptions import PaginationError
 from monday.services.utils import check_query_result
@@ -31,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def extract_items_page_value(
-    data: Union[Dict[str, Any], List]
+    data: Union[dict[str, Any], list]
 ) -> Optional[Any]:
     """
     Recursively extract the 'items_page' value from a nested dictionary or list.
@@ -59,7 +59,7 @@ def extract_items_page_value(
 
 
 def extract_cursor_from_response(
-    response_data: Dict[str, Any]
+    response_data: dict[str, Any]
 ) -> Optional[str]:
     """
     Recursively extract the 'cursor' value from the response data.
@@ -88,7 +88,7 @@ def extract_cursor_from_response(
 
 def extract_items_from_response(
     data: Any
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Recursively extract items from the response data.
 
@@ -162,9 +162,9 @@ async def paginated_item_request(
     query: str,
     limit: int = 25,
     cursor: Optional[str] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
-    Executes a paginated request to retrieve items from Monday.com.
+    Executes a paginated request to retrieve items from monday.com.
 
     Args:
         client: The MondayClient instance to execute the request.

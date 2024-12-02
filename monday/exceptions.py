@@ -17,12 +17,12 @@
 
 """Custom exceptions for the Monday module."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class MondayAPIError(Exception):
     """
-    Exception raised when an error occurs during API communication with Monday.com.
+    Exception raised when an error occurs during API communication with monday.com.
 
     Attributes:
         message: Explanation of the error.
@@ -32,7 +32,7 @@ class MondayAPIError(Exception):
     def __init__(
         self,
         message,
-        json: Optional[Dict[str, Any]] = None
+        json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
         self.json = json
@@ -52,7 +52,7 @@ class ComplexityLimitExceeded(Exception):
         self,
         message: str,
         reset_in: int,
-        json: Optional[Dict[str, Any]] = None
+        json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
         self.reset_in = reset_in
@@ -73,7 +73,7 @@ class MutationLimitExceeded(Exception):
         self,
         message: str,
         reset_in: int,
-        json: Optional[Dict[str, Any]] = None
+        json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
         self.reset_in = reset_in
@@ -107,7 +107,7 @@ class QueryFormatError(Exception):
     def __init__(
         self,
         message: str,
-        json: Optional[Dict[str, Any]] = None
+        json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
         self.json = json

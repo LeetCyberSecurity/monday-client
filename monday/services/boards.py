@@ -16,10 +16,10 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Module for handling Monday.com board operations.
+Module for handling monday.com board operations.
 
-The Boards class in this module serves as the main interface for these operations,
-providing methods that correspond to different Monday.com API endpoints related to boards.
+This module provides a comprehensive set of functions and classes for interacting
+with monday.com boards.
 
 This module is part of the monday-client package and relies on the MondayClient
 for making API requests. It also utilizes various utility functions to ensure proper 
@@ -31,10 +31,10 @@ MondayClient instance.
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 from monday.exceptions import QueryFormatError
-from monday.services.utils import (GraphQLQueryBuilder, check_query_result,
+from monday.services.utils import (build_graphql_query, check_query_result,
                                    extract_items_page_value,
                                    paginated_item_request,
                                    update_data_in_place)
@@ -45,13 +45,10 @@ if TYPE_CHECKING:
 
 class Boards:
     """
-    Handles operations related to Monday.com boards.
-
-    This class provides a comprehensive set of methods for interacting with boards
-    on Monday.com.
+    Handles operations related to monday.com boards.
 
     Note:
-        This class requires an initialized MondayClient instance for making API requests.
+        This class requires an initialized :meth:`MondayClient <monday.MondayClient>` instance for making API requests.
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
@@ -70,17 +67,17 @@ class Boards:
 
     async def query(
         self,
-        board_ids: Optional[Union[int, List[int]]] = None,
+        board_ids: Optional[Union[int, list[int]]] = None,
         paginate_items: bool = True,
         board_kind: Literal['private', 'public', 'share', 'all'] = 'all',
-        order_by: Literal['created_at', 'used_at'] = 'created_at',
+        order_by: Literal['created', 'used'] = 'created',
         items_page_limit: int = 25,
         boards_limit: int = 25,
         page: int = 1,
         state: Literal['active', 'all', 'archived', 'deleted'] = 'active',
-        workspace_ids: Optional[Union[int, List[int]]] = None,
+        workspace_ids: Optional[Union[int, list[int]]] = None,
         fields: str = 'id name',
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Query boards to return metadata about one or multiple boards.
 
@@ -94,22 +91,39 @@ class Boards:
             page: The page number to start from.
             state: The state of the boards to include.
             workspace_ids: The ID or list of IDs of the workspaces to filter by.
-            fields: Fields to specify in the boards query.
+            fields: Fields to return from the queried board.
 
         Returns:
             List of dictionaries containing queried board data.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.query(
+                ...     board_ids=987654321,
+                ...     fields='id name state'
+                ... )
+                [
+                    {
+                        "id": "987654321",
+                        "name": "Board 1",
+                        "state": "active"
+                    }
+                ]
         """
 
         if paginate_items and 'items_page' in fields and 'cursor' not in fields:
             raise QueryFormatError(
                 'Pagination requires a cursor in the items_page field. '
-                'Use boards.items_page() or update your fields parameter to include cursor, '
+                'Use items.items_page() or update your fields parameter to include cursor, '
                 'e.g.: "id name items_page { cursor items { id } }"'
             )
 
@@ -118,7 +132,7 @@ class Boards:
         args = {
             'ids': board_ids,
             'board_kind': board_kind if board_kind != 'all' else None,
-            'order_by': order_by,
+            'order_by': f'{order_by}_at',
             'limit': boards_limit,
             'page': page,
             'state': state,
@@ -130,7 +144,7 @@ class Boards:
 
         while True:
 
-            query_string = GraphQLQueryBuilder.build_query(
+            query_string = build_graphql_query(
                 'boards',
                 'query',
                 args
@@ -157,21 +171,20 @@ class Boards:
         self,
         name: str,
         board_kind: Optional[Literal['private', 'public', 'share']] = 'public',
-        owner_ids: Optional[List[int]] = None,
-        subscriber_ids: Optional[List[int]] = None,
-        subscriber_teams_ids: Optional[List[int]] = None,
+        owner_ids: Optional[list[int]] = None,
+        subscriber_ids: Optional[list[int]] = None,
+        subscriber_teams_ids: Optional[list[int]] = None,
         description: Optional[str] = None,
         folder_id: Optional[int] = None,
         template_id: Optional[int] = None,
         workspace_id: Optional[int] = None,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new board.
 
         Args:
             name: The name of the new board.
-            fields: Fields to query back from the created board.
             kind: The kind of board to create.
             owner_ids: List of user IDs to set as board owners.
             subscriber_ids: List of user IDs to set as board subscribers.
@@ -180,21 +193,41 @@ class Boards:
             folder_id: ID of the folder to place the board in.
             template_id: ID of the template to use for the board.
             workspace_id: ID of the workspace to create the board in.
+            fields: Fields to return from the created board.
 
         Returns:
             Dictionary containing info for the new board.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             MutationLimitExceeded: When the mutation API rate limit is exceeded.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.create(
+                ...     name='Board 1',
+                ...     workspace_id=1234567,
+                ...     description='Board 1 description',
+                ...     fields='id name state description workspace_id'
+                ... )
+                {
+                    "id": "987654321",
+                    "name": "Board 1",
+                    "state": "active",
+                    "description": "Board 1 description",
+                    "workspace_id": "1234567"
+                }
         """
 
         args = {
-            'name': name,
-            'board_kind ': board_kind,
+            'board_name': name,
+            'board_kind': board_kind,
             'owner_ids': owner_ids,
             'subscriber_ids': subscriber_ids,
             'subscriber_teams_ids': subscriber_teams_ids,
@@ -205,7 +238,7 @@ class Boards:
             'fields': fields
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'create_board',
             'mutation',
             args
@@ -221,12 +254,12 @@ class Boards:
         self,
         board_id: int,
         board_name: Optional[str] = None,
-        duplicate_type: Literal['duplicate_board_with_pulses', 'duplicate_board_with_pulses_and_updates', 'duplicate_board_with_structure'] = 'duplicate_board_with_structure',
+        duplicate_type: Literal['with_structure', 'with_pulses', 'with_pulses_and_updates'] = 'with_structure',
         folder_id: Optional[int] = None,
         keep_subscribers: bool = False,
         workspace_id: Optional[int] = None,
         fields: str = 'board { id }'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Duplicate a board.
 
@@ -237,30 +270,45 @@ class Boards:
             folder_id: The destination folder within the destination workspace.
             keep_subscribers: Duplicate the subscribers to the new board.
             workspace_id: The destination workspace.
-            fields: Fields to query back from the duplicated board.
+            fields: Fields to return from the duplicated board.
 
         Returns:
-            Dictionary containing info for the new board.
+            Dictionary containing info for the duplicated board.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             MutationLimitExceeded: When the mutation API rate limit is exceeded.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.duplicate(
+                ...     board_id=987654321,
+                ...     fields='id name state'
+                ... )
+                {
+                    "id": "987654321",
+                    "name": "Duplicate of Board 1",
+                    "state": "active"
+                }
         """
 
         args = {
             'board_id': board_id,
             'board_name ': board_name,
-            'duplicate_type ': duplicate_type,
+            'duplicate_type ': f'duplicate_board_{duplicate_type}',
             'folder_id': folder_id,
             'keep_subscribers': keep_subscribers,
             'workspace_id': workspace_id,
-            'fields': fields
+            'fields': f'board {{ {fields} }}' if 'board' not in fields else fields
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'duplicate_board',
             'mutation',
             args
@@ -270,14 +318,14 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data['data']['duplicate_board']
+        return data['data']['duplicate_board']['board']
 
     async def update(
         self,
         board_id: int,
         board_attribute: Literal['communication', 'description', 'name'],
         new_value: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update a board.
 
@@ -290,10 +338,31 @@ class Boards:
             Dictionary containing updated board info.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.update(
+                ...     board_id=987654321,
+                ...     board_attribute='name',
+                ...     new_value='New Board Name'
+                ... )
+                {
+                    "success": true,
+                    "undo_data": {
+                        "undo_record_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                        "action_type": "modify_project",
+                        "entity_type": "Board",
+                        "entity_id": 987654321,
+                        "count": 1
+                    }
+                }
         """
 
         args = {
@@ -302,7 +371,7 @@ class Boards:
             'new_value ': new_value
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'update_board',
             'mutation',
             args
@@ -323,22 +392,37 @@ class Boards:
         self,
         board_id: int,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Archive a board.
 
         Args:
             board_id: The ID of the board to archive.
-            fields: Fields to query back from the archived board.
+            fields: Fields to return from the archived board.
 
         Returns:
-            Dictionary containing archived board info.
+            Dictionary containing info for the archived board.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.archive(
+                ...     board_id=987654321,
+                ...     fields='id name state'
+                ... )
+                {
+                    "id": "987654321",
+                    "name": "Board 1",
+                    "state": "archived"
+                }
         """
 
         args = {
@@ -346,7 +430,7 @@ class Boards:
             'fields': fields
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'archive_board',
             'mutation',
             args
@@ -362,22 +446,37 @@ class Boards:
         self,
         board_id: int,
         fields: str = 'id'
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete a board.
 
         Args:
             board_id: The ID of the board to delete.
-            fields: Fields to query back from the deleted board.
+            fields: Fields to return from the deleted board.
 
         Returns:
-            Dictionary containing deleted board info.
+            Dictionary containing info for the deleted board.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.delete(
+                ...     board_id=987654321,
+                ...     fields='id name state'
+                ... )
+                {
+                    "id": "987654321",
+                    "name": "Board 1",
+                    "state": "deleted"
+                }
         """
 
         args = {
@@ -385,7 +484,7 @@ class Boards:
             'fields': fields
         }
 
-        query_string = GraphQLQueryBuilder.build_query(
+        query_string = build_graphql_query(
             'delete_board',
             'mutation',
             args
@@ -397,75 +496,12 @@ class Boards:
 
         return data['data']['delete_board']
 
-    async def get_group_items_by_name(
-        self,
-        board_id: int,
-        group_id: str,
-        item_name: str,
-        fields: str = 'id',
-    ) -> List[Dict[str, Any]]:
-        """
-        Get all items from a group with names that match item_name
-
-        Args:
-            board_id: The ID of the board to query.
-            group_id: A single group ID.
-            item_name: The name of the item to match.
-            fields: Additional fields to query from the matched items.
-
-        Returns:
-            List of dictionaries containing item info.
-
-        Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
-            QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
-            aiohttp.ClientError: When there's a client-side network or connection error.
-        """
-
-        fields = f"""
-            groups (ids: "{group_id}") {{
-               items_page (
-                   query_params: {{
-                       rules: [
-                           {{
-                               column_id: "name",
-                               compare_value: ["{item_name}"]
-                           }}
-                       ]
-                   }}
-               ) {{
-                   cursor
-                   items {{
-                       {fields}
-                   }}
-               }}
-            }}
-        """
-
-        args = {
-            'board_id': board_id,
-            'fields': fields
-        }
-
-        query_string = GraphQLQueryBuilder.build_query(
-            'boards',
-            'query',
-            args
-        )
-
-        query_result = await self.client.post_request(query_string)
-
-        data = check_query_result(query_result)
-
-        return data['data']['boards'][0]['groups'][0]['items_page']['items']
-
     async def _paginate_items(
         self,
         query_string: str,
-        boards: List[Dict[str, Any]],
+        boards: list[dict[str, Any]],
         limit: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Paginate items for each board.
 
@@ -478,11 +514,12 @@ class Boards:
             Updated list of board data with paginated items.
 
         Raises:
-            ComplexityLimitExceeded: When the API request exceeds Monday.com's complexity limits.
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
             QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled Monday.com API error occurs.
+            MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
             PaginationError: If pagination fails.
+
         """
         boards_list = boards
         for board in boards_list:
