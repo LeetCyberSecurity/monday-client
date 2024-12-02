@@ -38,8 +38,8 @@ from monday import MondayClient
 
 async def main():
     monday_client = MondayClient(api_key='your_api_key_here')
-    boards = await monday_client.boards.query(board_ids=[1234567890, 1234567891])
-    items_page = await monday_client.items.items_page(board_ids=[1234567890, 1234567891])
+    boards = await monday_client.boards.query(board_ids=[987654321, 876543210])
+    items_page = await monday_client.items.items_page(board_ids=[123456789, 123456780])
 
 asyncio.run(main())
 ```

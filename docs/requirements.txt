@@ -1,5 +1,5 @@
-aiohttp
-myst-parser
+aiohttp>=3.10.5
+myst-parser==4.0.0
 sphinx==7.4.7
 sphinx-autodoc-typehints==1.25.2
 sphinx-rtd-theme==2.0.0
