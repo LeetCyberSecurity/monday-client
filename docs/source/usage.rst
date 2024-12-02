@@ -40,9 +40,9 @@ Quick Start
     from monday import MondayClient
 
     async def main():
-        client = MondayClient(api_key='your_api_key_here')
-        boards = await client.boards.query(board_ids=[1234567890, 1234567891])
-        items_page = await client.items.items_page(board_ids=[1234567890, 1234567891])
+        monday_client = MondayClient(api_key='your_api_key_here')
+        boards = await monday_client.boards.query(board_ids=[1234567890, 1234567891])
+        items_page = await monday_client.items.items_page(board_ids=[1234567890, 1234567891])
 
     asyncio.run(main())
 
@@ -54,16 +54,13 @@ Custom exceptions are defined for handling specific error cases:
     * :exc:`~monday.exceptions.MondayAPIError`: Raised when an error occurs during API communication with Monday.com.
     * :exc:`~monday.exceptions.PaginationError`: Raised when item pagination fails during a request.
     * :exc:`~monday.exceptions.QueryFormatError`: Raised when there is a query formatting error.
-
-These exceptions are handled internally by the client during retries. If the maximum number of retries is exceeded, the client will return an error response.
-
     * :exc:`~monday.exceptions.ComplexityLimitExceeded`: Raised when the complexity limit is exceeded.
     * :exc:`~monday.exceptions.MutationLimitExceeded`: Raised when the mutation limit is exceeded.
 
 Logging
 -------
 
-The client uses a logger named ``monday_client`` for all logging operations. By default, a NullHandler is added to suppress logging output. To enable logging, you can configure the logger in your application:
+The client uses a logger named ``monday_client`` for all logging operations. By default, a ``NullHandler`` is added to suppress logging output. To enable logging, you can configure the logger in your application:
 
 .. code-block:: python
 

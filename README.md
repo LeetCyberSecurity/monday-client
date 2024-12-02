@@ -13,7 +13,7 @@ This Python library provides an **asynchronous** client to interact with the [Mo
 
 ## Documentation
 
-For detailed documentation, please visit the [official documentation site](https://monday-client.readthedocs.io).
+For detailed documentation, visit the [official documentation site](https://monday-client.readthedocs.io).
 
 ## Key Features
 
@@ -37,9 +37,9 @@ import asyncio
 from monday import MondayClient
 
 async def main():
-    client = MondayClient(api_key='your_api_key_here')
-    boards = await client.boards.query(board_ids=[1234567890, 1234567891])
-    items_page = await client.items.items_page(board_ids=[1234567890, 1234567891])
+    monday_client = MondayClient(api_key='your_api_key_here')
+    boards = await monday_client.boards.query(board_ids=[1234567890, 1234567891])
+    items_page = await monday_client.items.items_page(board_ids=[1234567890, 1234567891])
 
 asyncio.run(main())
 ```
@@ -62,11 +62,8 @@ Custom exceptions are defined for handling specific error cases:
 - `MondayAPIError`: Raised when an error occurs during API communication with Monday.com.
 - `PaginationError`: Raised when item pagination fails during a request.
 - `QueryFormatError`: Raised when there is a query formatting error.
-
-These exceptions are handled internally by the client during retries. If the maximum number of retries is exceeded, the client will return an error response.
-
-- `ComplexityLimitExceeded`: Raised when the complexity limit is exceeded.
-- `MutationLimitExceeded`: Raised when the mutation limit is exceeded.
+- `ComplexityLimitExceeded`: Raised when the complexity limit and max retries are exceeded.
+- `MutationLimitExceeded`: Raised when the mutation limit and max retries are exceeded.
 
 ### Logging
 

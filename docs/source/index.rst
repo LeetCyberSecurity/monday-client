@@ -49,7 +49,7 @@
 
 Introduction
 ============
-This is the official documentation for the `monday-client` library. This documentation will help you understand how to use the library to interact with the Monday.com API efficiently.
+This is the official documentation for the `monday-client <https://github.com/LeetCyberSecurity/monday-client>`_ library. This documentation will help you understand how to use the library to interact with the `monday.com API <https://developer.monday.com/api-reference/>`_ efficiently.
 
 
 .. contents:: Table of Contents
