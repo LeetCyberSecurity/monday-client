@@ -44,20 +44,32 @@ Groups
 .. autoclass:: monday.services.Groups
     :no-members:
 
+.. automethod:: monday.services.Groups.archive
 .. automethod:: monday.services.Groups.create
 .. automethod:: monday.services.Groups.delete
 .. automethod:: monday.services.Groups.duplicate
+.. automethod:: monday.services.Groups.items_by_name
 .. automethod:: monday.services.Groups.query
+.. automethod:: monday.services.Groups.update
 
 Items
 ~~~~~
 .. autoclass:: monday.services.Items
     :no-members:
 
+.. automethod:: monday.services.Items.archive
+.. automethod:: monday.services.Items.change_column_values
+.. automethod:: monday.services.Items.clear_updates
 .. automethod:: monday.services.Items.create
 .. automethod:: monday.services.Items.delete
 .. automethod:: monday.services.Items.duplicate
+.. automethod:: monday.services.Items.get_column_values
+.. automethod:: monday.services.Items.get_id
+.. automethod:: monday.services.Items.get_name
+.. automethod:: monday.services.Items.move_to_board
 .. automethod:: monday.services.Items.move_to_group
+.. automethod:: monday.services.Items.page
+.. automethod:: monday.services.Items.page_by_column_values
 .. automethod:: monday.services.Items.query
 
 Users
