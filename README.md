@@ -1,4 +1,4 @@
-# Monday.com API Client
+# monday.com API Client
 
 [![Documentation Status](https://readthedocs.org/projects/monday-client/badge/?version=latest)](https://monday-client.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/monday-client.svg)](https://badge.fury.io/py/monday-client)
@@ -7,7 +7,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/LeetCyberSecurity/monday-client.svg)](https://github.com/LeetCyberSecurity/monday-client/issues)
 [![GitHub last commit](https://img.shields.io/github/last-commit/LeetCyberSecurity/monday-client.svg)](https://github.com/LeetCyberSecurity/monday-client/commits/main)
 
-This Python library provides an **asynchronous** client to interact with the [Monday.com API](https://developer.monday.com/api-reference/reference/about-the-api-reference).
+This Python library provides an **asynchronous** client to interact with the [monday.com API](https://developer.monday.com/api-reference/reference/about-the-api-reference).
 
 ## Documentation
 
@@ -16,10 +16,10 @@ For detailed documentation, visit the [official documentation site](https://mond
 ## Key Features
 
 - **Asynchronous API calls** using `asyncio` and `aiohttp` for efficient I/O operations.
-- **Automatic handling of API rate limits and query limits** following Monday.com's rate limit policies.
+- **Automatic handling of API rate limits and query limits** following monday.com's rate limit policies.
 - **Built-in retry logic** for handling rate limit exceptions, ensuring smooth operation without manual intervention.
-- **Easy-to-use methods** for common Monday.com operations.
-- **Fully customizable requests** with all Monday.com method arguments and fields available to the user.
+- **Easy-to-use methods** for common monday.com operations.
+- **Fully customizable requests** with all monday.com method arguments and fields available to the user.
 
 ## Installation
 
@@ -51,13 +51,13 @@ All methods provided by the `MondayClient` are asynchronous and should be awaite
 
 ### Rate Limiting and Retry Logic
 
-The client automatically handles rate limiting in compliance with Monday.com's API policies. When a rate limit is reached, the client will wait for the specified reset time before retrying the request. This ensures that your application doesn't need to manually handle rate limit exceptions and can operate smoothly.
+The client automatically handles rate limiting in compliance with monday.com's API policies. When a rate limit is reached, the client will wait for the specified reset time before retrying the request. This ensures that your application doesn't need to manually handle rate limit exceptions and can operate smoothly.
 
 ### Error Handling
 
 Custom exceptions are defined for handling specific error cases:
 
-- `MondayAPIError`: Raised when an error occurs during API communication with Monday.com.
+- `MondayAPIError`: Raised when an error occurs during API communication with monday.com.
 - `PaginationError`: Raised when item pagination fails during a request.
 - `QueryFormatError`: Raised when there is a query formatting error.
 - `ComplexityLimitExceeded`: Raised when the complexity limit and max retries are exceeded.
