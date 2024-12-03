@@ -1,7 +1,5 @@
 # Monday.com API Client
 
-![Monday.com API Client Logo](https://raw.githubusercontent.com/LeetCyberSecurity/monday-client/main/docs/source/_static/leet_logo.png)
-
 [![Documentation Status](https://readthedocs.org/projects/monday-client/badge/?version=latest)](https://monday-client.readthedocs.io/en/latest/?badge=latest)
 [![PyPI version](https://badge.fury.io/py/monday-client.svg)](https://badge.fury.io/py/monday-client)
 [![Python Versions](https://img.shields.io/pypi/pyversions/monday-client.svg)](https://pypi.org/project/monday-client/)

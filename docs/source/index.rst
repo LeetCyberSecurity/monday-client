@@ -18,9 +18,8 @@
 
 .. title:: monday-client Documentation
 
-.. image:: _static/leet_logo.png
-   :alt: monday-client Logo
-   :align: center
+monday-client Documentation
+===========================
 
 .. image:: https://readthedocs.org/projects/monday-client/badge/?version=latest
    :target: https://monday-client.readthedocs.io/en/latest/?badge=latest
