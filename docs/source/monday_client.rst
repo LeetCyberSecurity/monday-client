@@ -16,10 +16,17 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
+.. index:: MondayClient
+
 MondayClient
 ------------
 
 .. autoclass:: monday.client.MondayClient
-   :member-order: bysource
-   :special-members: __init__
-   :no-index:
+   :no-members:
+
+.. autoattribute:: monday.client.MondayClient.boards
+.. autoattribute:: monday.client.MondayClient.groups
+.. autoattribute:: monday.client.MondayClient.items
+.. autoattribute:: monday.client.MondayClient.users
+.. autoattribute:: monday.client.MondayClient.logger
+.. automethod:: monday.client.MondayClient.post_request

@@ -47,12 +47,6 @@ if TYPE_CHECKING:
 class Items:
     """
     Service class for handling monday.com item operations.
-    This service is automatically initialized as part of MondayClient
-    and should be accessed through the MondayClient instance.
-
-    Usage:
-        >>> monday_client = MondayClient('your_api_key')
-        >>> await monday_client.items.query(item_ids=[123456789])
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)

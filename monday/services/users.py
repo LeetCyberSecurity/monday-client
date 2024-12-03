@@ -41,12 +41,6 @@ if TYPE_CHECKING:
 class Users:
     """
     Service class for handling monday.com user operations.
-    This service is automatically initialized as part of MondayClient
-    and should be accessed through the MondayClient instance.
-
-    Usage:
-        >>> monday_client = MondayClient('your_api_key')
-        >>> await monday_client.users.query(emails=[user@domain.com])
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)

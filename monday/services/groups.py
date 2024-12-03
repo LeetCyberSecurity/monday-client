@@ -44,12 +44,6 @@ if TYPE_CHECKING:
 class Groups:
     """
     Service class for handling monday.com group operations.
-    This service is automatically initialized as part of MondayClient
-    and should be accessed through the MondayClient instance.
-
-    Usage:
-        >>> monday_client = MondayClient('your_api_key')
-        >>> await monday_client.groups.query(board_ids=[987654321])
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)

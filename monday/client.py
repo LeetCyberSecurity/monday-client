@@ -42,17 +42,11 @@ class MondayClient:
     This client handles API requests, rate limiting, and pagination for monday.com's GraphQL API.
 
     It uses a class-level logger named `monday_client` for all logging operations.
-
-    Attributes:
-        boards (Boards): Service for board-related operations.
-        groups (Groups): Service for group-related operations.
-        items (Items): Service for item-related operations.
-        users (Users): Service for user-related operations.
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
     """
-    Class-level logger named 'monday_client' for all logging operations.
+    Class-level logger named `monday_client` for all logging operations.
 
     Note:
         Logging can be controlled by configuring this logger.
@@ -96,9 +90,29 @@ class MondayClient:
         self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
         self.max_retries = int(max_retries)
         self.boards = Boards(self)
+        """
+        Service for board-related operations
+
+        Type: :meth:`Boards <monday.services.Boards>`
+        """
         self.items = Items(self, self.boards)
+        """
+        Service for item-related operations
+
+        Type: :meth:`Items <monday.services.Items>`
+        """
         self.groups = Groups(self, self.boards)
+        """
+        Service for group-related operations
+
+        Type: :meth:`Groups <monday.services.Groups>`
+        """
         self.users = Users(self)
+        """
+        Service for user-related operations
+
+        Type: :meth:`Users <monday.services.Users>`
+        """
         self._rate_limit_seconds = 60
         self._query_errors = {
             'argumentLiteralsIncompatible'

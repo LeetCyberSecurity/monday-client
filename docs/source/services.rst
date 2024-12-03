@@ -19,11 +19,16 @@
 Services
 --------
 
+.. attention::
+
+    The services documented below are automatically initialized as part of MondayClient and should be accessed through the MondayClient instance.
+
+.. module:: monday.services
+
 Boards
 ~~~~~~
 .. autoclass:: monday.services.Boards
     :no-members:
-    :no-index:
 
 .. automethod:: monday.services.Boards.archive
 .. automethod:: monday.services.Boards.create
@@ -36,7 +41,6 @@ Groups
 ~~~~~~
 .. autoclass:: monday.services.Groups
     :no-members:
-    :no-index:
 
 .. automethod:: monday.services.Groups.create
 .. automethod:: monday.services.Groups.delete
@@ -47,7 +51,6 @@ Items
 ~~~~~
 .. autoclass:: monday.services.Items
     :no-members:
-    :no-index:
 
 .. automethod:: monday.services.Items.create
 .. automethod:: monday.services.Items.delete
@@ -59,6 +62,5 @@ Users
 ~~~~~
 .. autoclass:: monday.services.Users
     :no-members:
-    :no-index:
 
 .. automethod:: monday.services.Users.query
