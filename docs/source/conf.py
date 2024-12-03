@@ -60,16 +60,17 @@ html_theme_options = {
     'collapse_navigation': False,
     'sticky_navigation': True,
     'includehidden': True,
-    'titles_only': False,
+    'titles_only': False
 }
 
-autodoc_member_order = 'bysource'
+autodoc_member_order = 'alphabetical'
 autodoc_typehints = 'description'
 autodoc_default_options = {
     'members': True,
-    'member-order': 'bysource',
+    'undoc-members': False,
+    'show-inheritance': True,
+    'member-order': 'alphabetical',
     'special-members': '__init__',
-    'undoc-members': True,
     'exclude-members': '__weakref__'
 }
 add_module_names = False

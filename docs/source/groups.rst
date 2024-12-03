@@ -23,5 +23,3 @@
    <h1>Groups</h1>
 
 .. autoclass:: monday.services.Groups
-   :members:
-   :show-inheritance:

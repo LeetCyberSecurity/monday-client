@@ -43,9 +43,6 @@ def check_query_result(
 
     Raises:
         MondayAPIError: If an error is found in the query result or if the response structure is unexpected.
-
-    Example:
-        result = check_query_result(api_response)
     """
     error_conditions = [
         lambda x: isinstance(x, dict) and any('error' in k.lower() for k in x),

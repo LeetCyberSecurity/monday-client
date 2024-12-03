@@ -45,8 +45,8 @@ class MondayClient:
 
     Attributes:
         boards (Boards): Service for board-related operations.
-        items (Items): Service for item-related operations.
         groups (Groups): Service for group-related operations.
+        items (Items): Service for item-related operations.
         users (Users): Service for user-related operations.
     """
 

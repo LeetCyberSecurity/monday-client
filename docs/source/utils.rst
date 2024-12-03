@@ -20,33 +20,28 @@ Utils
 -----
 
 .. automodule:: monday.services.utils
-    :members:
-    :show-inheritance:
+    :member-order: bysource
 
 Data Modifiers
 ~~~~~~~~~~~~~~
 
 .. automodule:: monday.services.utils.data_modifiers
-    :members:
-    :show-inheritance:
+    :member-order: bysource
 
 Error Handlers
 ~~~~~~~~~~~~~~
 
 .. automodule:: monday.services.utils.error_handlers
-    :members:
-    :show-inheritance:
+    :member-order: bysource
 
 Pagination
 ~~~~~~~~~~
 
 .. automodule:: monday.services.utils.pagination
-    :members:
-    :show-inheritance:
+    :member-order: bysource
 
 Query Builder
 ~~~~~~~~~~~~~
 
 .. automodule:: monday.services.utils.query_builder
-    :members:
-    :show-inheritance:
+    :member-order: bysource

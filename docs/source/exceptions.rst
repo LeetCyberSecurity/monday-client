@@ -20,5 +20,5 @@ Exceptions
 ----------
 
 .. automodule:: monday.exceptions
-   :members:
-   :show-inheritance:
+   :member-order: bysource
+   

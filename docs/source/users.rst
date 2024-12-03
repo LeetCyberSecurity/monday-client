@@ -23,5 +23,3 @@
    <h1>Users</h1>
 
 .. autoclass:: monday.services.Users
-   :members:
-   :show-inheritance:

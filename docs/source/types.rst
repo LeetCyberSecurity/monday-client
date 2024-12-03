@@ -20,5 +20,5 @@ Types
 -----
 
 .. automodule:: monday.types
-   :members:
    :show-inheritance:
+   :member-order: bysource

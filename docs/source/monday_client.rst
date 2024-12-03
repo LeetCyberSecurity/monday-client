@@ -23,5 +23,4 @@
    <h1>MondayClient</h1>
 
 .. autoclass:: monday.client.MondayClient
-   :members:
-   :show-inheritance:
+   :member-order: bysource

@@ -23,5 +23,4 @@
    <h1>Items</h1>
 
 .. autoclass:: monday.services.Items
-   :members:
-   :show-inheritance:
+   
