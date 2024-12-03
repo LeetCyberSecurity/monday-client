@@ -16,6 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
+.. _services_section:
+
 Services
 --------
 

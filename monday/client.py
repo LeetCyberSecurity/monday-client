@@ -160,7 +160,7 @@ class MondayClient:
 
         Note:
             This is a low-level method that directly executes GraphQL queries. In most cases, you should use the higher-level
-            methods provided by the service classes (boards, items, groups, users) instead, as they handle query construction
+            methods provided by the :ref:`service classes <services_section>` instead, as they handle query construction
             and provide a more user-friendly interface.
         """
         for attempt in range(self.max_retries):
