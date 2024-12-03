@@ -70,7 +70,6 @@ autodoc_default_options = {
     'undoc-members': False,
     'show-inheritance': True,
     'member-order': 'alphabetical',
-    'special-members': '__init__',
     'exclude-members': '__weakref__'
 }
 add_module_names = False

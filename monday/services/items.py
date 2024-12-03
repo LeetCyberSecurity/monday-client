@@ -46,15 +46,13 @@ if TYPE_CHECKING:
 
 class Items:
     """
-    Handles operations related to monday.com items.
+    Service class for handling monday.com item operations.
+    This service is automatically initialized as part of MondayClient
+    and should be accessed through the MondayClient instance.
 
-    This class provides a comprehensive set of methods for interacting with items
-    on monday.com boards.
-    It encapsulates functionality for querying and managing items, always in the
-    context of their parent boards.
-
-    Note:
-        This class requires initialized :meth:`MondayClient <monday.MondayClient>` and :meth:`Boards <monday.services.Boards>` instances for making API requests.
+    Usage:
+        >>> monday_client = MondayClient('your_api_key')
+        >>> await monday_client.items.query(item_ids=[123456789])
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)

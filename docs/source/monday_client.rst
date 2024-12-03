@@ -16,11 +16,10 @@
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-.. title:: MondayClient
-
-.. raw:: html
-
-   <h1>MondayClient</h1>
+MondayClient
+------------
 
 .. autoclass:: monday.client.MondayClient
    :member-order: bysource
+   :special-members: __init__
+   :no-index:

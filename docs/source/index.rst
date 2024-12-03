@@ -66,10 +66,7 @@ This is the official documentation for the `monday-client <https://github.com/Le
    :caption: API Documentation
 
    monday_client
-   items
-   boards
-   groups
-   users
+   services
    types
    exceptions
    utils

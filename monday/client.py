@@ -41,7 +41,7 @@ class MondayClient:
     Client for interacting with the monday.com API.
     This client handles API requests, rate limiting, and pagination for monday.com's GraphQL API.
 
-    It uses a class-level logger named 'monday_client' for all logging operations.
+    It uses a class-level logger named `monday_client` for all logging operations.
 
     Attributes:
         boards (Boards): Service for board-related operations.
@@ -56,7 +56,7 @@ class MondayClient:
 
     Note:
         Logging can be controlled by configuring this logger.
-        By default, a NullHandler is added to the logger, which suppresses all output.
+        By default, a `NullHandler` is added to the logger, which suppresses all output.
         To enable logging, configure the logger in your application code. For example:
 
         .. code-block:: python

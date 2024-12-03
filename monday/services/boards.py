@@ -45,10 +45,13 @@ if TYPE_CHECKING:
 
 class Boards:
     """
-    Handles operations related to monday.com boards.
+    Service class for handling monday.com board operations.
+    This service is automatically initialized as part of MondayClient
+    and should be accessed through the MondayClient instance.
 
-    Note:
-        This class requires an initialized :meth:`MondayClient <monday.MondayClient>` instance for making API requests.
+    Usage:
+        >>> monday_client = MondayClient('your_api_key')
+        >>> await monday_client.boards.query(board_ids=[987654321])
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)
