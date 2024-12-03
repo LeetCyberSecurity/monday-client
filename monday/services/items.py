@@ -57,7 +57,7 @@ class Items:
         This class requires initialized :meth:`MondayClient <monday.MondayClient>` and :meth:`Boards <monday.services.Boards>` instances for making API requests.
     """
 
-    logger: logging.Logger = logging.getLogger(__name__)
+    _logger: logging.Logger = logging.getLogger(__name__)
 
     def __init__(
         self,

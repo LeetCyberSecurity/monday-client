@@ -51,7 +51,7 @@ class Boards:
         This class requires an initialized :meth:`MondayClient <monday.MondayClient>` instance for making API requests.
     """
 
-    logger: logging.Logger = logging.getLogger(__name__)
+    _logger: logging.Logger = logging.getLogger(__name__)
 
     def __init__(
         self,

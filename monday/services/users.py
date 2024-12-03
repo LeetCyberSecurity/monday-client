@@ -46,7 +46,7 @@ class Users:
         This class requires an initialized :meth:`MondayClient <monday.MondayClient>` instance for making API requests.
     """
 
-    logger: logging.Logger = logging.getLogger(__name__)
+    _logger: logging.Logger = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -150,14 +150,14 @@ class Users:
                 break
 
             if current_users == last_response:
-                self.logger.debug('Received duplicate page of users, stopping pagination')
+                self._logger.debug('Received duplicate page of users, stopping pagination')
                 break
 
             users_data.extend(current_users)
             last_response = current_users
 
             if len(current_users) < limit:
-                self.logger.debug('Received fewer results than limit, reached last page')
+                self._logger.debug('Received fewer results than limit, reached last page')
                 break
 
             if not paginate:
