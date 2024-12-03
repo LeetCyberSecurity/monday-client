@@ -46,11 +46,11 @@ class MondayClient:
 
     logger: logging.Logger = logging.getLogger(__name__)
     """
-    Class-level logger named `monday_client` for all logging operations.
+    Class-level logger named ``monday_client`` for all logging operations.
 
     Note:
         Logging can be controlled by configuring this logger.
-        By default, a `NullHandler` is added to the logger, which suppresses all output.
+        By default, a ``NullHandler`` is added to the logger, which suppresses all output.
         To enable logging, configure the logger in your application code. For example:
 
         .. code-block:: python
