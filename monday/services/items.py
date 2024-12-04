@@ -919,6 +919,9 @@ class Items:
             items_page_limit=limit
         )
 
+        if group_id:
+            return [{'id': b['id'], 'items': b['groups'][0]['items_page']['items']} for b in data]
+
         return [{'id': b['id'], 'items': b['items_page']['items']} for b in data]
 
     async def get_column_values(
