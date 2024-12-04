@@ -194,7 +194,7 @@ class Groups:
                 }
 
         Note:
-            See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`
+            See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`.
         """
 
         args = {
@@ -264,7 +264,7 @@ class Groups:
                 }
 
         Note:
-            When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`
+            When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`.
 
             When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below. 
         """
@@ -480,7 +480,7 @@ class Groups:
         fields: str = 'id',
     ) -> list[dict[str, Any]]:
         """
-        Get all items from a group with names that match item_name
+        Get all items from a group with names that match ``item_name``
 
         Args:
             board_id: The ID of the board to query.

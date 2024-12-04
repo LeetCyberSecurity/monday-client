@@ -23,15 +23,14 @@ Services
 
 .. attention::
 
-    The services documented below are automatically initialized as part of MondayClient and should be accessed through the MondayClient instance.
+    The services documented below are automatically initialized as part of `MondayClient <monday_client.html>`_ and should be accessed through the `MondayClient <monday_client.html>`_ instance.
 
 .. module:: monday.services
 
+.. _services_section_boards:
+
 Boards
 ~~~~~~
-.. autoclass:: monday.services.Boards
-    :no-members:
-
 .. automethod:: monday.services.Boards.archive
 .. automethod:: monday.services.Boards.create
 .. automethod:: monday.services.Boards.delete
@@ -39,11 +38,10 @@ Boards
 .. automethod:: monday.services.Boards.query
 .. automethod:: monday.services.Boards.update
 
+.. _services_section_groups:
+
 Groups
 ~~~~~~
-.. autoclass:: monday.services.Groups
-    :no-members:
-
 .. automethod:: monday.services.Groups.archive
 .. automethod:: monday.services.Groups.create
 .. automethod:: monday.services.Groups.delete
@@ -52,11 +50,10 @@ Groups
 .. automethod:: monday.services.Groups.query
 .. automethod:: monday.services.Groups.update
 
+.. _services_section_items:
+
 Items
 ~~~~~
-.. autoclass:: monday.services.Items
-    :no-members:
-
 .. automethod:: monday.services.Items.archive
 .. automethod:: monday.services.Items.change_column_values
 .. automethod:: monday.services.Items.clear_updates
@@ -72,9 +69,8 @@ Items
 .. automethod:: monday.services.Items.page_by_column_values
 .. automethod:: monday.services.Items.query
 
+.. _services_section_users:
+
 Users
 ~~~~~
-.. autoclass:: monday.services.Users
-    :no-members:
-
 .. automethod:: monday.services.Users.query

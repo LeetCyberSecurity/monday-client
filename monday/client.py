@@ -41,7 +41,14 @@ class MondayClient:
     Client for interacting with the monday.com API.
     This client handles API requests, rate limiting, and pagination for monday.com's GraphQL API.
 
-    It uses a class-level logger named `monday_client` for all logging operations.
+    It uses a class-level logger named ``monday_client`` for all logging operations.
+
+    Usage:
+        .. code-block:: python
+
+            >>> from monday import MondayClient
+            >>> monday_client = MondayClient('your_api_key')
+            >>> monday_client.boards.query(board_ids=987654321)
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
@@ -93,25 +100,25 @@ class MondayClient:
         """
         Service for board-related operations
 
-        Type: :meth:`Boards <monday.services.Boards>`
+        Type: `Boards <services.html#boards>`_
         """
         self.items = Items(self, self.boards)
         """
         Service for item-related operations
 
-        Type: :meth:`Items <monday.services.Items>`
+        Type: `Items <services.html#items>`_
         """
         self.groups = Groups(self, self.boards)
         """
         Service for group-related operations
 
-        Type: :meth:`Groups <monday.services.Groups>`
+        Type: `Groups <services.html#groups>`_
         """
         self.users = Users(self)
         """
         Service for user-related operations
 
-        Type: :meth:`Users <monday.services.Users>`
+        Type: `Users <services.html#users>`_
         """
         self._rate_limit_seconds = 60
         self._query_errors = {

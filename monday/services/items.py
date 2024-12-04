@@ -101,7 +101,7 @@ class Items:
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
                 >>> await monday_client.items.query(
-                ...     item_ids=[123456789, 987654321],
+                ...     item_ids=[123456789, 012345678],
                 ...     fields='id name state updates { text_body }',
                 ...     limit=50
                 ... )
@@ -120,7 +120,7 @@ class Items:
                         ]
                     },
                     {
-                        'id': '987654321',
+                        'id': '012345678',
                         'name': 'Task 2',
                         'state': 'active',
                         'updates': []
@@ -295,7 +295,7 @@ class Items:
                             "text": "Done"
                         },
                         {
-                            "id": "text__1",
+                            "id": "text",
                             "text": "This item is done"
                         }
                     ]
@@ -791,23 +791,21 @@ class Items:
                 [
                     {
                         "id": "987654321",
-                        "items_page": {
-                            "items": [
-                                {
-                                    "id": "123456789",
-                                    "column_values": [
-                                        {
-                                            "id": "status",
-                                            "text": "Done"
-                                        },
-                                        {
-                                            "id": "status_2",
-                                            "text": "Working on it"
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
+                        "items": [
+                            {
+                                "id": "123456789",
+                                "column_values": [
+                                    {
+                                        "id": "status",
+                                        "text": "Done"
+                                    },
+                                    {
+                                        "id": "status_2",
+                                        "text": "Working on it"
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
 
@@ -921,7 +919,7 @@ class Items:
             items_page_limit=limit
         )
 
-        return data
+        return [{'id': b['id'], 'items': b['items_page']['items']} for b in data]
 
     async def get_column_values(
         self,
@@ -1048,7 +1046,7 @@ class Items:
                             "text": "Done"
                         },
                         {
-                            "id": "text__1",
+                            "id": "text",
                             "text": "Working on this item"
                         }
                     ]
@@ -1108,7 +1106,7 @@ class Items:
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
                 >>> await monday_client.items.get_name(item_id=123456789)
-                ... Item 1
+                Item 1
         """
 
         args = {
