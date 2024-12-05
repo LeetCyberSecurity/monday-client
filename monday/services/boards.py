@@ -34,10 +34,13 @@ import logging
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 from monday.exceptions import QueryFormatError
-from monday.services.utils import (build_graphql_query, check_query_result,
+from monday.services.utils import (build_graphql_query,
+                                   build_query_params_string,
+                                   check_query_result,
                                    extract_items_page_value,
                                    paginated_item_request,
                                    update_data_in_place)
+from monday.types import QueryParams
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -163,6 +166,288 @@ class Boards:
             boards_data = query_result
 
         return boards_data
+
+    async def get_items(
+        self,
+        board_ids: Union[int, list[int]],
+        query_params: Optional[QueryParams] = None,
+        limit: int = 25,
+        group_id: Optional[str] = None,
+        paginate_items: bool = True,
+        fields: str = 'id'
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieves a paginated list of items from specified boards.
+
+        Args:
+            board_ids: The ID or list of IDs of the boards from which to retrieve items.
+            query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query. Use this to customize the results based on specific criteria.
+            limit: The maximum number of items to retrieve per page.
+            group_id: Only retrieve items from the specified group ID.
+            paginate_items: Whether to paginate items.
+            fields: Fields to return from the items.
+
+        Returns:
+            A list of dictionaries containing the board IDs and their combined items retrieved.
+
+        Raises:
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.get_items(
+                ...     board_ids=987654321,
+                ...     query_params={
+                ...         'rules': [
+                ...             {
+                ...                 'column_id': 'status',
+                ...                 'compare_value': ['Done'],
+                ...                 'operator': 'contains_terms'
+                ...             },
+                ...             {
+                ...                 'column_id': 'status_2',
+                ...                 'compare_value': [2],
+                ...                 'operator': 'not_any_of'
+                ...             }
+                ...         ]
+                ...     },
+                ...     fields='id column_values { id text }'   
+                ... )
+                [
+                    {
+                        "id": "987654321",
+                        "items": [
+                            {
+                                "id": "123456789",
+                                "column_values": [
+                                    {
+                                        "id": "status",
+                                        "text": "Done"
+                                    },
+                                    {
+                                        "id": "status_2",
+                                        "text": "Working on it"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+
+        Note:
+            The ``query_params`` argument allows complex filtering and sorting of items.
+
+            Filter by status column:
+
+            .. code-block:: python
+
+                query_params={
+                    'rules': [{
+                        'column_id': 'status',
+                        'compare_value': ['Done', 'In Progress'],
+                        'operator': 'contains_terms'
+                    }]
+                }
+
+            Filter by date range:
+
+            .. code-block:: python
+
+                query_params={
+                    'rules': [{
+                        'column_id': 'date_column',
+                        'compare_value': ['2024-01-01', '2024-12-31'],
+                        'operator': 'between'
+                    }]
+                }
+
+            Multiple conditions with AND:
+
+            .. code-block:: python
+
+                query_params={
+                    'rules': [
+                        {
+                            'column_id': 'status',
+                            'compare_value': ['Done'],
+                            'operator': 'contains_terms'
+                        },
+                        {
+                            'column_id': 'priority',
+                            'compare_value': [2],
+                            'operator': 'not_any_of'
+                        }
+                    ],
+                    'operator': 'and'
+                }
+
+            Sort by creation date:
+
+            .. code-block:: python
+
+                query_params={
+                    'rules': [],  # No filtering
+                    'order_by': {
+                        'column_id': 'creation_date',
+                        'direction': 'desc'
+                    }
+                }
+
+            Text search in multiple columns:
+
+            .. code-block:: python
+
+                query_params={
+                    'rules': [
+                        {
+                            'column_id': 'text_column',
+                            'compare_value': ['search term'],
+                            'operator': 'contains_text'
+                        },
+                        {
+                            'column_id': 'name',
+                            'compare_value': ['search term'],
+                            'operator': 'contains_text'
+                        }
+                    ],
+                    'operator': 'or'
+                }
+
+            **No data will be returned if you use invalid operators in your rules.**
+
+            See the `monday.com API documentation (column types reference) <https://developer.monday.com/api-reference/reference/column-types-reference>`_ for more details on which operators are supported for each column type.
+
+            See the `monday.com API documentation (items page) <https://developer.monday.com/api-reference/reference/items-page#queries>`_ for more details on query params.
+        """
+
+        query_params_str = build_query_params_string(query_params) if query_params else ''
+
+        group_query = f'groups (ids: "{group_id}") {{' if group_id else ''
+        group_query_end = '}' if group_id else ''
+        fields = f"""
+            id 
+            {group_query} 
+            items_page (
+                limit: {limit} 
+                {f', query_params: {query_params_str}' if query_params_str else ''}
+            ) {{
+                cursor
+                items {{ {fields} }}
+            }}
+            {group_query_end}
+        """
+
+        data = await self.query(
+            board_ids,
+            fields=fields,
+            paginate_items=paginate_items,
+            items_page_limit=limit
+        )
+
+        if group_id:
+            try:
+                return [{'id': b['id'], 'items': b['groups'][0]['items_page']['items']} for b in data]
+            except IndexError:
+                return [{'id': b['id'], 'items': []} for b in data]
+
+        return [{'id': b['id'], 'items': b['items_page']['items']} for b in data]
+
+    async def get_items_by_column_values(
+        self,
+        board_id: int,
+        columns: list[dict[Literal['column_id', 'column_values'], Union[str, list[str]]]],
+        limit: int = 25,
+        paginate_items: bool = True,
+        fields: str = 'id'
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieves items from a board filtered by specific column values.
+
+        Args:
+            board_id: The ID of the board from which to retrieve items.
+            columns: List of column filters to search by.
+            limit: The maximum number of items to retrieve per page.
+            paginate_items: Whether to paginate items.
+            fields: Fields to return from the matching items.
+
+        Returns:
+            A list of dictionaries containing the combined items retrieved.
+
+        Raises:
+            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
+            QueryFormatError: When the GraphQL query format is invalid.
+            MondayAPIError: When an unhandled monday.com API error occurs.
+            aiohttp.ClientError: When there's a client-side network or connection error.
+            PaginationError: If pagination fails.
+
+        Example:
+            .. code-block:: python
+
+                >>> from monday import MondayClient
+                >>> monday_client = MondayClient('your_api_key')
+                >>> await monday_client.boards.get_items_by_column_values(
+                ...     board_id=987654321,
+                ...     columns=[
+                ...         {
+                ...             'column_id': 'status',
+                ...             'column_values': ['Done', 'In Progress']
+                ...         },
+                ...         {
+                ...             'column_id': 'text',
+                ...             'column_values': 'This item is done'
+                ...         }
+                ...     ],
+                ...     fields='id column_values { id text }'
+                ... )
+                [
+                    {
+                        "id": "123456789",
+                        "column_values": [
+                            {
+                                "id": "status",
+                                "text": "Done"
+                            },
+                            {
+                                "id": "text__1",
+                                "text": "This item is done"
+                            }
+                        ]
+                    }
+                ]
+        """
+
+        args = {
+            'board_id': board_id,
+            'columns': columns,
+            'fields': f'cursor items {{ {fields} }}'
+        }
+
+        query_string = build_graphql_query(
+            'items_page_by_column_values',
+            'query',
+            args
+        )
+
+        if paginate_items:
+            data = await paginated_item_request(
+                self.client,
+                query_string,
+                limit=limit
+            )
+            if 'error' in data:
+                check_query_result(data)
+        else:
+            query_result = await self.client.post_request(query_string)
+            data = check_query_result(query_result)
+            data = {'items': data['data']['items_page_by_column_values']['items']}
+
+        return data['items']
 
     async def create(
         self,
@@ -521,6 +806,8 @@ class Boards:
         boards_list = boards
         for board in boards_list:
             items_page = extract_items_page_value(board)
+            if not items_page:
+                continue
             if items_page['cursor']:
                 query_result = await paginated_item_request(self.client, query_string, limit=limit, cursor=items_page['cursor'])
                 items_page['items'].extend(query_result['items'])

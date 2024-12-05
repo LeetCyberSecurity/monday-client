@@ -654,7 +654,7 @@ class Items:
         fields: str = 'id'
     ) -> list[dict[str, Any]]:
         """
-        Retrieves a paginated list of items from a specified board on monday.com.
+        Retrieves a paginated list of items from a specified board on monday.com based on supplied column values.
 
         Args:
             board_id: The ID of the board from which to retrieve items.
@@ -920,7 +920,10 @@ class Items:
         )
 
         if group_id:
-            return [{'id': b['id'], 'items': b['groups'][0]['items_page']['items']} for b in data]
+            try:
+                return [{'id': b['id'], 'items': b['groups'][0]['items_page']['items']} for b in data]
+            except IndexError:
+                return [{'id': b['id'], 'items': []} for b in data]
 
         return [{'id': b['id'], 'items': b['items_page']['items']} for b in data]
 

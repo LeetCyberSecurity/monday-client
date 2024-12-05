@@ -472,7 +472,7 @@ class Groups:
 
         return data['data']['delete_group']
 
-    async def items_by_name(
+    async def get_items_by_name(
         self,
         board_id: int,
         group_id: str,
@@ -502,7 +502,7 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.items_by_name(
+                >>> await monday_client.groups.get_items_by_name(
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     item_name='Item Name',

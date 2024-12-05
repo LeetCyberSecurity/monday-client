@@ -35,6 +35,8 @@ Boards
 .. automethod:: monday.services.Boards.create
 .. automethod:: monday.services.Boards.delete
 .. automethod:: monday.services.Boards.duplicate
+.. automethod:: monday.services.Boards.get_items
+.. automethod:: monday.services.Boards.get_items_by_column_values
 .. automethod:: monday.services.Boards.query
 .. automethod:: monday.services.Boards.update
 
@@ -46,7 +48,7 @@ Groups
 .. automethod:: monday.services.Groups.create
 .. automethod:: monday.services.Groups.delete
 .. automethod:: monday.services.Groups.duplicate
-.. automethod:: monday.services.Groups.items_by_name
+.. automethod:: monday.services.Groups.get_items_by_name
 .. automethod:: monday.services.Groups.query
 .. automethod:: monday.services.Groups.update
 
@@ -65,8 +67,6 @@ Items
 .. automethod:: monday.services.Items.get_name
 .. automethod:: monday.services.Items.move_to_board
 .. automethod:: monday.services.Items.move_to_group
-.. automethod:: monday.services.Items.page
-.. automethod:: monday.services.Items.page_by_column_values
 .. automethod:: monday.services.Items.query
 
 .. _services_section_users:
