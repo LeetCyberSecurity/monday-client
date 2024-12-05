@@ -49,6 +49,13 @@ class MondayClient:
             >>> from monday import MondayClient
             >>> monday_client = MondayClient('your_api_key')
             >>> monday_client.boards.query(board_ids=987654321)
+
+    Args:
+        api_key: The API key for authenticating with the monday.com API.
+        url: The endpoint URL for the monday.com API.
+        headers: Additional HTTP headers used for API requests.
+        max_retries: Maximum amount of retry attempts before raising an error.
+
     """
 
     logger: logging.Logger = logging.getLogger(__name__)
