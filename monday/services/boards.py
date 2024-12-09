@@ -351,10 +351,13 @@ class Boards:
         )
 
         if group_id:
-            try:
-                return [{'id': b['id'], 'items': b['groups'][0]['items_page']['items']} for b in data]
-            except IndexError:
-                return [{'id': b['id'], 'items': []} for b in data]
+            boards = []
+            for board in data:
+                try:
+                    boards.append({'id': board['id'], 'items': board['groups'][0]['items_page']['items']})
+                except IndexError:
+                    boards.append({'id': board['id'], 'items': []})
+            return boards
 
         return [{'id': b['id'], 'items': b['items_page']['items']} for b in data]
 
