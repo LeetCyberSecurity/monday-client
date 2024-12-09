@@ -26,9 +26,9 @@ import pytest
 from monday.client import MondayClient
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def client_instance():
-    client = MondayClient("test_api_key")
+    client = MondayClient('test_api_key')
     client.max_retries = 2
     client._rate_limit_seconds = 1
     return client
@@ -36,7 +36,7 @@ def client_instance():
 
 @pytest.mark.asyncio
 async def test_init():
-    client = MondayClient("test_api_key")
+    client = MondayClient('test_api_key')
     assert client.url == 'https://api.monday.com/v2'
     assert client.headers == {
         'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ async def test_post_request_success(client_instance):
     mock_response = {'data': {'some': 'data'}}
 
     with patch.object(client_instance, '_execute_request', new_callable=AsyncMock, return_value=mock_response):
-        result = await client_instance.post_request("test_query")
+        result = await client_instance.post_request('test_query')
 
     assert result == mock_response
 
@@ -67,7 +67,7 @@ async def test_post_request_complexity_limit_exceeded(client_instance):
 
     with patch.object(client_instance, '_execute_request', side_effect=error_responses):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await client_instance.post_request("test_query")
+            result = await client_instance.post_request('test_query')
 
     mock_sleep.assert_called_once_with(1)
     assert result == {'data': {'some': 'data'}}
@@ -82,7 +82,7 @@ async def test_post_request_mutation_limit_exceeded(client_instance):
 
     with patch.object(client_instance, '_execute_request', side_effect=error_responses):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await client_instance.post_request("test_query")
+            result = await client_instance.post_request('test_query')
 
     mock_sleep.assert_called_once_with(1)
     assert result == {'data': {'some': 'data'}}
@@ -99,7 +99,7 @@ async def test_post_request_max_retries_reached(client_instance):
     with patch.object(client_instance, '_execute_request', side_effect=error_responses):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock):
             with pytest.raises(Exception) as exc_info:
-                await client_instance.post_request("test_query")
+                await client_instance.post_request('test_query')
 
     expected_error = f'Max retries ({client_instance.max_retries}) reached'
     assert str(exc_info.value) == expected_error
@@ -116,7 +116,7 @@ async def test_post_request_client_error_retry(client_instance):
 
     with patch.object(client_instance, '_execute_request', side_effect=error_responses):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await client_instance.post_request("test_query")
+            result = await client_instance.post_request('test_query')
 
     assert mock_sleep.call_count == 2
     mock_sleep.assert_called_with(1)
@@ -131,7 +131,7 @@ async def test_post_request_max_retries_client_error(client_instance):
     with patch.object(client_instance, '_execute_request', side_effect=client_error):
         with patch('monday.client.asyncio.sleep', new_callable=AsyncMock):
             with pytest.raises(Exception) as exc_info:
-                await client_instance.post_request("test_query")
+                await client_instance.post_request('test_query')
 
     expected_error = f'Max retries ({client_instance.max_retries}) reached'
     assert str(exc_info.value) == expected_error
@@ -144,9 +144,7 @@ async def test_execute_request(client_instance):
     mock_response.__aenter__.return_value.json = mock_json
 
     with patch('aiohttp.ClientSession.post', return_value=mock_response) as mock_post:
-        # pylint: disable=W0212
-        result = await client_instance._execute_request("test_query")
-        # pylint: enable=W0212
+        result = await client_instance._execute_request('test_query')
 
     assert result == {'data': {'some': 'data'}}
     mock_post.assert_called_once_with(

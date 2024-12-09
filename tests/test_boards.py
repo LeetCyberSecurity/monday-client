@@ -26,12 +26,12 @@ from monday.exceptions import MondayAPIError, QueryFormatError
 from monday.services.boards import Boards
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_client():
     return MagicMock(spec=MondayClient)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def boards_instance(mock_client):
     return Boards(mock_client)
 
@@ -55,8 +55,8 @@ async def test_query(boards_instance):
 async def test_query_with_invalid_pagination(boards_instance):
     """Test query with invalid pagination parameters."""
     with pytest.raises(QueryFormatError) as exc_info:
-        await boards_instance.query(fields="items_page { items { id } }", paginate_items=True)
-    assert "Pagination requires a cursor" in str(exc_info.value)
+        await boards_instance.query(fields='items_page { items { id } }', paginate_items=True)
+    assert 'Pagination requires a cursor' in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -84,7 +84,7 @@ async def test_create(boards_instance):
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await boards_instance.create(name="New Board")
+    result = await boards_instance.create(name='New Board')
 
     assert result == {'id': 1, 'name': 'New Board'}
     boards_instance.client.post_request.assert_awaited_once()
@@ -114,7 +114,7 @@ async def test_update(boards_instance):
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await boards_instance.update(board_id=1, board_attribute="name", new_value="Updated Board")
+    result = await boards_instance.update(board_id=1, board_attribute='name', new_value='Updated Board')
 
     assert result == {'id': 1, 'name': 'Updated Board'}
     boards_instance.client.post_request.assert_awaited_once()

@@ -27,19 +27,19 @@ from monday.services.boards import Boards
 from monday.services.items import Items
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_client():
     return MagicMock(spec=MondayClient)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_boards():
     boards = MagicMock(spec=Boards)
     boards.query = AsyncMock()
     return boards
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def items_instance(mock_client, mock_boards):
     return Items(mock_client, mock_boards)
 
@@ -114,7 +114,7 @@ async def test_create(items_instance):
     }
 
     items_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await items_instance.create(board_id=1, item_name="New Item")
+    result = await items_instance.create(board_id=1, item_name='New Item')
 
     assert result == {'id': 1, 'name': 'New Item'}
     items_instance.client.post_request.assert_awaited_once()
@@ -132,7 +132,7 @@ async def test_create_with_invalid_input(items_instance):
 
     items_instance.client.post_request = AsyncMock(return_value=error_response)
     with pytest.raises(MondayAPIError) as exc_info:
-        await items_instance.create(board_id=1, item_name="Test")
+        await items_instance.create(board_id=1, item_name='Test')
     assert exc_info.value.json == error_response
 
 
@@ -318,8 +318,8 @@ async def test_page_with_max_retries_exceeded(items_instance):
     # Mock to always return error (exceeding max retries)
     items_instance.client.post_request = AsyncMock(return_value=error_response)
     items_instance.client.max_retries = 2
-    items_instance.boards.query = AsyncMock(side_effect=MondayAPIError("Max retries reached", json=error_response))
+    items_instance.boards.query = AsyncMock(side_effect=MondayAPIError('Max retries reached', json=error_response))
 
     with pytest.raises(MondayAPIError) as exc_info:
         await items_instance.page(board_ids=1)
-    assert "Max retries reached" in str(exc_info.value)
+    assert 'Max retries reached' in str(exc_info.value)

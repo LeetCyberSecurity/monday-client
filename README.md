@@ -77,6 +77,24 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -
 logger.addHandler(handler)
 ```
 
+Or update an already existing logging config:
+```python
+import logging.config
+
+logging_config = config['logging']
+
+logging_config['loggers'].update({
+    'monday_client': {
+        'handlers': ['file', 'console'],  # Use the same handlers as your main logger
+        'level': 'INFO',  # Set appropriate level
+        'propagate': False
+    }
+})
+
+logging.config.dictConfig(logging_config)
+logger = logging.getLogger(__name__)
+```
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](https://github.com/LeetCyberSecurity/monday-client/blob/main/LICENSE) file for details.

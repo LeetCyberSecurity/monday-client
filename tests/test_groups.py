@@ -28,24 +28,24 @@ from monday.services.groups import Groups
 from monday.services.items import Items
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_client():
     return MagicMock(spec=MondayClient)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_boards():
     boards = MagicMock(spec=Boards)
     boards.query = AsyncMock()
     return boards
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_items():
     return MagicMock(spec=Items)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def groups_instance(mock_client, mock_boards):
     return Groups(mock_client, mock_boards)
 
@@ -123,7 +123,7 @@ async def test_query_with_api_error(groups_instance, mock_boards):
         }]
     }
 
-    mock_boards.query.side_effect = MondayAPIError("API Error", json=error_response)
+    mock_boards.query.side_effect = MondayAPIError('API Error', json=error_response)
 
     with pytest.raises(MondayAPIError) as exc_info:
         await groups_instance.query(board_ids=1)

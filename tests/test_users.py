@@ -26,12 +26,12 @@ from monday.exceptions import MondayAPIError
 from monday.services.users import Users
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def mock_client():
     return MagicMock(spec=MondayClient)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def users_instance(mock_client):
     return Users(mock_client)
 
