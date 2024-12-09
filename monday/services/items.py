@@ -32,7 +32,6 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.exceptions import MondayAPIError
 from monday.services.utils import (build_graphql_query, check_query_result,
                                    manage_temp_fields)
 
@@ -712,8 +711,8 @@ class Items:
 
         try:
             items = data['data']['items'][0]
-        except IndexError as e:
-            raise MondayAPIError from e
+        except IndexError:
+            return []
 
         return items['column_values']
 
