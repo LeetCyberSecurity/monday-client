@@ -41,6 +41,8 @@ def convert_numeric_args(args_dict: dict) -> dict:
     for key, value in args_dict.items():
         if value is None:
             continue
+        elif isinstance(value, bool):
+            converted[key] = value
         elif isinstance(value, list):
             # Handle lists of values
             converted[key] = []
@@ -54,7 +56,7 @@ def convert_numeric_args(args_dict: dict) -> dict:
         else:
             # Handle single values
             try:
-                converted[key] = int(value)
+                converted[key] = int(value) if not isinstance(value, bool) else value
             except (ValueError, TypeError):
                 converted[key] = value
     return converted
