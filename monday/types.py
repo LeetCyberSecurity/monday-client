@@ -96,6 +96,9 @@ class QueryParams(TypedDict, total=False):
                 }
             }
     """
+    ids: list[int]
+    """The specific item IDs to return. The maximum is 100."""
+
     rules: list[QueryRule]
     """List of query rules to apply"""
 
