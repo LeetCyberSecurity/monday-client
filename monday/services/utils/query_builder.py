@@ -132,7 +132,10 @@ def build_graphql_query(
             else:
                 processed_values = []
                 for item in value:
-                    processed_values.append(f'"{item}"')
+                    if key == 'ids':
+                        processed_values.append(str(item))
+                    else:
+                        processed_values.append(f'"{item}"')
                 processed_args[key] = '[' + ', '.join(processed_values) + ']'
         elif isinstance(value, str):
             if key in enum_fields:
@@ -203,6 +206,9 @@ def build_query_params_string(
                      f'direction: {order_by["direction"]}' +
                      '}')
         parts.append(f'order_by: {order_str}')
+
+    if ids := query_params.get('ids'):
+        parts.append(f'ids: {ids}')
 
     return '{' + ', '.join(parts) + '}' if parts else ''
 

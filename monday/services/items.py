@@ -75,7 +75,7 @@ class Items:
         Query items to return metadata about one or multiple items.
 
         Args:
-            item_ids: The ID or list of IDs of the specific items, subitems, or parent items to return.
+            item_ids: The ID or list of IDs of the specific items to return.
             limit: The maximum number of items to retrieve per page. Must be greater than 0 and less than 100.
             page: The page number at which to start.
             exclude_nonactive: Excludes items that are inactive, deleted, or belong to deleted items.
@@ -197,7 +197,7 @@ class Items:
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
                 >>> await monday_client.items.create(
-                ...     board_id=123456789,
+                ...     board_id=987654321,
                 ...     item_name='New Item',
                 ...     column_values={
                 ...         'status': 'Done',
@@ -207,7 +207,7 @@ class Items:
                 ...     fields='id name column_values (ids: ["status", "text"]) { id text }'
                 ... )
                 {
-                    "id": "123456789",
+                    "id": "987654321",
                     "name": "New Item",
                     "column_values": [
                         {

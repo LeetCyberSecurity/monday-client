@@ -248,11 +248,13 @@ class Boards:
             .. code-block:: python
 
                 query_params={
-                    'rules': [{
-                        'column_id': 'status',
-                        'compare_value': ['Done', 'In Progress'],
-                        'operator': 'contains_terms'
-                    }]
+                    'rules': [
+                        {
+                            'column_id': 'status',
+                            'compare_value': ['Done', 'In Progress'],
+                            'operator': 'contains_terms'
+                        }
+                    ]
                 }
 
             Filter by date range:
@@ -260,11 +262,13 @@ class Boards:
             .. code-block:: python
 
                 query_params={
-                    'rules': [{
-                        'column_id': 'date_column',
-                        'compare_value': ['2024-01-01', '2024-12-31'],
-                        'operator': 'between'
-                    }]
+                    'rules': [
+                        {
+                            'column_id': 'date_column',
+                            'compare_value': ['2024-01-01', '2024-12-31'],
+                            'operator': 'between'
+                        }
+                    ]
                 }
 
             Multiple conditions with AND:

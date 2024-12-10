@@ -69,6 +69,13 @@ Items
 .. automethod:: monday.services.Items.move_to_group
 .. automethod:: monday.services.Items.query
 
+.. _services_section_subitems:
+
+Subitems
+~~~~~~~~
+.. automethod:: monday.services.Subitems.query
+.. automethod:: monday.services.Subitems.create
+
 .. _services_section_users:
 
 Users

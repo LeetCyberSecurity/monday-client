@@ -27,6 +27,7 @@ MondayClient
 .. autoattribute:: monday.client.MondayClient.boards
 .. autoattribute:: monday.client.MondayClient.groups
 .. autoattribute:: monday.client.MondayClient.items
+.. autoattribute:: monday.client.MondayClient.subitems
 .. autoattribute:: monday.client.MondayClient.users
 .. autoattribute:: monday.client.MondayClient.logger
 .. automethod:: monday.client.MondayClient.post_request

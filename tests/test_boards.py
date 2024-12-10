@@ -37,7 +37,7 @@ def boards_instance(mock_client):
 
 
 @pytest.mark.asyncio
-async def test_query(boards_instance):
+async def test_query(boards_instance: Boards):
     mock_responses = [
         {'data': {'boards': [{'id': 1, 'name': 'Board 1'}, {'id': 2, 'name': 'Board 2'}]}},
         {'data': {'boards': [{'id': 3, 'name': 'Board 3'}]}},
@@ -52,7 +52,7 @@ async def test_query(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_query_with_invalid_pagination(boards_instance):
+async def test_query_with_invalid_pagination(boards_instance: Boards):
     """Test query with invalid pagination parameters."""
     with pytest.raises(QueryFormatError) as exc_info:
         await boards_instance.query(fields='items_page { items { id } }', paginate_items=True)
@@ -60,7 +60,7 @@ async def test_query_with_invalid_pagination(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_query_with_api_error(boards_instance):
+async def test_query_with_api_error(boards_instance: Boards):
     """Test handling of API errors in query method."""
     error_response = {
         'errors': [{
@@ -76,7 +76,7 @@ async def test_query_with_api_error(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_create(boards_instance):
+async def test_create(boards_instance: Boards):
     mock_response = {
         'data': {
             'create_board': {'id': 1, 'name': 'New Board'}
@@ -91,7 +91,7 @@ async def test_create(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_duplicate(boards_instance):
+async def test_duplicate(boards_instance: Boards):
     mock_response = {
         'data': {
             'duplicate_board': {'board': {'id': 2}}
@@ -106,7 +106,7 @@ async def test_duplicate(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_update(boards_instance):
+async def test_update(boards_instance: Boards):
     mock_response = {
         'data': {
             'update_board': '{"id": 1, "name": "Updated Board"}'
@@ -121,7 +121,7 @@ async def test_update(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_archive(boards_instance):
+async def test_archive(boards_instance: Boards):
     mock_response = {
         'data': {
             'archive_board': {'id': 1, 'state': 'archived'}
@@ -136,7 +136,7 @@ async def test_archive(boards_instance):
 
 
 @pytest.mark.asyncio
-async def test_delete(boards_instance):
+async def test_delete(boards_instance: Boards):
     mock_response = {
         'data': {
             'delete_board': {'id': 1, 'state': 'deleted'}

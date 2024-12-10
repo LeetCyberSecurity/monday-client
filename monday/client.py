@@ -33,7 +33,7 @@ import aiohttp
 
 from monday.exceptions import (ComplexityLimitExceeded, MondayAPIError,
                                MutationLimitExceeded, QueryFormatError)
-from monday.services import Boards, Groups, Items, Users
+from monday.services import Boards, Groups, Items, Subitems, Users
 
 
 class MondayClient:
@@ -114,6 +114,12 @@ class MondayClient:
         Service for item-related operations
 
         Type: `Items <services.html#items>`_
+        """
+        self.subitems = Subitems(self, self.items, self.boards)
+        """
+        Service for subitem-related operations
+
+        Type: `Subitems <services.html#subitems>`_
         """
         self.groups = Groups(self, self.boards)
         """
