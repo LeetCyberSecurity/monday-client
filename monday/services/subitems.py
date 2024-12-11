@@ -70,7 +70,7 @@ class Subitems:
         subitem_ids: Optional[Union[int, list[int]]] = None,
         fields: str = 'id',
         **kwargs: Any
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Union[str, list[dict[str, Any]]]]]:
         """
         Query items to return metadata about one or multiple subitems.
 
@@ -175,7 +175,7 @@ class Subitems:
                 query_result = await self.boards.get_items(
                     board_ids=subitem_board_id,
                     query_params={'ids': parent_subitem_ids},
-                    fields=f'{fields}' if fields else 'id'
+                    fields=fields
                 )
                 data = check_query_result(query_result, errors_only=True)
                 items.append({'id': parent_item['id'], 'subitems': data[0]['items']})
