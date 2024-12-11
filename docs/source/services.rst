@@ -35,6 +35,7 @@ Boards
 .. automethod:: monday.services.Boards.create
 .. automethod:: monday.services.Boards.delete
 .. automethod:: monday.services.Boards.duplicate
+.. automethod:: monday.services.Boards.get_column_values
 .. automethod:: monday.services.Boards.get_items
 .. automethod:: monday.services.Boards.get_items_by_column_values
 .. automethod:: monday.services.Boards.query

@@ -459,23 +459,21 @@ class Boards:
     async def get_column_values(
         self,
         board_id: int,
-        columns: list[dict[Literal['column_id', 'column_values'], Union[str, list[str]]]],
-        limit: int = 25,
-        paginate_items: bool = True,
-        fields: str = 'id'
+        column_ids: Union[str, list[str]],
+        fields: str = 'id text',
+        item_fields: str = 'id name'
     ) -> list[dict[str, Any]]:
         """
-        Retrieves specific column values from a board.
+        Retrieves specific column values for items on a board.
 
         Args:
-            board_id: The ID of the board from which to retrieve items.
-            columns: List of column filters to search by.
-            limit: The maximum number of items to retrieve per page.
-            paginate_items: Whether to paginate items.
-            fields: Fields to return from the matching items.
+            board_id: The ID of the board from which to retrieve item column values.
+            column_ids: The specific column IDs to return.
+            fields: Fields to return from the matching columns.
+            item_fields: Fields to return from the matching items.
 
         Returns:
-            A list of dictionaries containing the combined items retrieved.
+            A list of dictionaries containing the combined items retrieved and their column values.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -489,63 +487,55 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.get_items_by_column_values(
+                >>> await client.boards.get_column_values(
                 ...     board_id=987654321,
-                ...     columns=[
-                ...         {
-                ...             'column_id': 'status',
-                ...             'column_values': ['Done', 'In Progress']
-                ...         },
-                ...         {
-                ...             'column_id': 'text',
-                ...             'column_values': 'This item is done'
-                ...         }
-                ...     ],
-                ...     fields='id column_values { id text }'
+                ...     column_ids=[
+                ...         'text',
+                ...         'status'
+                ...     ]
                 ... )
                 [
                     {
                         "id": "123456789",
+                        "name": "Item 1",
                         "column_values": [
+                            {
+                                "id": "text",
+                                "text": "Item 1 text"
+                            },
                             {
                                 "id": "status",
                                 "text": "Done"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "02345678",
+                        "name": "Item 2",
+                        "column_values": [
+                            {
+                                "id": "text",
+                                "text": "Item 2 text"
                             },
                             {
-                                "id": "text__1",
-                                "text": "This item is done"
+                                "id": "status",
+                                "text": "Working on it"
                             }
                         ]
                     }
                 ]
         """
 
-        args = {
-            'board_id': board_id,
-            'columns': columns,
-            'fields': f'cursor items {{ {fields} }}'
-        }
+        column_ids = ', '.join([f'"{i}"' for i in column_ids]) if isinstance(column_ids, list) else f'"{column_ids}"'
 
-        query_string = build_graphql_query(
-            'items_page_by_column_values',
-            'query',
-            args
+        query_result = await self.get_items(
+            board_ids=board_id,
+            fields=f'{item_fields} column_values (ids: [{column_ids}]) {{ {fields} }}'
         )
 
-        if paginate_items:
-            data = await paginated_item_request(
-                self.client,
-                query_string,
-                limit=limit
-            )
-            if 'error' in data:
-                check_query_result(data)
-        else:
-            query_result = await self.client.post_request(query_string)
-            data = check_query_result(query_result)
-            data = {'items': data['data']['items_page_by_column_values']['items']}
+        data = check_query_result(query_result, errors_only=True)
 
-        return data['items']
+        return data[0]['items']
 
     async def create(
         self,
