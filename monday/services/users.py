@@ -32,7 +32,8 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.services.utils import build_graphql_query, check_query_result
+from monday.services.utils import (Fields, build_graphql_query,
+                                   check_query_result)
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -116,7 +117,13 @@ class Users:
                         "name": "User Two"
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_users>`
         """
+
+        fields = Fields(fields)
+
         args = {
             'emails': emails,
             'ids': ids,

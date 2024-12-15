@@ -17,6 +17,8 @@
 
 # pylint: disable=redefined-outer-name
 
+"""Comprehensive tests for Items methods"""
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -29,11 +31,13 @@ from monday.services.items import Items
 
 @pytest.fixture(scope='module')
 def mock_client():
+    """Create mock MondayClient instance"""
     return MagicMock(spec=MondayClient)
 
 
 @pytest.fixture(scope='module')
 def mock_boards():
+    """Create mock Boards instance"""
     boards = MagicMock(spec=Boards)
     boards.query = AsyncMock()
     return boards
@@ -41,11 +45,13 @@ def mock_boards():
 
 @pytest.fixture(scope='module')
 def items_instance(mock_client, mock_boards):
+    """Create mock Items instance"""
     return Items(mock_client, mock_boards)
 
 
 @pytest.mark.asyncio
 async def test_query(items_instance):
+    """Test basic item query functionality."""
     mock_responses = [
         {'data': {'items': [{'id': 1, 'name': 'Item 1'}, {'id': 2, 'name': 'Item 2'}]}},
         {'data': {'items': []}}
@@ -107,6 +113,7 @@ async def test_query_with_rate_limit_error(items_instance):
 
 @pytest.mark.asyncio
 async def test_create(items_instance):
+    """Test creating a new item."""
     mock_response = {
         'data': {
             'create_item': {'id': 1, 'name': 'New Item'}
@@ -138,6 +145,7 @@ async def test_create_with_invalid_input(items_instance):
 
 @pytest.mark.asyncio
 async def test_duplicate(items_instance):
+    """Test duplicating an existing item."""
     mock_response = {
         'data': {
             'duplicate_item': {'id': 2, 'name': 'Item 1 (copy)'}
@@ -153,6 +161,7 @@ async def test_duplicate(items_instance):
 
 @pytest.mark.asyncio
 async def test_move_to_group(items_instance):
+    """Test moving item to a different group."""
     mock_response = {
         'data': {
             'move_item_to_group': {'id': 1, 'group': {'id': 'new_group'}}
@@ -168,6 +177,7 @@ async def test_move_to_group(items_instance):
 
 @pytest.mark.asyncio
 async def test_move_to_board(items_instance):
+    """Test moving item to a different board."""
     mock_response = {
         'data': {
             'move_item_to_board': {'id': 1, 'board': {'id': 2}}
@@ -189,6 +199,7 @@ async def test_move_to_board(items_instance):
 
 @pytest.mark.asyncio
 async def test_archive(items_instance):
+    """Test archiving an item."""
     mock_response = {
         'data': {
             'archive_item': {'id': 1, 'state': 'archived'}
@@ -204,6 +215,7 @@ async def test_archive(items_instance):
 
 @pytest.mark.asyncio
 async def test_delete(items_instance):
+    """Test deleting an item."""
     mock_response = {
         'data': {
             'delete_item': {'id': 1, 'state': 'deleted'}
@@ -219,6 +231,7 @@ async def test_delete(items_instance):
 
 @pytest.mark.asyncio
 async def test_clear_updates(items_instance):
+    """Test clearing item updates."""
     mock_response = {
         'data': {
             'clear_item_updates': {'id': 1, 'updates_cleared': True}
@@ -233,93 +246,153 @@ async def test_clear_updates(items_instance):
 
 
 @pytest.mark.asyncio
-async def test_page_by_column_values(items_instance):
-    mock_responses = [{
+async def test_get_column_values(items_instance):
+    """Test retrieving column values for a specific item."""
+    mock_response = {
         'data': {
-            'items_page_by_column_values': {
-                'cursor': None,
-                'items': [
-                    {'id': 1, 'name': 'Item 1'},
-                    {'id': 2, 'name': 'Item 2'}
+            'items': [{
+                'column_values': [
+                    {'id': 'status', 'text': 'Done'},
+                    {'id': 'text', 'text': 'Test content'}
                 ]
-            }
+            }]
         }
-    }]
+    }
 
-    items_instance.client.post_request = AsyncMock(side_effect=mock_responses)
-    result = await items_instance.page_by_column_values(
-        board_id=1,
-        columns=[{'column_id': 'status', 'column_values': ['Done']}],
-        limit=2
+    items_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await items_instance.get_column_values(
+        item_id=1,
+        column_ids=['status', 'text'],
+        fields='id text'
     )
 
-    assert result == [{'id': 1, 'name': 'Item 1'}, {'id': 2, 'name': 'Item 2'}]
+    assert result == [
+        {'id': 'status', 'text': 'Done'},
+        {'id': 'text', 'text': 'Test content'}
+    ]
     items_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_page(items_instance):
+async def test_get_column_values_empty_response(items_instance):
+    """Test handling empty response when getting column values."""
     mock_response = {
         'data': {
-            'boards': [
-                {
-                    'id': 1,
-                    'items_page': {
-                        'cursor': None,
-                        'items': [
-                            {'id': 1, 'name': 'Item 1'},
-                            {'id': 2, 'name': 'Item 2'}
-                        ]
-                    }
-                }
-            ]
+            'items': []
         }
     }
 
-    # Set up the mock response for boards.query
-    items_instance.boards.query.return_value = [
-        {
-            'id': 1,
-            'items_page': {
-                'items': [
-                    {'id': 1, 'name': 'Item 1'},
-                    {'id': 2, 'name': 'Item 2'}
-                ]
-            }
-        }
-    ]
-
     items_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await items_instance.page(board_ids=1, limit=2)
+    result = await items_instance.get_column_values(item_id=1)
 
-    expected_result = [
-        {
-            'id': 1,
-            'items_page': {
-                'items': [
-                    {'id': 1, 'name': 'Item 1'},
-                    {'id': 2, 'name': 'Item 2'}
-                ]
-            }
-        }
-    ]
-    assert result == expected_result
+    assert result == []
+    items_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_page_with_max_retries_exceeded(items_instance):
-    """Test page method with max retries exceeded."""
-    error_response = {
-        'error_code': 'ComplexityException',
-        'error_message': 'Complexity limit exceeded. Please retry in 30.5 seconds',
-        'status_code': 400
+async def test_change_column_values(items_instance):
+    """Test changing column values for an item."""
+    # First response is for the query to get board ID
+    mock_query_response = {
+        'data': {
+            'items': [{
+                'board': {'id': '123'}
+            }]
+        }
     }
 
-    # Mock to always return error (exceeding max retries)
-    items_instance.client.post_request = AsyncMock(return_value=error_response)
-    items_instance.client.max_retries = 2
-    items_instance.boards.query = AsyncMock(side_effect=MondayAPIError('Max retries reached', json=error_response))
+    # Empty response to break the query loop
+    mock_empty_response = {
+        'data': {
+            'items': []
+        }
+    }
 
-    with pytest.raises(MondayAPIError) as exc_info:
-        await items_instance.page(board_ids=1)
-    assert 'Max retries reached' in str(exc_info.value)
+    # Response for the actual column value change
+    mock_change_response = {
+        'data': {
+            'change_multiple_column_values': {
+                'id': '1',
+                'column_values': [
+                    {'id': 'status', 'text': 'In Progress'},
+                    {'id': 'text', 'text': 'Updated content'}
+                ]
+            }
+        }
+    }
+
+    # Set up the mock to return all responses in sequence
+    items_instance.client.post_request = AsyncMock(side_effect=[
+        mock_query_response,  # First query response
+        mock_empty_response,  # Empty response to break query loop
+        mock_change_response  # Column value change response
+    ])
+
+    result = await items_instance.change_column_values(
+        item_id=1,
+        column_values={
+            'status': 'In Progress',
+            'text': 'Updated content'
+        },
+        fields='id column_values { id text }'
+    )
+
+    assert result == mock_change_response['data']['change_multiple_column_values']
+    assert items_instance.client.post_request.await_count == 3
+
+    # Verify the first call was for querying the board ID
+    first_call = items_instance.client.post_request.call_args_list[0]
+    assert 'items' in first_call[0][0]
+    assert 'board { id }' in first_call[0][0]
+
+    # Verify the last call was for changing column values
+    last_call = items_instance.client.post_request.call_args_list[2]
+    assert 'change_multiple_column_values' in last_call[0][0]
+
+
+@pytest.mark.asyncio
+async def test_get_name(items_instance):
+    """Test retrieving item name by ID."""
+    mock_response = {
+        'data': {
+            'items': [{
+                'name': 'Test Item'
+            }]
+        }
+    }
+
+    items_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await items_instance.get_name(item_id=1)
+
+    assert result == 'Test Item'
+    items_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_id(items_instance):
+    """Test retrieving item IDs by name."""
+    mock_response = [
+        {'id': '123'},
+        {'id': '456'}
+    ]
+
+    items_instance.boards.get_items_by_column_values = AsyncMock(return_value=mock_response)
+    result = await items_instance.get_id(board_id=1, item_name='Test Item')
+
+    assert result == ['123', '456']
+    items_instance.boards.get_items_by_column_values.assert_awaited_once_with(
+        1,
+        [{'column_id': 'name', 'column_values': 'Test Item'}]
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_id_no_matches(items_instance):
+    """Test retrieving item IDs when no matches found."""
+    mock_response = []
+
+    items_instance.boards.get_items_by_column_values = AsyncMock(return_value=mock_response)
+    result = await items_instance.get_id(board_id=1, item_name='Nonexistent Item')
+
+    assert result == []
+    items_instance.boards.get_items_by_column_values.assert_awaited_once()

@@ -32,7 +32,8 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from monday.services.utils import build_graphql_query, check_query_result
+from monday.services.utils import (Fields, build_graphql_query,
+                                   check_query_result)
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -140,15 +141,20 @@ class Subitems:
                         ]
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_subitems>`
         """
 
+        fields = Fields(fields)
+
         if not subitem_ids:
-            fields = f'''
+            fields = Fields(f'''
                 id subitems 
                 {{
-                    {f"{fields}" if fields else "id"}    
+                    {str(fields)}   
                 }}
-            '''
+            ''')
 
             query_result = await self.items.query(
                 item_ids=item_ids,
@@ -238,7 +244,12 @@ class Subitems:
                         }
                     ]
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_subitems>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'parent_item_id': item_id,

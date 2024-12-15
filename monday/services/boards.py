@@ -33,8 +33,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.exceptions import QueryFormatError
-from monday.services.utils import (build_graphql_query,
+from monday.services.utils import (Fields, build_graphql_query,
                                    build_query_params_string,
                                    check_query_result,
                                    extract_items_page_value,
@@ -52,6 +51,61 @@ class Boards:
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)
+
+    BASIC_FIELDS = Fields('id name')
+    """Returns the following fields:
+    - id: Board's ID
+    - name: Board's name
+    """
+
+    DETAILED_FIELDS = Fields('id name board_kind description')
+    """Returns the following fields:
+    - id: Board's ID
+    - name: Board's name
+    - board_kind: The type of board
+    - description: Board's description
+    """
+
+    GROUPS_FIELDS = Fields('id name top_group { id title } groups { id title }')
+    """Returns the following fields:
+    - id: Board's ID
+    - name: Board's name
+    - top_group: The group at the top of the board
+        - id: Group's ID
+        - title: Group's title
+    - groups: The board's visible groups
+        - id: Group's ID
+        - title: Group's title
+    """
+
+    ITEMS_FIELDS = Fields('id name items_count items_page { cursor items { id name } }')
+    """
+    Returns the following fields:
+    - id: Board's ID
+    - name: Board's name
+    - items_count: The number of items on the board
+    - items: List of all items on the board
+        - id: Item's ID
+        - name: Item's name
+    """
+
+    USERS_FIELDS = Fields('id name creator { id email name } owners { id email name } subscribers { id email name }')
+    """Returns the following fields:
+    - id: Board's ID
+    - name: Board's name
+    - creator: The board's creator
+        - id: User's ID
+        - email: User's email
+        - name: User's name
+    - owners: The board's owners
+        - id: User's ID
+        - email: User's email
+        - name: User's name
+    - subscribers: The board's subscribers
+        - id: User's ID
+        - email: User's email
+        - name: User's name
+    """
 
     def __init__(
         self,
@@ -76,7 +130,7 @@ class Boards:
         page: int = 1,
         state: Literal['active', 'all', 'archived', 'deleted'] = 'active',
         workspace_ids: Optional[Union[int, list[int]]] = None,
-        fields: str = 'id name',
+        fields: Union[str, Fields] = BASIC_FIELDS
     ) -> list[dict[str, Any]]:
         """
         Query boards to return metadata about one or multiple boards.
@@ -91,14 +145,13 @@ class Boards:
             page: The page number to start from.
             state: The state of the boards to include.
             workspace_ids: The ID or list of IDs of the workspaces to filter by.
-            fields: Fields to return from the queried board.
+            fields: Fields to return from the queried board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             List of dictionaries containing queried board data.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
-            QueryFormatError: When the GraphQL query format is invalid.
             MondayAPIError: When an unhandled monday.com API error occurs.
             aiohttp.ClientError: When there's a client-side network or connection error.
 
@@ -118,14 +171,15 @@ class Boards:
                         "state": "active"
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
+        fields = Fields(fields)
+
         if paginate_items and 'items_page' in fields and 'cursor' not in fields:
-            raise QueryFormatError(
-                'Pagination requires a cursor in the items_page field. '
-                'Use items.items_page() or update your fields parameter to include cursor, '
-                'e.g.: "id name items_page { cursor items { id } }"'
-            )
+            fields += 'items_page { cursor }'
 
         board_ids = [board_ids] if not isinstance(board_ids, list) else board_ids
 
@@ -161,9 +215,14 @@ class Boards:
 
             args['page'] += 1
 
-        if 'items_page' in fields and paginate_items:
-            query_result = await self._paginate_items(query_string, boards_data, limit=items_page_limit)
-            boards_data = query_result
+        if 'items_page' in fields:
+            if paginate_items:
+                query_result = await self._paginate_items(query_string, boards_data, limit=items_page_limit)
+                boards_data = query_result
+            if fields == self.ITEMS_FIELDS:
+                for board in boards_data:
+                    boards_data_items = board.pop('items_page')
+                    board['items'] = boards_data_items['items']
 
         return boards_data
 
@@ -174,7 +233,7 @@ class Boards:
         limit: int = 25,
         group_id: Optional[str] = None,
         paginate_items: bool = True,
-        fields: str = 'id'
+        fields: Union[str, Fields] = BASIC_FIELDS
     ) -> list[dict[str, Any]]:
         """
         Retrieves a paginated list of items from specified boards.
@@ -185,7 +244,7 @@ class Boards:
             limit: The maximum number of items to retrieve per page.
             group_id: Only retrieve items from the specified group ID.
             paginate_items: Whether to paginate items.
-            fields: Fields to return from the items.
+            fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             A list of dictionaries containing the board IDs and their combined items retrieved.
@@ -239,6 +298,9 @@ class Boards:
                         ]
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
 
         Note:
             The ``query_params`` argument allows complex filtering and sorting of items.
@@ -334,7 +396,7 @@ class Boards:
 
         group_query = f'groups (ids: "{group_id}") {{' if group_id else ''
         group_query_end = '}' if group_id else ''
-        fields = f"""
+        fields = Fields(f"""
             id 
             {group_query} 
             items_page (
@@ -345,7 +407,7 @@ class Boards:
                 items {{ {fields} }}
             }}
             {group_query_end}
-        """
+        """)
 
         data = await self.query(
             board_ids,
@@ -371,7 +433,7 @@ class Boards:
         columns: list[dict[Literal['column_id', 'column_values'], Union[str, list[str]]]],
         limit: int = 25,
         paginate_items: bool = True,
-        fields: str = 'id'
+        fields: Union[str, Fields] = BASIC_FIELDS
     ) -> list[dict[str, Any]]:
         """
         Retrieves items from a board filtered by specific column values.
@@ -381,7 +443,7 @@ class Boards:
             columns: List of column filters to search by.
             limit: The maximum number of items to retrieve per page.
             paginate_items: Whether to paginate items.
-            fields: Fields to return from the matching items.
+            fields: Fields to return from the matching items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             A list of dictionaries containing the combined items retrieved.
@@ -427,7 +489,12 @@ class Boards:
                         ]
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -460,8 +527,8 @@ class Boards:
         self,
         board_id: int,
         column_ids: Union[str, list[str]],
-        fields: str = 'id text',
-        item_fields: str = 'id name'
+        column_fields: Union[str, Fields] = 'id text',
+        item_fields: Union[str, Fields] = BASIC_FIELDS
     ) -> list[dict[str, Any]]:
         """
         Retrieves specific column values for items on a board.
@@ -469,8 +536,8 @@ class Boards:
         Args:
             board_id: The ID of the board from which to retrieve item column values.
             column_ids: The specific column IDs to return.
-            fields: Fields to return from the matching columns.
-            item_fields: Fields to return from the matching items.
+            column_fields: Fields to return from the matching columns. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            item_fields: Fields to return from the matching items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             A list of dictionaries containing the combined items retrieved and their column values.
@@ -524,13 +591,43 @@ class Boards:
                         ]
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
+
+        Note:
+            Use :meth:`Items.get_column_values() <monday.services.Items.get_column_values>` to retrieve column values for a specific item.
         """
 
-        column_ids = ', '.join([f'"{i}"' for i in column_ids]) if isinstance(column_ids, list) else f'"{column_ids}"'
+        column_ids = [f'"{i}"' for i in column_ids] if isinstance(column_ids, list) else [f'"{column_ids}"']
+
+        if 'column_values' in item_fields:
+            # Construct a new query that explicitly includes column_values with specific column IDs.
+            # Having two column_values fields in the query would cause issues, so this removes any
+            # existing column_values field from the input fields string
+            item_fields_list = []  # Will hold the filtered fields
+            fields_list = [i.strip() for i in str(item_fields).split()]  # Split into tokens
+            skip_until_closing_brace = False  # Flag to track if we're in column_values block
+
+            for field in fields_list:
+                if field == 'column_values':  # Start skipping
+                    skip_until_closing_brace = True
+                    continue
+
+                if skip_until_closing_brace:  # Keep skipping until we find }
+                    if '}' in field:
+                        skip_until_closing_brace = False
+                    continue
+
+                item_fields_list.append(field)  # Add non-skipped fields
+
+            item_fields = ' '.join(item_fields_list)  # Rejoin filtered fields
+
+        fields = Fields(f"{item_fields} column_values (ids: [{', '.join(column_ids)}]) {{ {column_fields} }}")
 
         query_result = await self.get_items(
             board_ids=board_id,
-            fields=f'{item_fields} column_values (ids: [{column_ids}]) {{ {fields} }}'
+            fields=fields
         )
 
         data = check_query_result(query_result, errors_only=True)
@@ -548,7 +645,7 @@ class Boards:
         folder_id: Optional[int] = None,
         template_id: Optional[int] = None,
         workspace_id: Optional[int] = None,
-        fields: str = 'id'
+        fields: Union[str, Fields] = BASIC_FIELDS
     ) -> dict[str, Any]:
         """
         Create a new board.
@@ -563,7 +660,7 @@ class Boards:
             folder_id: ID of the folder to place the board in.
             template_id: ID of the template to use for the board.
             workspace_id: ID of the workspace to create the board in.
-            fields: Fields to return from the created board.
+            fields: Fields to return from the created board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             Dictionary containing info for the new board.
@@ -593,7 +690,12 @@ class Boards:
                     "description": "Board 1 description",
                     "workspace_id": "1234567"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_name': name,
@@ -628,7 +730,7 @@ class Boards:
         folder_id: Optional[int] = None,
         keep_subscribers: bool = False,
         workspace_id: Optional[int] = None,
-        fields: str = 'board { id }'
+        fields: Union[str, Fields] = 'board { id }'
     ) -> dict[str, Any]:
         """
         Duplicate a board.
@@ -640,7 +742,7 @@ class Boards:
             folder_id: The destination folder within the destination workspace.
             keep_subscribers: Duplicate the subscribers to the new board.
             workspace_id: The destination workspace.
-            fields: Fields to return from the duplicated board.
+            fields: Fields to return from the duplicated board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             Dictionary containing info for the duplicated board.
@@ -666,7 +768,12 @@ class Boards:
                     "name": "Duplicate of Board 1",
                     "state": "active"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
+
+        fields = Fields(fields) + 'board { id }'
 
         args = {
             'board_id': board_id,
@@ -675,7 +782,7 @@ class Boards:
             'folder_id': folder_id,
             'keep_subscribers': keep_subscribers,
             'workspace_id': workspace_id,
-            'fields': f'board {{ {fields} }}' if 'board' not in fields else fields
+            'fields': fields  # f'board {{ {fields} }}' if 'board' not in fields else fields
         }
 
         query_string = build_graphql_query(
@@ -761,14 +868,14 @@ class Boards:
     async def archive(
         self,
         board_id: int,
-        fields: str = 'id'
+        fields: Union[str, Fields] = BASIC_FIELDS
     ) -> dict[str, Any]:
         """
         Archive a board.
 
         Args:
             board_id: The ID of the board to archive.
-            fields: Fields to return from the archived board.
+            fields: Fields to return from the archived board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             Dictionary containing info for the archived board.
@@ -793,7 +900,12 @@ class Boards:
                     "name": "Board 1",
                     "state": "archived"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -815,14 +927,14 @@ class Boards:
     async def delete(
         self,
         board_id: int,
-        fields: str = 'id'
+        fields: Union[str, Fields] = BASIC_FIELDS
     ) -> dict[str, Any]:
         """
         Delete a board.
 
         Args:
             board_id: The ID of the board to delete.
-            fields: Fields to return from the deleted board.
+            fields: Fields to return from the deleted board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
             Dictionary containing info for the deleted board.
@@ -847,7 +959,12 @@ class Boards:
                     "name": "Board 1",
                     "state": "deleted"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,

@@ -18,6 +18,8 @@
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
 
+"""Comprehensive tests for MondayClient methods"""
+
 from unittest.mock import AsyncMock, patch
 
 import aiohttp
@@ -28,6 +30,7 @@ from monday.client import MondayClient
 
 @pytest.fixture(scope='module')
 def client_instance():
+    """Create mock MondayClient instance"""
     client = MondayClient('test_api_key')
     client.max_retries = 2
     client._rate_limit_seconds = 1
@@ -36,6 +39,7 @@ def client_instance():
 
 @pytest.mark.asyncio
 async def test_init():
+    """Test MondayClient initialization and default values."""
     client = MondayClient('test_api_key')
     assert client.url == 'https://api.monday.com/v2'
     assert client.headers == {
@@ -48,6 +52,7 @@ async def test_init():
 
 @pytest.mark.asyncio
 async def test_post_request_success(client_instance):
+    """Test successful POST request execution."""
     mock_response = {'data': {'some': 'data'}}
 
     with patch.object(client_instance, '_execute_request', new_callable=AsyncMock, return_value=mock_response):
@@ -58,6 +63,7 @@ async def test_post_request_success(client_instance):
 
 @pytest.mark.asyncio
 async def test_post_request_complexity_limit_exceeded(client_instance):
+    """Test handling of complexity limit exceeded errors."""
     error_responses = [
         {'error': 'error', 'error_code': 'ComplexityException', 'error_message': 'Complexity limit exceeded reset in 0.1 seconds'},
         {'data': {'some': 'data'}}
@@ -75,6 +81,7 @@ async def test_post_request_complexity_limit_exceeded(client_instance):
 
 @pytest.mark.asyncio
 async def test_post_request_mutation_limit_exceeded(client_instance):
+    """Test handling of mutation limit exceeded errors."""
     error_responses = [
         {'error': 'error', 'status_code': 429},
         {'data': {'some': 'data'}}
@@ -90,6 +97,7 @@ async def test_post_request_mutation_limit_exceeded(client_instance):
 
 @pytest.mark.asyncio
 async def test_post_request_max_retries_reached(client_instance):
+    """Test behavior when maximum retry attempts are reached."""
     client_instance.max_retries = 1
     error_responses = [
         {'error': 'error', 'error_code': 'ComplexityException', 'error_message': 'Complexity limit exceeded reset in 0.1 seconds'},
@@ -107,6 +115,7 @@ async def test_post_request_max_retries_reached(client_instance):
 
 @pytest.mark.asyncio
 async def test_post_request_client_error_retry(client_instance):
+    """Test retry behavior on client errors."""
     error_responses = [
         aiohttp.ClientError('Client error occurred'),
         aiohttp.ClientError('Client error occurred'),
@@ -125,6 +134,7 @@ async def test_post_request_client_error_retry(client_instance):
 
 @pytest.mark.asyncio
 async def test_post_request_max_retries_client_error(client_instance):
+    """Test max retries behavior with client errors."""
     client_instance.max_retries = 1
     client_error = aiohttp.ClientError('Client error occurred')
 
@@ -139,6 +149,7 @@ async def test_post_request_max_retries_client_error(client_instance):
 
 @pytest.mark.asyncio
 async def test_execute_request(client_instance):
+    """Test low-level request execution."""
     mock_response = AsyncMock()
     mock_json = AsyncMock(return_value={'data': {'some': 'data'}})
     mock_response.__aenter__.return_value.json = mock_json

@@ -17,6 +17,8 @@
 
 # pylint: disable=redefined-outer-name
 
+"""Comprehensive tests for Users methods"""
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -28,16 +30,19 @@ from monday.services.users import Users
 
 @pytest.fixture(scope='module')
 def mock_client():
+    """Create mock MondayClient instance"""
     return MagicMock(spec=MondayClient)
 
 
 @pytest.fixture(scope='module')
 def users_instance(mock_client):
+    """Create mock Users instance"""
     return Users(mock_client)
 
 
 @pytest.mark.asyncio
 async def test_query(users_instance):
+    """Test basic user query functionality."""
     mock_responses = [
         {'data': {'users': [{'id': 1, 'name': 'User 1'}, {'id': 2, 'name': 'User 2'}]}},
         {'data': {'users': []}}
@@ -68,6 +73,7 @@ async def test_query_with_api_error(users_instance):
 
 @pytest.mark.asyncio
 async def test_query_with_filters(users_instance):
+    """Test query with email, id, name and kind filters."""
     mock_responses = [
         {
             'data': {
@@ -86,3 +92,90 @@ async def test_query_with_filters(users_instance):
 
     assert result == [{'id': 1, 'email': 'test@example.com'}]
     assert users_instance.client.post_request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_query_pagination(users_instance):
+    """Test pagination behavior of query method."""
+    mock_responses = [
+        {'data': {'users': [{'id': '1'}, {'id': '2'}]}},  # First page
+        {'data': {'users': [{'id': '3'}, {'id': '4'}]}},  # Second page
+        {'data': {'users': []}}  # Empty last page
+    ]
+
+    users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await users_instance.query(limit=2, paginate=True)
+
+    assert len(result) == 4
+    assert [user['id'] for user in result] == ['1', '2', '3', '4']
+    assert users_instance.client.post_request.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_query_no_pagination(users_instance):
+    """Test query behavior when pagination is disabled."""
+    mock_response = {'data': {'users': [{'id': '1'}, {'id': '2'}]}}
+
+    users_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await users_instance.query(limit=2, paginate=False)
+
+    assert len(result) == 2
+    assert users_instance.client.post_request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_query_duplicate_handling(users_instance):
+    """Test handling of duplicate users in response."""
+    mock_responses = [
+        {'data': {'users': [{'id': '1'}, {'id': '2'}]}},
+        {'data': {'users': [{'id': '2'}, {'id': '3'}]}},  # Note duplicate id '2'
+        {'data': {'users': []}}  # Empty response to stop pagination
+    ]
+
+    users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await users_instance.query(limit=2)
+
+    assert len(result) == 3  # Should only have 3 unique users
+    assert sorted([user['id'] for user in result]) == ['1', '2', '3']
+    assert users_instance.client.post_request.await_count == 3  # Verify all pages were requested
+
+
+@pytest.mark.asyncio
+async def test_query_empty_response(users_instance):
+    """Test handling of empty response."""
+    mock_response = {'data': {'users': []}}
+
+    users_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await users_instance.query()
+
+    assert result == []
+    assert users_instance.client.post_request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_query_custom_fields(users_instance):
+    """Test querying with custom fields."""
+    mock_response = {
+        'data': {
+            'users': [{
+                'id': '1',
+                'name': 'Test User',
+                'email': 'test@example.com',
+                'title': 'Developer'
+            }]
+        }
+    }
+
+    users_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await users_instance.query(
+        fields='id name email title',
+        limit=1
+    )
+
+    assert len(result) == 1
+    assert result[0] == {
+        'id': '1',
+        'name': 'Test User',
+        'email': 'test@example.com',
+        'title': 'Developer'
+    }

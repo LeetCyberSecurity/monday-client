@@ -32,9 +32,8 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.services.utils import (add_temp_fields, build_graphql_query,
-                                   check_query_result, manage_temp_fields,
-                                   map_color_to_hex)
+from monday.services.utils import (Fields, build_graphql_query,
+                                   check_query_result, map_color_to_hex)
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -47,6 +46,12 @@ class Groups:
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)
+
+    BASIC_FIELDS = Fields('id title')
+    """Returns the following fields:
+    - id: Group's ID
+    - title: Group's title
+    """
 
     def __init__(
         self,
@@ -112,19 +117,24 @@ class Groups:
                         ]
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
+
+        fields = Fields(fields)
 
         group_ids_list = [group_ids] if isinstance(group_ids, str) else group_ids
         group_ids_quoted = [f'"{i}"' for i in group_ids_list] if group_ids_list else None
 
         temp_fields = ['title'] if group_name else []
-        query_fields = add_temp_fields(fields, temp_fields)
+        query_fields = fields.add_temp_fields(temp_fields)
 
-        group_fields = f"""
+        group_fields = Fields(f"""
             id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ''} {{
                 {query_fields}
             }}
-        """
+        """)
 
         boards_data = await self.boards.query(
             board_ids=board_ids,
@@ -145,7 +155,7 @@ class Groups:
             })
 
         # Clean temporary fields from results
-        return manage_temp_fields(groups, fields, temp_fields)
+        return Fields.manage_temp_fields(groups, fields, temp_fields)
 
     async def create(
         self,
@@ -193,9 +203,14 @@ class Groups:
                     "color": "#0086c0"
                 }
 
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
+
         Note:
             See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`.
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -263,11 +278,16 @@ class Groups:
                     "color": "#7F5347"
                 }
 
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
+
         Note:
             When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`.
 
             When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below. 
         """
+
+        fields = Fields(fields)
 
         if attribute == 'color':
             new_value = map_color_to_hex(new_value)
@@ -334,7 +354,12 @@ class Groups:
                     "id": "group_2",
                     "title": "Duplicate of Group Name"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -394,7 +419,12 @@ class Groups:
                     "title": "Group Name",
                     "archived": true
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -452,7 +482,12 @@ class Groups:
                     "title": "Group Name",
                     "deleted": true
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -518,9 +553,12 @@ class Groups:
                         "name": "Item Name"
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
 
-        fields = f"""
+        fields = Fields(f"""
             groups (ids: "{group_id}") {{
                 items_page (
                     query_params: {{
@@ -538,7 +576,7 @@ class Groups:
                     }}
                 }}
             }}
-        """
+        """)
 
         args = {
             'ids': board_id,

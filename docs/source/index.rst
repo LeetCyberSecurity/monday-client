@@ -67,6 +67,7 @@ This is the official documentation for the `monday-client <https://github.com/Le
 
    monday_client
    services
+   fields
    exceptions
    types
    utils

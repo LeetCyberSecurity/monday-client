@@ -32,8 +32,8 @@ MondayClient instance.
 import logging
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.services.utils import (build_graphql_query, check_query_result,
-                                   manage_temp_fields)
+from monday.services.utils import (Fields, build_graphql_query,
+                                   check_query_result)
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -123,9 +123,14 @@ class Items:
                     }
                 ]
 
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
+
         Note:
             To return all items on a board, use :meth:`Items.page() <monday.services.Items.page>` or :meth:`Items.page_by_column_values() <monday.services.Items.page_by_column_values>` instead.
         """
+
+        fields = Fields(fields)
 
         args = {
             'ids': item_ids,
@@ -138,7 +143,6 @@ class Items:
 
         items_data = []
         while True:
-
             query_string = build_graphql_query(
                 'items',
                 'query',
@@ -146,14 +150,12 @@ class Items:
             )
 
             query_result = await self.client.post_request(query_string)
-
             data = check_query_result(query_result)
 
-            if not data['data']['items']:
+            if not data.get('data', {}).get('items'):
                 break
 
             items_data.extend(data['data']['items'])
-
             args['page'] += 1
 
         return items_data
@@ -220,7 +222,12 @@ class Items:
                         }
                     ]
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
         """
+
+        fields = Fields(fields)
 
         args = {
             'board_id': board_id,
@@ -296,10 +303,15 @@ class Items:
                         }
                     ]
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
+        fields = Fields(fields)
+
         # Only query the ID first if the duplicated item name is being changed
-        # Other potential fields are added back in the change column values query
+        # Other potential fields are added back in during the change column values query
         temp_fields, query_fields = (['id'], 'id') if new_item_name else ([], fields)
 
         args = {
@@ -326,7 +338,7 @@ class Items:
                 fields=fields
             )
             data = check_query_result(query_result, errors_only=True)
-            return manage_temp_fields(data, fields, temp_fields)
+            return Fields.manage_temp_fields(data, fields, temp_fields)
         else:
             return data['data']['duplicate_item']
 
@@ -371,7 +383,13 @@ class Items:
                         "title": "Group 1"
                     }
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
         """
+
+        fields = Fields(fields)
+
         args = {
             'item_id': item_id,
             'group_id': group_id,
@@ -454,6 +472,9 @@ class Items:
                     ]
                 }
 
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
+
         Note:
             Every column type can be mapped **except for formula columns.**
 
@@ -464,6 +485,9 @@ class Items:
 
             See the `monday.com API documentation (move item) <https://developer.monday.com/api-reference/reference/items#move-item-to-board>`_ for more details.
         """
+
+        fields = Fields(fields)
+
         args = {
             'item_id': item_id,
             'board_id': board_id,
@@ -519,7 +543,13 @@ class Items:
                     "id": "123456789",
                     "state": "archived"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
         """
+
+        fields = Fields(fields)
+
         args = {
             'item_id': item_id,
             'fields': fields
@@ -571,7 +601,13 @@ class Items:
                     "id": "123456789",
                     "state": "deleted"
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
         """
+
+        fields = Fields(fields)
+
         args = {
             'item_id': item_id,
             'fields': fields
@@ -623,7 +659,13 @@ class Items:
                     "id": "123456789",
                     "updates": []
                 }
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
         """
+
+        fields = Fields(fields)
+
         args = {
             'item_id': item_id,
             'fields': fields
@@ -684,15 +726,21 @@ class Items:
                         "text": "This item is done"
                     }
                 ]
+
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
+
+        Note:
+            Use :meth:`Boards.get_column_values() <monday.services.Boards.get_column_values>` to retrieve column values for all items on a board.
         """
 
         column_ids = [f'"{i}"' for i in column_ids] if column_ids else None
 
-        fields = f"""
+        fields = Fields(f"""
             column_values {f"(ids: [{', '.join(column_ids)}])" if column_ids else ''} {{ 
                 {fields} 
             }}
-        """
+        """)
 
         args = {
             'ids': item_id,
@@ -772,6 +820,9 @@ class Items:
                     ]
                 }
 
+        See also:
+            :ref:`Complete list of premade field options. <fields_section_items>`
+
         Note:
             Each column has a certain type, and different column types expect a different set of parameters to update their values.
 
@@ -780,6 +831,8 @@ class Items:
 
         board_id_query = await self.query(item_id, fields='board { id }')
         board_id = int(board_id_query[0]['board']['id'])
+
+        fields = Fields(fields)
 
         args = {
             'item_id': item_id,
