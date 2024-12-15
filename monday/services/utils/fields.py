@@ -50,9 +50,10 @@ class Fields:
     Helper class for handling GraphQL field combinations.
 
     This class provides structured handling of GraphQL field strings, including:
-    - Parsing field strings while preserving nested structures
-    - Combining multiple field sets while maintaining order
-    - Converting back to GraphQL-compatible strings
+
+        - Parsing field strings while preserving nested structures
+        - Combining multiple field sets while maintaining order
+        - Converting back to GraphQL-compatible strings
 
     Args:
         fields (Union[str, Fields]): Either a space-separated string of field names or another Fields instance. Can include nested structures using GraphQL syntax.
@@ -259,6 +260,12 @@ class Fields:
 
         Returns:
             New Fields instance with temporary fields added
+
+        Example:
+            >>> fields = Fields('id name')
+            >>> new_fields = fields.add_temp_fields(['temp1', 'temp2'])
+            >>> str(new_fields)
+            'id name temp1 temp2'
         """
         # Only add temp fields that aren't already present
         new_fields = [f for f in temp_fields if f not in self.fields]
@@ -284,6 +291,11 @@ class Fields:
 
         Returns:
             Data structure with temporary fields removed if they weren't in original fields
+
+        Example:
+            >>> data = {'id': 1, 'name': 'test', 'temp': 'value'}
+            >>> Fields.manage_temp_fields(data, 'id name', ['temp'])
+            {'id': 1, 'name': 'test'}
         """
         # Convert original_fields to set based on its type
         if isinstance(original_fields, str):
@@ -313,7 +325,21 @@ class Fields:
 
     @staticmethod
     def _parse_structure(s: str, start: int) -> tuple[int, str]:
-        """Parse a nested structure and return end position and processed content."""
+        """
+        Parse a nested structure starting from a given position.
+
+        Args:
+            s: String containing the structure to parse
+            start: Starting position in the string
+
+        Returns:
+            Tuple containing end position and processed content
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._parse_structure('{ id name }', 0)
+            (11, ' id name ')
+        """
         brace_count = 1
         pos = start
         while pos < len(s) and brace_count > 0:
@@ -325,7 +351,20 @@ class Fields:
         return pos, s[start:pos - 1]
 
     def _process_nested_content(self, content: str) -> str:
-        """Recursively process and deduplicate nested field structures."""
+        """
+        Process and deduplicate nested field structures recursively.
+
+        Args:
+            content: String containing nested field structures
+
+        Returns:
+            Processed and deduplicated field string
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._process_nested_content('id name board { id id name }')
+            'id name board { id name }'
+        """
         content = ' '.join(content.split())
         if not content:
             return ''
@@ -422,7 +461,20 @@ class Fields:
 
     @staticmethod
     def _parse_args(args_str: str) -> dict:
-        """Parse arguments string into a dictionary."""
+        """
+        Parse GraphQL arguments string into a dictionary.
+
+        Args:
+            args_str: String containing GraphQL arguments
+
+        Returns:
+            Dictionary of parsed arguments
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._parse_args('(limit: 10, ids: ["123", "456"])')
+            {'limit': '10', 'ids': [('string', '123'), ('string', '456')]}
+        """
         args_dict = {}
         content = args_str.strip('()').strip()
         if not content:
@@ -517,7 +569,20 @@ class Fields:
 
     @staticmethod
     def _format_value(value) -> str:
-        """Format value based on its type."""
+        """
+        Format a value based on its type for GraphQL arguments.
+
+        Args:
+            value: Value to format (can be string, bool, number, or array)
+
+        Returns:
+            Formatted string representation of the value
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._format_value([('string', 'test'), ('number', 123)])
+            '["test", 123]'
+        """
         if isinstance(value, list):
             formatted = []
             for val_type, val in value:
@@ -535,7 +600,21 @@ class Fields:
         return str(value)
 
     def _merge_args(self, args1: str, args2: str) -> str:
-        """Merge field arguments."""
+        """
+        Merge two sets of GraphQL field arguments.
+
+        Args:
+            args1: First argument string
+            args2: Second argument string
+
+        Returns:
+            Merged argument string
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._merge_args('(limit: 10)', '(offset: 20)')
+            '(limit: 10, offset: 20)'
+        """
         if not args1:
             return args2
         if not args2:

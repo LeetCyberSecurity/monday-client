@@ -21,6 +21,9 @@ Fields Reference
 
 This page documents all premade field options available across different services.
 
+.. seealso::
+    :class:`Fields <monday.Fields>` class documentation for information on implementing custom fields.
+
 .. _fields_section_boards:
 
 Boards
