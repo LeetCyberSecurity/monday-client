@@ -23,7 +23,7 @@ Fields Reference
 
 The fields used in the MondayClient library directly correspond to the field structure used in monday.com API queries. When you specify fields in this library, they are translated directly into the GraphQL query structure that monday.com's API expects.
 
-For example, if you request ``BASIC_FIELDS`` for a board, it's equivalent to requesting ``id name`` in a GraphQL query.
+For example, if you request ``ITEMS_FIELDS`` for a board, it's equivalent to requesting ``id name items_count items_page { cursor items { id name } }`` in a GraphQL query.
 
 This page documents all premade field options available across different services.
 
