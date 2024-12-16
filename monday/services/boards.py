@@ -214,8 +214,20 @@ class Boards:
 
         if 'items_page' in fields:
             if paginate_items:
-                query_result = await self._paginate_items(query_string, boards_data, limit=items_page_limit)
-                boards_data = query_result
+                for board in boards_data:
+                    items_page = extract_items_page_value(board)
+                    if not items_page or not items_page['cursor']:
+                        continue
+                    query_result = await paginated_item_request(
+                        self.client,
+                        query_string,
+                        limit=items_page_limit,
+                        cursor=items_page['cursor']
+                    )
+                    items_page['items'].extend(query_result['items'])
+                    del items_page['cursor']
+                    update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
+
             if fields == self.ITEMS_FIELDS:
                 for board in boards_data:
                     boards_data_items = board.pop('items_page')
@@ -958,40 +970,3 @@ class Boards:
         data = check_query_result(query_result)
 
         return data['data']['delete_board']
-
-    async def _paginate_items(
-        self,
-        query_string: str,
-        boards: list[dict[str, Any]],
-        limit: int
-    ) -> list[dict[str, Any]]:
-        """
-        Paginate items for each board.
-
-        Args:
-            query_string: GraphQL query string.
-            boards: List of board data.
-            limit: The number of items to return per page.
-
-        Returns:
-            Updated list of board data with paginated items.
-
-        Raises:
-            ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
-            QueryFormatError: When the GraphQL query format is invalid.
-            MondayAPIError: When an unhandled monday.com API error occurs.
-            aiohttp.ClientError: When there's a client-side network or connection error.
-            PaginationError: If pagination fails.
-
-        """
-        boards_list = boards
-        for board in boards_list:
-            items_page = extract_items_page_value(board)
-            if not items_page:
-                continue
-            if items_page['cursor']:
-                query_result = await paginated_item_request(self.client, query_string, limit=limit, cursor=items_page['cursor'])
-                items_page['items'].extend(query_result['items'])
-            del items_page['cursor']
-            board = update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
-        return boards_list
