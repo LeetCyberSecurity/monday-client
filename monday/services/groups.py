@@ -117,9 +117,6 @@ class Groups:
                         ]
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
 
         fields = Fields(fields)
@@ -203,9 +200,6 @@ class Groups:
                     "color": "#0086c0"
                 }
 
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
-
         Note:
             See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`.
         """
@@ -277,9 +271,6 @@ class Groups:
                     "title": "Group Name",
                     "color": "#7F5347"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
 
         Note:
             When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`.
@@ -354,9 +345,6 @@ class Groups:
                     "id": "group_2",
                     "title": "Duplicate of Group Name"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
 
         fields = Fields(fields)
@@ -419,9 +407,6 @@ class Groups:
                     "title": "Group Name",
                     "archived": true
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
 
         fields = Fields(fields)
@@ -482,9 +467,6 @@ class Groups:
                     "title": "Group Name",
                     "deleted": true
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
 
         fields = Fields(fields)
@@ -553,9 +535,6 @@ class Groups:
                         "name": "Item Name"
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_groups>`
         """
 
         fields = Fields(f"""

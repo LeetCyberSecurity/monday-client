@@ -171,9 +171,6 @@ class Boards:
                         "state": "active"
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
         fields = Fields(fields)
@@ -298,9 +295,6 @@ class Boards:
                         ]
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
 
         Note:
             The ``query_params`` argument allows complex filtering and sorting of items.
@@ -489,9 +483,6 @@ class Boards:
                         ]
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
         fields = Fields(fields)
@@ -592,9 +583,6 @@ class Boards:
                     }
                 ]
 
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
-
         Note:
             Use :meth:`Items.get_column_values() <monday.services.Items.get_column_values>` to retrieve column values for a specific item.
         """
@@ -690,9 +678,6 @@ class Boards:
                     "description": "Board 1 description",
                     "workspace_id": "1234567"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
         fields = Fields(fields)
@@ -768,9 +753,6 @@ class Boards:
                     "name": "Duplicate of Board 1",
                     "state": "active"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
         fields = Fields(fields) + 'board { id }'
@@ -900,9 +882,6 @@ class Boards:
                     "name": "Board 1",
                     "state": "archived"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
         fields = Fields(fields)
@@ -959,9 +938,6 @@ class Boards:
                     "name": "Board 1",
                     "state": "deleted"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_boards>`
         """
 
         fields = Fields(fields)

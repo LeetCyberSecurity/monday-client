@@ -141,9 +141,6 @@ class Subitems:
                         ]
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_subitems>`
         """
 
         fields = Fields(fields)
@@ -244,9 +241,6 @@ class Subitems:
                         }
                     ]
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_subitems>`
         """
 
         fields = Fields(fields)

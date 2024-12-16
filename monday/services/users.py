@@ -117,9 +117,6 @@ class Users:
                         "name": "User Two"
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_users>`
         """
 
         fields = Fields(fields)

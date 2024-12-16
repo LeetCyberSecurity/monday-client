@@ -16,8 +16,14 @@
     You should have received a copy of the GNU General Public License
     along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
+.. _fields_section_top:
+
 Fields Reference
 ----------------
+
+The fields used in the MondayClient library directly correspond to the field structure used in monday.com API queries. When you specify fields in this library, they are translated directly into the GraphQL query structure that monday.com's API expects.
+
+For example, if you request ``BASIC_FIELDS`` for a board, it's equivalent to requesting ``id name`` in a GraphQL query.
 
 This page documents all premade field options available across different services.
 

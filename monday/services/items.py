@@ -123,9 +123,6 @@ class Items:
                     }
                 ]
 
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
-
         Note:
             To return all items on a board, use :meth:`Items.page() <monday.services.Items.page>` or :meth:`Items.page_by_column_values() <monday.services.Items.page_by_column_values>` instead.
         """
@@ -222,9 +219,6 @@ class Items:
                         }
                     ]
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
         fields = Fields(fields)
@@ -303,9 +297,6 @@ class Items:
                         }
                     ]
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
         fields = Fields(fields)
@@ -383,9 +374,6 @@ class Items:
                         "title": "Group 1"
                     }
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
         fields = Fields(fields)
@@ -472,9 +460,6 @@ class Items:
                     ]
                 }
 
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
-
         Note:
             Every column type can be mapped **except for formula columns.**
 
@@ -543,9 +528,6 @@ class Items:
                     "id": "123456789",
                     "state": "archived"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
         fields = Fields(fields)
@@ -601,9 +583,6 @@ class Items:
                     "id": "123456789",
                     "state": "deleted"
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
         fields = Fields(fields)
@@ -659,9 +638,6 @@ class Items:
                     "id": "123456789",
                     "updates": []
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
         """
 
         fields = Fields(fields)
@@ -726,9 +702,6 @@ class Items:
                         "text": "This item is done"
                     }
                 ]
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
 
         Note:
             Use :meth:`Boards.get_column_values() <monday.services.Boards.get_column_values>` to retrieve column values for all items on a board.
@@ -819,9 +792,6 @@ class Items:
                         }
                     ]
                 }
-
-        See also:
-            :ref:`Complete list of premade field options. <fields_section_items>`
 
         Note:
             Each column has a certain type, and different column types expect a different set of parameters to update their values.

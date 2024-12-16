@@ -25,6 +25,14 @@ Services
 
     The services documented below are automatically initialized as part of `MondayClient <monday_client.html>`_ and should be accessed through the `MondayClient <monday_client.html>`_ instance.
 
+.. note::
+
+    The fields parameters in this class's methods directly correspond to monday.com's API GraphQL fields.
+    For example, using ``fields='id name owners { id }'`` or ``fields=Fields('id name owners { id }')`` is equivalent to requesting ``id name owners { id }`` in a GraphQL query.
+
+.. seealso::
+        Complete documentation of available premade fields in the :ref:`Fields Reference <fields_section_top>`.
+
 .. module:: monday.services
 
 .. _services_section_boards:
