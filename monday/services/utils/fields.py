@@ -111,6 +111,9 @@ class Fields:
         """
         return ' '.join(self.fields)  # No sorting, maintain order
 
+    def __repr__(self) -> str:
+        return f"Fields('{str(self)}')"
+
     def __add__(self, other: Union['Fields', str]) -> 'Fields':
         """
         Combine two field lists, maintaining order and preserving nested structures.
@@ -137,66 +140,45 @@ class Fields:
         return Fields(' '.join(combined))
 
     def __sub__(self, other: Union['Fields', str]) -> 'Fields':
-        """
-        Remove fields from the current instance. Can remove entire nested fields or specific elements of nested fields.
-
-        Args:
-            other: Either a Fields instance or a field string to remove from this instance.
-
-        Returns:
-            New Fields instance containing removed fields.
-
-        Example:
-            >>> fields = Fields('id name top_group { id title } groups { id title }')
-            >>> str(fields - 'groups')
-            'id name top_group { id title }'
-            >>> str(fields - 'groups { id }')
-            'id name top_group { id title } groups { title }'
-        """
+        """Subtract fields from another Fields object or a string."""
+        # Convert string to Fields object if needed
         if isinstance(other, str):
             other = Fields(other)
 
+        if not other.fields:
+            return Fields(str(self))
+
         result_fields = []
-        i = 0
-        while i < len(self.fields):
-            field = self.fields[i]
 
-            # Extract field name and check if it's a nested structure
+        for field in self.fields:
+            # Check if this is a nested field
             if '{' in field:
-                field_name = field.split('{')[0].strip()
+                base_field = field.split(' {')[0]
+
+                # Find corresponding field in other
+                other_field = next((f for f in other.fields if f.startswith(f"{base_field} {{")
+                                    or f == base_field), None)
+
+                if other_field:
+                    if '{' in other_field:  # Both have nested content
+                        # Extract and compare nested content
+                        self_nested = self._extract_nested_content(field)
+                        other_nested = self._extract_nested_content(other_field)
+
+                        # Create new Fields objects for nested content
+                        self_nested_fields = Fields(self_nested)
+                        other_nested_fields = Fields(other_nested)
+
+                        # Recursively subtract nested fields
+                        diff_nested = self_nested_fields - other_nested_fields
+                        if str(diff_nested):  # If there are remaining fields
+                            result_fields.append(f"{base_field} {{ {str(diff_nested)} }}")
+                else:
+                    result_fields.append(field)
             else:
-                field_name = field.strip()
-
-            # Check if this field exists in other
-            matching_other = next((f for f in other.fields if f.split('{')[0].strip() == field_name), None)
-
-            if matching_other is None:
-                # Field not in other, keep it and its nested structure if any
-                result_fields.append(field)
-                if i + 1 < len(self.fields) and self.fields[i + 1].startswith('{'):
-                    result_fields.append(self.fields[i + 1])
-                    i += 1
-            else:
-                # Field exists in other
-                other_idx = other.fields.index(matching_other)
-                has_other_nested = (other_idx + 1 < len(other.fields) and
-                                    other.fields[other_idx + 1].startswith('{'))
-
-                if i + 1 < len(self.fields) and self.fields[i + 1].startswith('{'):
-                    if not has_other_nested:
-                        # Complete removal case - other has the field but no nested structure
-                        i += 1  # Skip the nested structure
-                    else:
-                        # Partial nested removal case
-                        current_nested = Fields(self.fields[i + 1][1:-1].strip())
-                        other_nested = Fields(other.fields[other_idx + 1][1:-1].strip())
-                        remaining = current_nested - other_nested
-                        if str(remaining):
-                            result_fields.append(field_name)
-                            result_fields.append(f"{{ {str(remaining)} }}")
-                    i += 1
-
-            i += 1
+                # Handle non-nested fields
+                if field not in other.fields:
+                    result_fields.append(field)
 
         return Fields(' '.join(result_fields))
 
@@ -686,41 +668,56 @@ class Fields:
         return self._process_nested_content(fields_str)
 
     def _parse_fields(self, fields_str: str) -> list[str]:
-        """
-        Parse a fields string into a list of normalized fields.
-
-        Args:
-            fields_str: Space-separated string of field names, potentially including nested structures.
-
-        Returns:
-            List of individual field strings with nested structures preserved and duplicates removed.
-        """
+        """Parse a fields string into a list of normalized fields."""
         # First deduplicate the entire string
-        fields_str = self._deduplicate_nested_fields(fields_str)  # Store the deduplicated result
+        fields_str = self._deduplicate_nested_fields(fields_str)
 
         fields = []
         current_field = []
         nested_level = 0
+        i = 0
+        last_parent = None
 
-        for char in fields_str:
+        while i < len(fields_str):
+            char = fields_str[i]
+
             if char == '{':
+                if nested_level == 0:
+                    # Get the last field as parent before starting nested content
+                    if fields:
+                        last_parent = fields[-1]
                 nested_level += 1
                 current_field.append(char)
             elif char == '}':
                 nested_level -= 1
                 current_field.append(char)
+
+                if nested_level == 0 and last_parent:
+                    # Complete a nested structure
+                    nested_content = ''.join(current_field).strip()
+                    complete_field = f"{last_parent} {nested_content}"
+                    # Replace the parent field with the complete field
+                    if last_parent in fields:
+                        fields.remove(last_parent)
+                        fields.append(complete_field)
+                    last_parent = None
+                    current_field = []
             elif char.isspace() and nested_level == 0:
+                # Space outside nested structure
                 if current_field:
                     field = ''.join(current_field).strip()
-                    if field and field not in fields:  # Add check for duplicates here
+                    if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
                         fields.append(field)
                     current_field = []
             else:
                 current_field.append(char)
 
-        if current_field:
+            i += 1
+
+        # Handle any remaining field
+        if current_field and nested_level == 0:
             field = ''.join(current_field).strip()
-            if field and field not in fields:  # Add check for duplicates here
+            if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
                 fields.append(field)
 
         return fields
@@ -776,3 +773,21 @@ class Fields:
 
         if brace_count != 0:
             raise ValueError('Unmatched braces in field string')
+
+    def _extract_nested_content(self, field: str) -> str:
+        """Extract the content inside nested braces."""
+        start = field.find('{')
+        if start == -1:
+            return ''
+
+        # Count braces to handle nested structures
+        count = 1
+        start += 1
+        for i in range(start, len(field)):
+            if field[i] == '{':
+                count += 1
+            elif field[i] == '}':
+                count -= 1
+                if count == 0:
+                    return field[start:i].strip()
+        return ''
