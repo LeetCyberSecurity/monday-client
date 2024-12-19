@@ -329,6 +329,11 @@ def test_add_temp_fields():
     result = fields.add_temp_fields(temp_fields)
     assert str(result) == 'id name temp1 temp2'
 
+    fields = Fields('id name')
+    temp_fields = ['temp1', 'field { temp2 }', 'name { user id { account } }']
+    result = fields.add_temp_fields(temp_fields)
+    assert str(result) == 'id name { user id { account } } temp1 field { temp2 }'
+
 
 def test_manage_temp_fields():
     """Test managing temporary fields in query results."""
@@ -374,6 +379,21 @@ def test_manage_temp_fields():
     original_fields = Fields('id name')
     result = Fields.manage_temp_fields(data, original_fields, temp_fields)
     assert result == {'id': 1, 'name': 'test'}
+
+    data = {
+        'id': 1,
+        'field': {
+            'temp2': 'value'
+        },
+        'name': {
+            'user': 'value',
+            'id': {'account': 'value'}
+        }
+    }
+    original_fields = Fields('id name { user }')
+    temp_fields = ['temp1', 'field { temp2 }', 'name { user id { account } }']
+    result = Fields.manage_temp_fields(data, original_fields, temp_fields)
+    assert result == {'id': 1, 'name': {'user': 'value'}}
 
 
 def test_field_args_parsing():
