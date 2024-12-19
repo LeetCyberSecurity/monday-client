@@ -102,7 +102,7 @@ async def test_query_with_name_filter(groups_instance, mock_boards):
         }
     ]
 
-    result = await groups_instance.query(board_ids=1, group_name='Group 1')
+    result = await groups_instance.query(board_ids=1, group_name='Group 1', fields='id')
     assert result == [{'id': 1, 'groups': [{'id': 'group1'}]}]
 
 
@@ -293,7 +293,7 @@ async def test_get_items_by_name(groups_instance, mock_client):
         board_id=1,
         group_id='group1',
         item_name='Test Item',
-        fields='id name'
+        item_fields='id name'
     )
 
     assert result == [

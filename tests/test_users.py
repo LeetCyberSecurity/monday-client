@@ -26,6 +26,7 @@ import pytest
 from monday.client import MondayClient
 from monday.exceptions import MondayAPIError
 from monday.services.users import Users
+from monday.services.utils.fields import Fields
 
 
 @pytest.fixture(scope='module')
@@ -179,3 +180,101 @@ async def test_query_custom_fields(users_instance):
         'email': 'test@example.com',
         'title': 'Developer'
     }
+
+
+@pytest.mark.asyncio
+async def test_query_pagination_with_full_pages(users_instance):
+    """Test pagination when all pages are full."""
+    mock_responses = [
+        {'data': {'users': [{'id': '1'}, {'id': '2'}]}},  # Full page
+        {'data': {'users': [{'id': '3'}, {'id': '4'}]}},  # Full page
+        {'data': {'users': [{'id': '5'}]}}  # Partial page to end pagination
+    ]
+
+    users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await users_instance.query(limit=2, paginate=True)
+
+    assert len(result) == 5
+    assert [user['id'] for user in result] == ['1', '2', '3', '4', '5']
+    assert users_instance.client.post_request.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_temp_fields_management(users_instance):
+    """Test temporary fields are properly added and removed."""
+    mock_response = {
+        'data': {
+            'users': [
+                {'id': '1', 'name': 'Test User', 'temp_field': 'value'}
+            ]
+        }
+    }
+
+    users_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await users_instance.query(fields='name')  # Note: not requesting 'id'
+
+    assert len(result) == 1
+    assert 'name' in result[0]
+    assert 'id' not in result[0]  # ID should be removed as it was temporary
+
+
+@pytest.mark.asyncio
+async def test_query_with_duplicate_users_across_pages(users_instance):
+    """Test deduplication of users when duplicates appear across different pages."""
+    mock_responses = [
+        {'data': {'users': [{'id': '1', 'name': 'User 1'}, {'id': '2', 'name': 'User 2'}]}},
+        {'data': {'users': [{'id': '2', 'name': 'User 2'}, {'id': '3', 'name': 'User 3'}]}},
+        {'data': {'users': []}}
+    ]
+
+    users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await users_instance.query(limit=2)
+
+    assert len(result) == 3  # Should only have 3 unique users
+    assert sorted([user['id'] for user in result]) == ['1', '2', '3']
+    assert users_instance.client.post_request.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_query_with_fields_object_and_temp_fields(users_instance):
+    """Test query using Fields object with temporary fields."""
+    mock_response = {
+        'data': {
+            'users': [{'id': '1', 'name': 'Test User', 'email': 'test@example.com'}]
+        }
+    }
+
+    users_instance.client.post_request = AsyncMock(return_value=mock_response)
+    fields = Fields('name email')  # Not requesting 'id'
+    result = await users_instance.query(fields=fields)
+
+    assert len(result) == 1
+    assert set(result[0].keys()) == {'name', 'email'}  # Should only have requested fields
+
+
+@pytest.mark.asyncio
+async def test_query_identical_responses_stops_pagination(users_instance):
+    """Test that pagination stops when receiving identical responses."""
+    mock_responses = [
+        {'data': {'users': [{'id': '1'}, {'id': '2'}]}},
+        {'data': {'users': [{'id': '1'}, {'id': '2'}]}}  # Identical response
+    ]
+
+    users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await users_instance.query(limit=2)
+
+    assert len(result) == 2
+    assert [user['id'] for user in result] == ['1', '2']
+    assert users_instance.client.post_request.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_query_empty_response_handling(users_instance):
+    """Test handling of empty response from the API."""
+    mock_response = {'data': {'users': []}}
+
+    users_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await users_instance.query()
+
+    assert result == []
+    assert users_instance.client.post_request.await_count == 1

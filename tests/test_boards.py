@@ -524,3 +524,184 @@ async def test_delete(boards_instance: Boards):
 
     assert result == {'id': 1, 'state': 'deleted'}
     boards_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_query_with_items_pagination(boards_instance: Boards):
+    """Test query method with items pagination."""
+    mock_responses = [
+        # First response - initial board query
+        {
+            'data': {
+                'boards': [{
+                    'id': 1,
+                    'items_page': {
+                        'cursor': 'next_page',
+                        'items': [{'id': '101'}]
+                    }
+                }]
+            }
+        },
+        # Second response - next_items_page query
+        {
+            'data': {
+                'next_items_page': {
+                    'cursor': None,  # No more pages
+                    'items': [{'id': '102'}]
+                }
+            }
+        },
+        # Third response - final empty boards query to end pagination
+        {
+            'data': {
+                'boards': []
+            }
+        }
+    ]
+
+    boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await boards_instance.query(
+        board_ids=1,
+        paginate_items=True,
+        fields='id items_page { items { id } }'
+    )
+
+    assert len(result) == 1
+    assert result[0]['id'] == 1
+    assert len(result[0]['items_page']['items']) == 2
+    assert result[0]['items_page']['items'][0]['id'] == '101'
+    assert result[0]['items_page']['items'][1]['id'] == '102'
+    assert boards_instance.client.post_request.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_query_with_workspace_ids(boards_instance: Boards):
+    """Test query method with workspace filtering."""
+    mock_responses = [
+        {
+            'data': {
+                'boards': [{
+                    'id': 1,
+                    'workspace_id': 100
+                }]
+            }
+        },
+        {
+            'data': {
+                'boards': []  # Empty response to end pagination
+            }
+        }
+    ]
+
+    boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await boards_instance.query(workspace_ids=100)
+
+    assert result[0]['workspace_id'] == 100
+    assert boards_instance.client.post_request.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_create_with_all_parameters(boards_instance: Boards):
+    """Test board creation with all optional parameters."""
+    mock_response = {
+        'data': {
+            'create_board': {
+                'id': 1,
+                'name': 'New Board',
+                'board_kind': 'private',
+                'description': 'Test board',
+                'workspace_id': 100
+            }
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await boards_instance.create(
+        name='New Board',
+        board_kind='private',
+        owner_ids=[1, 2],
+        subscriber_ids=[3, 4],
+        subscriber_teams_ids=[5, 6],
+        description='Test board',
+        folder_id=200,
+        template_id=300,
+        workspace_id=100
+    )
+
+    assert result['board_kind'] == 'private'
+    assert result['description'] == 'Test board'
+    assert result['workspace_id'] == 100
+    boards_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_duplicate_with_all_parameters(boards_instance: Boards):
+    """Test board duplication with all optional parameters."""
+    mock_response = {
+        'data': {
+            'duplicate_board': {
+                'board': {
+                    'id': 2,
+                    'name': 'Duplicated Board',
+                    'workspace_id': 100
+                }
+            }
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await boards_instance.duplicate(
+        board_id=1,
+        board_name='Duplicated Board',
+        duplicate_type='with_pulses_and_updates',
+        folder_id=200,
+        keep_subscribers=True,
+        workspace_id=100
+    )
+
+    assert result['name'] == 'Duplicated Board'
+    assert result['workspace_id'] == 100
+    boards_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_with_non_json_response(boards_instance: Boards):
+    """Test update method with non-JSON response."""
+    mock_response = {
+        'data': {
+            'update_board': {'id': 1, 'name': 'Updated Board'}  # Direct dict instead of JSON string
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await boards_instance.update(
+        board_id=1,
+        board_attribute='name',
+        new_value='Updated Board'
+    )
+
+    assert result['name'] == 'Updated Board'
+    boards_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_items_by_column_values_without_pagination(boards_instance: Boards):
+    """Test retrieving items by column values without pagination."""
+    mock_response = {
+        'data': {
+            'items_page_by_column_values': {
+                'items': [{'id': '101', 'name': 'Item 1'}]
+            }
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await boards_instance.get_items_by_column_values(
+        board_id=1,
+        columns=[{'column_id': 'status', 'column_values': ['Done']}],
+        paginate_items=False
+    )
+
+    assert len(result) == 1
+    assert result[0]['id'] == '101'
+    boards_instance.client.post_request.assert_awaited_once()

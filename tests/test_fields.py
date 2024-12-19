@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=protected-access,redefined-outer-name
 
 """Comprehensive tests for Fields methods"""
 
@@ -444,3 +444,164 @@ def test_args_merging():
     fields2 = Fields('items (active: false) { name }')
     result = fields1 + fields2
     assert str(result) == 'items (active: false) { id name }'
+
+
+def test_repr_method():
+    """Test the __repr__ method of Fields."""
+    fields = Fields('id name')
+    assert repr(fields) == "Fields('id name')"
+
+    # Test with nested fields
+    fields = Fields('id items { name }')
+    assert repr(fields) == "Fields('id items { name }')"
+
+
+def test_parse_structure():
+    """Test the _parse_structure internal method."""
+    fields = Fields('')
+    end_pos, content = fields._parse_structure('{ id name }', 0)
+    assert end_pos == 11
+    assert content == '{ id name '
+
+    # Test with nested structures
+    end_pos, content = fields._parse_structure('{ id items { name } }', 0)
+    assert end_pos == 21
+    assert content == '{ id items { name } '
+
+
+def test_field_validation_edge_cases():
+    """Test edge cases in field validation."""
+    # Test invalid field names - starting with a brace
+    with pytest.raises(ValueError):
+        Fields('{ invalid }')
+
+    # Test consecutive nested structures
+    with pytest.raises(ValueError):
+        Fields('field { id } { name }')
+
+    # Test unmatched braces in nested structure
+    with pytest.raises(ValueError):
+        Fields('field { id { name }')
+
+    # Add more valid edge cases
+    assert str(Fields('field { }')) == 'field {  }'
+    assert str(Fields('field { nested { } }')) == 'field { nested {  } }'
+
+
+def test_args_parsing_complex():
+    """Test complex argument parsing scenarios."""
+    # Test mixed type arrays
+    fields = Fields('items (ids: ["1", 2, true]) { id }')
+    assert str(fields) == 'items (ids: ["1", 2, true]) { id }'
+
+    # Test nested arrays with mixed types
+    fields = Fields('items (data: [[1, "2"], [true, 3]]) { id }')
+    assert str(fields) == 'items (data: [[1, "2"], [true, 3]]) { id }'
+
+    # Test multiple arguments with different types
+    fields = Fields('items (limit: 10, ids: ["1", "2"], active: true) { id }')
+    assert str(fields) == 'items (limit: 10, ids: ["1", "2"], active: true) { id }'
+
+
+def test_manage_temp_fields_complex():
+    """Test complex scenarios for managing temporary fields."""
+    # Test deeply nested structures
+    data = {
+        'id': 1,
+        'board': {
+            'items': [
+                {
+                    'id': 2,
+                    'temp1': 'value1',
+                    'column_values': {
+                        'temp2': 'value2',
+                        'id': 3
+                    }
+                }
+            ],
+            'temp3': 'value3'
+        }
+    }
+    original_fields = 'id board { items { id column_values { id } } }'
+    temp_fields = ['temp1', 'temp2', 'temp3']
+    result = Fields.manage_temp_fields(data, original_fields, temp_fields)
+    assert result == {
+        'id': 1,
+        'board': {
+            'items': [
+                {
+                    'id': 2,
+                    'column_values': {
+                        'id': 3
+                    }
+                }
+            ]
+        }
+    }
+
+
+def test_field_combination_with_args():
+    """Test combining fields with complex arguments."""
+    # Test merging fields with overlapping arguments
+    fields1 = Fields('items (ids: ["1"], limit: 10) { id }')
+    fields2 = Fields('items (ids: ["2"], offset: 20) { name }')
+    result = fields1 + fields2
+    assert str(result) == 'items (ids: ["1", "2"], limit: 10, offset: 20) { id name }'
+
+    # Test merging nested fields with arguments
+    fields1 = Fields('board { items (limit: 10) { id } }')
+    fields2 = Fields('board { items (offset: 20) { name } }')
+    result = fields1 + fields2
+    assert str(result) == 'board { items (limit: 10, offset: 20) { id name } }'
+
+
+def test_subtraction_with_args():
+    """Test field subtraction with arguments."""
+    # Test subtracting fields with arguments
+    fields1 = Fields('items (ids: ["1", "2"]) { id name }')
+    fields2 = Fields('items { name }')
+    result = fields1 - fields2
+    assert str(result) == 'items (ids: ["1", "2"]) { id name }'
+
+    # Test subtracting nested fields with arguments
+    fields1 = Fields('board { items (limit: 10) { id name } }')
+    fields2 = Fields('board { items { name } }')
+    result = fields1 - fields2
+    assert str(result) == 'board { items (limit: 10) { id name } }'
+
+    # Add more specific subtraction tests
+    fields1 = Fields('board { items { id name description } }')
+    fields2 = Fields('board { items { name } }')
+    result = fields1 - fields2
+    assert str(result) == 'board { items { id description } }'
+
+
+def test_parse_args_edge_cases():
+    """Test edge cases in argument parsing."""
+    fields = Fields('')
+
+    # Test empty arguments
+    assert fields._parse_args('()') == {}  # pylint: disable=use-implicit-booleaness-not-comparison
+
+    # Test whitespace handling
+    assert fields._parse_args('(  limit:  10  )') == {'limit': 10}
+
+    # Test nested array with empty values
+    args = fields._parse_args('(ids: ["", null, []])')
+    assert 'ids' in args
+    assert len(args['ids']) == 3
+
+
+def test_format_value_edge_cases():
+    """Test edge cases in value formatting."""
+    fields = Fields('')
+
+    # Test empty array
+    assert fields._format_value([]) == '[]'
+
+    # Test array with None values
+    assert fields._format_value([('string', None)]) == '["None"]'
+
+    # Test boolean values
+    assert fields._format_value(True) == 'true'
+    assert fields._format_value(False) == 'false'

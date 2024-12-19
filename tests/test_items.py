@@ -396,3 +396,232 @@ async def test_get_id_no_matches(items_instance):
 
     assert result == []
     items_instance.boards.get_items_by_column_values.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_with_column_values(items_instance):
+    """Test creating an item with column values."""
+    mock_response = {
+        'data': {
+            'create_item': {
+                'id': 1,
+                'name': 'New Item',
+                'column_values': [
+                    {'id': 'status', 'text': 'Done'},
+                    {'id': 'text', 'text': 'Test content'}
+                ]
+            }
+        }
+    }
+
+    items_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await items_instance.create(
+        board_id=1,
+        item_name='New Item',
+        column_values={
+            'status': 'Done',
+            'text': 'Test content'
+        },
+        fields='id name column_values { id text }'
+    )
+
+    assert result == mock_response['data']['create_item']
+    items_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_duplicate_with_updates_and_new_name(items_instance):
+    """Test duplicating an item with updates and new name."""
+    mock_responses = [
+        # First response for duplicate_item
+        {
+            'data': {
+                'duplicate_item': {'id': 2}
+            }
+        },
+        # Second response for getting board ID
+        {
+            'data': {
+                'items': [{
+                    'board': {'id': '123'}
+                }]
+            }
+        },
+        # Empty response to break query loop
+        {
+            'data': {
+                'items': []
+            }
+        },
+        # Fourth response for change_multiple_column_values
+        {
+            'data': {
+                'change_multiple_column_values': {
+                    'id': 2,
+                    'name': 'New Name',
+                    'column_values': []
+                }
+            }
+        }
+    ]
+
+    items_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await items_instance.duplicate(
+        item_id=1,
+        board_id=1,
+        with_updates=True,
+        new_item_name='New Name',
+        fields='id name column_values { id text }'
+    )
+
+    assert result['name'] == 'New Name'
+    assert items_instance.client.post_request.await_count == 4
+
+
+@pytest.mark.asyncio
+async def test_move_to_group_with_invalid_group(items_instance):
+    """Test moving item to invalid group."""
+    error_response = {
+        'errors': [{
+            'message': 'Group not found',
+            'extensions': {'code': 'InvalidGroup'}
+        }]
+    }
+
+    items_instance.client.post_request = AsyncMock(return_value=error_response)
+    with pytest.raises(MondayAPIError) as exc_info:
+        await items_instance.move_to_group(item_id=1, group_id='invalid_group')
+    assert exc_info.value.json == error_response
+
+
+@pytest.mark.asyncio
+async def test_move_to_board_with_column_mapping(items_instance):
+    """Test moving item to different board with column mapping."""
+    mock_response = {
+        'data': {
+            'move_item_to_board': {
+                'id': 1,
+                'board': {'id': 2},
+                'column_values': [
+                    {'id': 'new_status', 'text': 'Done'},
+                    {'id': 'new_text', 'text': 'Mapped content'}
+                ]
+            }
+        }
+    }
+
+    items_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await items_instance.move_to_board(
+        item_id=1,
+        board_id=2,
+        group_id='new_group',
+        columns_mapping=[
+            {'from': 'old_status', 'to': 'new_status'},
+            {'from': 'old_text', 'to': 'new_text'}
+        ],
+        fields='id board { id } column_values { id text }'
+    )
+
+    assert result == mock_response['data']['move_item_to_board']
+    items_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_column_values_specific_columns(items_instance):
+    """Test retrieving specific column values for an item."""
+    mock_response = {
+        'data': {
+            'items': [{
+                'column_values': [
+                    {'id': 'status', 'text': 'Done'},
+                    {'id': 'priority', 'text': 'High'}
+                ]
+            }]
+        }
+    }
+
+    items_instance.client.post_request = AsyncMock(return_value=mock_response)
+    result = await items_instance.get_column_values(
+        item_id=1,
+        column_ids=['status', 'priority'],
+        fields='id text'
+    )
+
+    assert result == mock_response['data']['items'][0]['column_values']
+    items_instance.client.post_request.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_change_column_values_with_complex_values(items_instance):
+    """Test changing column values with complex value types."""
+    mock_responses = [
+        # First response for getting board ID
+        {
+            'data': {
+                'items': [{
+                    'board': {'id': '123'}
+                }]
+            }
+        },
+        # Empty response to break query loop
+        {
+            'data': {
+                'items': []
+            }
+        },
+        # Third response for changing column values
+        {
+            'data': {
+                'change_multiple_column_values': {
+                    'id': '1',
+                    'column_values': [
+                        {'id': 'status', 'text': 'Done'},
+                        {'id': 'date', 'text': '2024-03-20'},
+                        {'id': 'people', 'text': 'John Doe'}
+                    ]
+                }
+            }
+        }
+    ]
+
+    items_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+
+    complex_values = {
+        'status': {'label': 'Done'},
+        'date': {'date': '2024-03-20'},
+        'people': {'personsAndTeams': [{'id': 123, 'kind': 'person'}]}
+    }
+
+    result = await items_instance.change_column_values(
+        item_id=1,
+        column_values=complex_values,
+        fields='id column_values { id text }'
+    )
+
+    assert result == mock_responses[2]['data']['change_multiple_column_values']
+    assert items_instance.client.post_request.await_count == 3
+
+    # Verify the first call was for querying the board ID
+    first_call = items_instance.client.post_request.call_args_list[0]
+    assert 'items' in first_call[0][0]
+    assert 'board { id }' in first_call[0][0]
+
+    # Verify the last call was for changing column values
+    last_call = items_instance.client.post_request.call_args_list[2]
+    assert 'change_multiple_column_values' in last_call[0][0]
+
+
+@pytest.mark.asyncio
+async def test_get_id_multiple_matches(items_instance):
+    """Test getting IDs when multiple items match the name."""
+    mock_items = [
+        {'id': '123'},
+        {'id': '456'},
+        {'id': '789'}
+    ]
+
+    items_instance.boards.get_items_by_column_values = AsyncMock(return_value=mock_items)
+    result = await items_instance.get_id(board_id=1, item_name='Duplicate Name')
+
+    assert result == ['123', '456', '789']
+    items_instance.boards.get_items_by_column_values.assert_awaited_once()
