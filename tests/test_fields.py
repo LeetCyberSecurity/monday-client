@@ -32,6 +32,8 @@ def test_basic_field_initialization():
     assert 'name' in fields
     assert 'description' in fields
     assert 'nonexistent' not in fields
+    fields2 = Fields('id name creator { id email name } owners { id email name } subscribers { id email name }')
+    assert str(fields2) == 'id name creator { id email name } owners { id email name } subscribers { id email name }'
 
 
 def test_nested_field_initialization():
@@ -313,3 +315,112 @@ def test_nested_partial_subtraction():
     fields2 = Fields('board { items { title } }')
     result = fields1 - fields2
     assert str(result) == 'id board { id name items { id description } }'
+
+
+def test_add_temp_fields():
+    """Test adding temporary fields."""
+    fields = Fields('id name')
+    temp_fields = ['temp1', 'temp2']
+    result = fields.add_temp_fields(temp_fields)
+    assert str(result) == 'id name temp1 temp2'
+
+    # Test with duplicate fields
+    fields = Fields('id name temp1')
+    result = fields.add_temp_fields(temp_fields)
+    assert str(result) == 'id name temp1 temp2'
+
+
+def test_manage_temp_fields():
+    """Test managing temporary fields in query results."""
+    # Test with dict input
+    data = {'id': 1, 'name': 'test', 'temp1': 'value1', 'temp2': 'value2'}
+    original_fields = 'id name'
+    temp_fields = ['temp1', 'temp2']
+    result = Fields.manage_temp_fields(data, original_fields, temp_fields)
+    assert result == {'id': 1, 'name': 'test'}
+
+    # Test with list input
+    data = [
+        {'id': 1, 'name': 'test1', 'temp1': 'value1'},
+        {'id': 2, 'name': 'test2', 'temp1': 'value2'}
+    ]
+    result = Fields.manage_temp_fields(data, original_fields, temp_fields)
+    assert result == [
+        {'id': 1, 'name': 'test1'},
+        {'id': 2, 'name': 'test2'}
+    ]
+
+    # Test with nested structures
+    data = {
+        'id': 1,
+        'name': 'test',
+        'items': [
+            {'id': 2, 'temp1': 'value1'},
+            {'id': 3, 'temp1': 'value2'}
+        ]
+    }
+    original_fields = 'id name items { id }'
+    result = Fields.manage_temp_fields(data, original_fields, temp_fields)
+    assert result == {
+        'id': 1,
+        'name': 'test',
+        'items': [
+            {'id': 2},
+            {'id': 3}
+        ]
+    }
+
+    # Test with Fields instance as original_fields
+    original_fields = Fields('id name')
+    result = Fields.manage_temp_fields(data, original_fields, temp_fields)
+    assert result == {'id': 1, 'name': 'test'}
+
+
+def test_field_args_parsing():
+    """Test handling of field arguments."""
+    # Test basic arguments
+    fields = Fields('items (limit: 10) { id }')
+    assert str(fields) == 'items (limit: 10) { id }'
+
+    # Test string arguments
+    fields = Fields('items (name: "test") { id }')
+    assert str(fields) == 'items (name: "test") { id }'
+
+    # Test boolean arguments
+    fields = Fields('items (active: true, archived: false) { id }')
+    assert str(fields) == 'items (active: true, archived: false) { id }'
+
+    # Test array arguments
+    fields = Fields('items (ids: [1, 2, 3]) { id }')
+    assert str(fields) == 'items (ids: [1, 2, 3]) { id }'
+
+    # Test nested array arguments
+    fields = Fields('items (ids: [[1, 2], [3, 4]]) { id }')
+    assert str(fields) == 'items (ids: [[1, 2], [3, 4]]) { id }'
+
+
+def test_args_merging():
+    """Test merging of field arguments."""
+    # Test merging simple arguments
+    fields1 = Fields('items (limit: 10) { id }')
+    fields2 = Fields('items (offset: 20) { name }')
+    result = fields1 + fields2
+    assert str(result) == 'items (limit: 10, offset: 20) { id name }'
+
+    # Test merging array arguments
+    fields1 = Fields('items (ids: [1, 2]) { id }')
+    fields2 = Fields('items (ids: [3, 4]) { name }')
+    result = fields1 + fields2
+    assert str(result) == 'items (ids: [1, 2, 3, 4]) { id name }'
+
+    # Test merging with duplicate values
+    fields1 = Fields('items (ids: [1, 2]) { id }')
+    fields2 = Fields('items (ids: [2, 3]) { name }')
+    result = fields1 + fields2
+    assert str(result) == 'items (ids: [1, 2, 3]) { id name }'
+
+    # Test merging boolean arguments
+    fields1 = Fields('items (active: true) { id }')
+    fields2 = Fields('items (active: false) { name }')
+    result = fields1 + fields2
+    assert str(result) == 'items (active: false) { id name }'

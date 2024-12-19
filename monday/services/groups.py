@@ -146,13 +146,14 @@ class Groups:
                     group for group in board_groups
                     if group['title'] in (group_name if isinstance(group_name, list) else [group_name])
                 ]
-            groups.append({
-                'id': board['id'],
-                'groups': board_groups
-            })
+            if board_groups:  # Only add board if it has matching groups
+                groups.append({
+                    'id': board['id'],
+                    'groups': board_groups
+                })
 
         # Clean temporary fields from results
-        return Fields.manage_temp_fields(groups, fields, temp_fields)
+        return Fields.manage_temp_fields(groups, f"id groups {{ {fields} }}", temp_fields)
 
     async def create(
         self,

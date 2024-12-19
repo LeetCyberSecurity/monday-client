@@ -112,6 +112,17 @@ class Fields:
         return ' '.join(self.fields)  # No sorting, maintain order
 
     def __repr__(self) -> str:
+        """
+        Return a string representation of the Fields object.
+
+        Returns:
+            String representation that can be used to recreate the object.
+
+        Example:
+            >>> fields = Fields('id name')
+            >>> repr(fields)
+            "Fields('id name')"
+        """
         return f"Fields('{str(self)}')"
 
     def __add__(self, other: Union['Fields', str]) -> 'Fields':
@@ -140,7 +151,21 @@ class Fields:
         return Fields(' '.join(combined))
 
     def __sub__(self, other: Union['Fields', str]) -> 'Fields':
-        """Subtract fields from another Fields object or a string."""
+        """
+        Subtract fields from another Fields object or a string.
+
+        Args:
+            other: Fields instance or string containing fields to subtract.
+
+        Returns:
+            New Fields instance with specified fields removed.
+
+        Example:
+            >>> fields1 = Fields('id name board { id title }')
+            >>> fields2 = Fields('name board { title }')
+            >>> str(fields1 - fields2)
+            'id board { id }'
+        """
         # Convert string to Fields object if needed
         if isinstance(other, str):
             other = Fields(other)
@@ -196,7 +221,7 @@ class Fields:
             >>> fields = Fields('id name')
             >>> 'name' in fields
             True
-            >>> ' name ' in fields
+            >>> ' name ' in fields  # Whitespace is normalized
             True
             >>> 'board' in fields
             False
@@ -273,40 +298,174 @@ class Fields:
 
         Returns:
             Data structure with temporary fields removed if they weren't in original fields
-
-        Example:
-            >>> data = {'id': 1, 'name': 'test', 'temp': 'value'}
-            >>> Fields.manage_temp_fields(data, 'id name', ['temp'])
-            {'id': 1, 'name': 'test'}
         """
-        # Convert original_fields to set based on its type
+        # Convert original_fields to Fields object if needed
         if isinstance(original_fields, str):
-            orig_fields_set = set(original_fields.split())
+            fields_obj = Fields(original_fields)
         elif isinstance(original_fields, Fields):
-            orig_fields_set = set(original_fields.fields)
+            fields_obj = original_fields
         else:
-            orig_fields_set = set(original_fields)
+            fields_obj = Fields(' '.join(original_fields))
+
+        # Get top-level fields and their nested structure
+        field_structure = {}
+        for field in fields_obj.fields:
+            base_field = field.split(' {')[0].split(' (')[0]
+            if '{' in field:
+                nested_content = field[field.find('{') + 1:field.rfind('}')].strip()
+                field_structure[base_field] = Fields(nested_content)
+            else:
+                field_structure[base_field] = None
 
         # Find which temp fields weren't in original fields
-        fields_to_remove = set(temp_fields) - orig_fields_set
+        fields_to_remove = set(temp_fields) - set(field_structure.keys())
 
         if not fields_to_remove:
             return data
 
         if isinstance(data, list):
-            return [Fields.manage_temp_fields(item, orig_fields_set, temp_fields) for item in data]
+            return [Fields.manage_temp_fields(item, fields_obj, temp_fields) for item in data]
 
         if isinstance(data, dict):
-            return {
-                k: Fields.manage_temp_fields(v, orig_fields_set, temp_fields) if isinstance(v, (dict, list)) else v
-                for k, v in data.items()
-                if k not in fields_to_remove
-            }
+            result = {}
+            for k, v in data.items():
+                # Skip temporary fields
+                if k in fields_to_remove:
+                    continue
+                # Skip fields not in original structure
+                if k not in field_structure:
+                    continue
+                # Handle nested structures
+                if isinstance(v, (dict, list)) and field_structure[k] is not None:
+                    result[k] = Fields.manage_temp_fields(v, field_structure[k], temp_fields)
+                else:
+                    result[k] = v
+            return result
 
         return data
 
+    def _parse_fields(self, fields_str: str) -> list[str]:
+        """
+        Parse a fields string into a list of normalized fields.
+
+        Args:
+            fields_str: String containing fields to parse
+
+        Returns:
+            List of normalized field strings
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._parse_fields('id name board { id title }')
+            ['id', 'name', 'board { id title }']
+        """
+        # First deduplicate the entire string
+        fields_str = self._deduplicate_nested_fields(fields_str)
+
+        fields = []
+        current_field = []
+        nested_level = 0
+        i = 0
+        last_parent = None
+
+        while i < len(fields_str):
+            char = fields_str[i]
+
+            if char == '{':
+                if nested_level == 0:
+                    # Get the last field as parent before starting nested content
+                    if fields:
+                        last_parent = fields[-1]
+                nested_level += 1
+                current_field.append(char)
+            elif char == '}':
+                nested_level -= 1
+                current_field.append(char)
+
+                if nested_level == 0 and last_parent:
+                    # Complete a nested structure
+                    nested_content = ''.join(current_field).strip()
+                    complete_field = f"{last_parent} {nested_content}"
+                    # Replace the parent field with the complete field
+                    if last_parent in fields:
+                        fields.remove(last_parent)
+                        fields.append(complete_field)
+                    last_parent = None
+                    current_field = []
+            elif char.isspace() and nested_level == 0:
+                # Space outside nested structure
+                if current_field:
+                    field = ''.join(current_field).strip()
+                    if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
+                        fields.append(field)
+                    current_field = []
+            else:
+                current_field.append(char)
+
+            i += 1
+
+        # Handle any remaining field
+        if current_field and nested_level == 0:
+            field = ''.join(current_field).strip()
+            if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
+                fields.append(field)
+
+        return fields
+
     @staticmethod
-    def _parse_structure(s: str, start: int) -> tuple[int, str]:
+    def _validate_fields(fields_str: str) -> None:
+        """
+        Validate the field string format according to GraphQL rules.
+
+        Args:
+            fields_str: String containing fields to validate
+
+        Raises:
+            ValueError: If the field string is malformed
+        """
+        # Remove whitespace for easier parsing
+        fields_str = fields_str.strip()
+        if not fields_str:
+            return
+
+        # Track brace matching and current field
+        brace_count = 0
+        current_field = []
+        last_field = []
+
+        for i, char in enumerate(fields_str):
+
+            if char == '{':
+                current_field_str = ''.join(last_field).strip()
+                if not current_field_str:
+                    raise ValueError('Selection set must be preceded by a field name')
+                brace_count += 1
+                current_field = []
+            elif char == '}':
+                brace_count -= 1
+                if brace_count < 0:
+                    raise ValueError('Unmatched closing brace')
+                current_field = []
+                last_field = []
+            elif char.isspace():
+                if current_field:  # Only update last_field if current_field is not empty
+                    last_field = current_field.copy()
+                current_field = []
+            else:
+                current_field.append(char)
+                if not char.isspace():  # If not a space, update last_field
+                    last_field = current_field.copy()
+
+            # Check for invalid selection sets
+            if i < len(fields_str) - 1:
+                next_char = fields_str[i + 1]
+                if char == '}' and next_char == '{':
+                    raise ValueError('Invalid syntax: multiple selection sets for single field')
+
+        if brace_count != 0:
+            raise ValueError('Unmatched braces in field string')
+
+    def _parse_structure(self, s: str, start: int) -> tuple[int, str]:
         """
         Parse a nested structure starting from a given position.
 
@@ -315,7 +474,7 @@ class Fields:
             start: Starting position in the string
 
         Returns:
-            Tuple containing end position and processed content
+            Tuple containing (end position, processed content)
 
         Example:
             >>> fields = Fields('')
@@ -441,6 +600,61 @@ class Fields:
 
         return ' '.join(result)
 
+    def _deduplicate_nested_fields(self, fields_str: str) -> str:
+        """
+        Deduplicate fields within a nested structure.
+
+        Args:
+            fields_str: String containing fields, potentially nested
+
+        Returns:
+            Deduplicated fields string
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._deduplicate_nested_fields('id id name name board { id id }')
+            'id name board { id }'
+        """
+        # Handle empty or whitespace-only strings
+        if not fields_str.strip():
+            return ''
+
+        # Normalize whitespace and remove newlines
+        fields_str = ' '.join(fields_str.split())
+
+        return self._process_nested_content(fields_str)
+
+    def _extract_nested_content(self, field: str) -> str:
+        """
+        Extract the content inside nested braces.
+
+        Args:
+            field: Field string containing nested content
+
+        Returns:
+            Content between the outermost braces, or empty string if no braces found
+
+        Example:
+            >>> fields = Fields('')
+            >>> fields._extract_nested_content('board { id name }')
+            'id name'
+        """
+        start = field.find('{')
+        if start == -1:
+            return ''
+
+        # Count braces to handle nested structures
+        count = 1
+        start += 1
+        for i in range(start, len(field)):
+            if field[i] == '{':
+                count += 1
+            elif field[i] == '}':
+                count -= 1
+                if count == 0:
+                    return field[start:i].strip()
+        return ''
+
     @staticmethod
     def _parse_args(args_str: str) -> dict:
         """
@@ -450,12 +664,12 @@ class Fields:
             args_str: String containing GraphQL arguments
 
         Returns:
-            Dictionary of parsed arguments
+            Dictionary of parsed arguments with their types and values
 
         Example:
             >>> fields = Fields('')
             >>> fields._parse_args('(limit: 10, ids: ["123", "456"])')
-            {'limit': '10', 'ids': [('string', '123'), ('string', '456')]}
+            {'limit': 10, 'ids': [('string', '123'), ('string', '456')]}
         """
         args_dict = {}
         content = args_str.strip('()').strip()
@@ -490,62 +704,64 @@ class Fields:
             if ':' in part:
                 key, value = [x.strip() for x in part.split(':', 1)]
                 if value.startswith('[') and value.endswith(']'):
-                    # Handle nested arrays
+                    # Handle arrays
                     parsed_values = []
                     nested_value = value[1:-1].strip()
                     if nested_value:
-                        current_value = []
-                        stack = []
+                        in_array = 0
                         in_quotes = False
+                        current = []
 
                         for char in nested_value:
                             if char == '[':
-                                stack.append(char)
-                                current_value.append(char)
+                                in_array += 1
+                                if in_array == 1:
+                                    current = ['[']
+                                else:
+                                    current.append(char)
                             elif char == ']':
-                                stack.pop()
-                                current_value.append(char)
-                                if not stack:  # We've completed a nested array
-                                    val = ''.join(current_value).strip()
-                                    if val.startswith('['):
-                                        parsed_values.append(('array', val))
-                                    current_value = []
+                                in_array -= 1
+                                if in_array == 0:
+                                    current.append(']')
+                                    parsed_values.append(('array', ''.join(current)))
+                                    current = []
                             elif char == '"':
                                 in_quotes = not in_quotes
-                                current_value.append(char)
-                            elif char == ',' and not stack and not in_quotes:
-                                val = ''.join(current_value).strip()
-                                if val:
-                                    if val.startswith('['):
-                                        parsed_values.append(('array', val))
-                                    elif val.startswith('"'):
+                                current.append(char)
+                            elif char == ',' and not in_array and not in_quotes:
+                                if current:
+                                    val = ''.join(current).strip()
+                                    if val.startswith('"') and val.endswith('"'):
                                         parsed_values.append(('string', val.strip('"')))
                                     elif val.isdigit():
                                         parsed_values.append(('number', int(val)))
                                     else:
                                         parsed_values.append(('string', val))
-                                current_value = []
+                                    current = []
                             else:
-                                current_value.append(char)
+                                current.append(char)
 
-                        # Handle any remaining value
-                        if current_value:
-                            val = ''.join(current_value).strip()
-                            if val:
-                                if val.startswith('['):
-                                    parsed_values.append(('array', val))
-                                elif val.startswith('"'):
-                                    parsed_values.append(('string', val.strip('"')))
-                                elif val.isdigit():
-                                    parsed_values.append(('number', int(val)))
-                                else:
-                                    parsed_values.append(('string', val))
+                        if current:
+                            val = ''.join(current).strip()
+                            if val.startswith('"') and val.endswith('"'):
+                                parsed_values.append(('string', val.strip('"')))
+                            elif val.isdigit():
+                                parsed_values.append(('number', int(val)))
+                            else:
+                                parsed_values.append(('string', val))
 
                     args_dict[key] = parsed_values
                 elif value.lower() in ('true', 'false'):
                     args_dict[key] = value.lower() == 'true'
+                elif value.startswith('"') and value.endswith('"'):
+                    args_dict[key] = value[1:-1]
+                elif value.isdigit():
+                    args_dict[key] = int(value)
                 else:
-                    args_dict[key] = value
+                    try:
+                        args_dict[key] = float(value)
+                    except ValueError:
+                        args_dict[key] = value
 
         return args_dict
 
@@ -564,6 +780,10 @@ class Fields:
             >>> fields = Fields('')
             >>> fields._format_value([('string', 'test'), ('number', 123)])
             '["test", 123]'
+            >>> fields._format_value(True)
+            'true'
+            >>> fields._format_value("test")
+            '"test"'
         """
         if isinstance(value, list):
             formatted = []
@@ -590,12 +810,14 @@ class Fields:
             args2: Second argument string
 
         Returns:
-            Merged argument string
+            Merged argument string with duplicates resolved
 
         Example:
             >>> fields = Fields('')
             >>> fields._merge_args('(limit: 10)', '(offset: 20)')
             '(limit: 10, offset: 20)'
+            >>> fields._merge_args('(ids: ["1"])', '(ids: ["2"])')
+            '(ids: ["1", "2"])'
         """
         if not args1:
             return args2
@@ -642,152 +864,3 @@ class Fields:
             formatted_args = [f"{key}: {self._format_value(value)}" for key, value in merged.items()]
             return f"({', '.join(formatted_args)})"
         return ""
-
-    def _deduplicate_nested_fields(self, fields_str: str) -> str:
-        """
-        Deduplicate fields within a nested structure.
-
-        Args:
-            fields_str: String containing fields, potentially nested.
-
-        Returns:
-            Deduplicated fields string.
-
-        Example:
-            >>> fields = Fields('')
-            >>> fields._deduplicate_nested_fields('id id name name board { id id }')
-            'id name board { id }'
-        """
-        # Handle empty or whitespace-only strings
-        if not fields_str.strip():
-            return ''
-
-        # Normalize whitespace and remove newlines
-        fields_str = ' '.join(fields_str.split())
-
-        return self._process_nested_content(fields_str)
-
-    def _parse_fields(self, fields_str: str) -> list[str]:
-        """Parse a fields string into a list of normalized fields."""
-        # First deduplicate the entire string
-        fields_str = self._deduplicate_nested_fields(fields_str)
-
-        fields = []
-        current_field = []
-        nested_level = 0
-        i = 0
-        last_parent = None
-
-        while i < len(fields_str):
-            char = fields_str[i]
-
-            if char == '{':
-                if nested_level == 0:
-                    # Get the last field as parent before starting nested content
-                    if fields:
-                        last_parent = fields[-1]
-                nested_level += 1
-                current_field.append(char)
-            elif char == '}':
-                nested_level -= 1
-                current_field.append(char)
-
-                if nested_level == 0 and last_parent:
-                    # Complete a nested structure
-                    nested_content = ''.join(current_field).strip()
-                    complete_field = f"{last_parent} {nested_content}"
-                    # Replace the parent field with the complete field
-                    if last_parent in fields:
-                        fields.remove(last_parent)
-                        fields.append(complete_field)
-                    last_parent = None
-                    current_field = []
-            elif char.isspace() and nested_level == 0:
-                # Space outside nested structure
-                if current_field:
-                    field = ''.join(current_field).strip()
-                    if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
-                        fields.append(field)
-                    current_field = []
-            else:
-                current_field.append(char)
-
-            i += 1
-
-        # Handle any remaining field
-        if current_field and nested_level == 0:
-            field = ''.join(current_field).strip()
-            if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
-                fields.append(field)
-
-        return fields
-
-    def _validate_fields(self, fields_str: str) -> None:
-        """
-        Validate the field string format according to GraphQL rules.
-
-        Args:
-            fields_str: String containing fields to validate
-
-        Raises:
-            ValueError: If the field string is malformed
-        """
-        # Remove whitespace for easier parsing
-        fields_str = fields_str.strip()
-        if not fields_str:
-            return
-
-        # Track brace matching and current field
-        brace_count = 0
-        current_field = []
-        last_field = []
-
-        for i, char in enumerate(fields_str):
-
-            if char == '{':
-                current_field_str = ''.join(last_field).strip()
-                if not current_field_str:
-                    raise ValueError('Selection set must be preceded by a field name')
-                brace_count += 1
-                current_field = []
-            elif char == '}':
-                brace_count -= 1
-                if brace_count < 0:
-                    raise ValueError('Unmatched closing brace')
-                current_field = []
-                last_field = []
-            elif char.isspace():
-                if current_field:  # Only update last_field if current_field is not empty
-                    last_field = current_field.copy()
-                current_field = []
-            else:
-                current_field.append(char)
-                if not char.isspace():  # If not a space, update last_field
-                    last_field = current_field.copy()
-
-            # Check for invalid selection sets
-            if i < len(fields_str) - 1:
-                next_char = fields_str[i + 1]
-                if char == '}' and next_char == '{':
-                    raise ValueError('Invalid syntax: multiple selection sets for single field')
-
-        if brace_count != 0:
-            raise ValueError('Unmatched braces in field string')
-
-    def _extract_nested_content(self, field: str) -> str:
-        """Extract the content inside nested braces."""
-        start = field.find('{')
-        if start == -1:
-            return ''
-
-        # Count braces to handle nested structures
-        count = 1
-        start += 1
-        for i in range(start, len(field)):
-            if field[i] == '{':
-                count += 1
-            elif field[i] == '}':
-                count -= 1
-                if count == 0:
-                    return field[start:i].strip()
-        return ''
