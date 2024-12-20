@@ -30,14 +30,20 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
-from monday.services.utils import (Fields, build_graphql_query,
-                                   check_query_result, map_color_to_hex)
+from monday.fields.group_fields import GroupFields
+from monday.fields.item_fields import ItemFields
+from monday.services.utils.error_handlers import check_query_result
+from monday.services.utils.fields import Fields
+from monday.services.utils.query_builder import (build_graphql_query,
+                                                 map_color_to_hex)
+from monday.types.group import Group
+from monday.types.item import Item
 
 if TYPE_CHECKING:
-    from monday import MondayClient
-    from monday.services import Boards
+    from monday.client import MondayClient
+    from monday.services.boards import Boards
 
 
 class Groups:
@@ -46,12 +52,6 @@ class Groups:
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)
-
-    BASIC_FIELDS = Fields('id title')
-    """Returns the following fields:
-    - id: Group's ID
-    - title: Group's title
-    """
 
     def __init__(
         self,
@@ -65,16 +65,16 @@ class Groups:
             client: The MondayClient instance to use for API requests.
             boards: The Boards instance to use for board-related operations.
         """
-        self.client: 'MondayClient' = client
-        self.boards: 'Boards' = boards
+        self.client = client
+        self.boards = boards
 
     async def query(
         self,
         board_ids: Union[int, list[int]],
         group_ids: Optional[Union[str, list[str]]] = None,
         group_name: Optional[Union[str, list[str]]] = None,
-        fields: str = 'id'
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = GroupFields.BASIC
+    ) -> list[dict[Literal['id', 'groups'], Union[str, list[Group]]]]:
         """
         Query groups from boards. Optionally specify the group names and/or IDs to filter by.
 
@@ -125,11 +125,10 @@ class Groups:
         group_ids_quoted = [f'"{i}"' for i in group_ids_list] if group_ids_list else None
 
         temp_fields = ['title'] if group_name else []
-        query_fields = fields.add_temp_fields(temp_fields)
 
         group_fields = Fields(f"""
             id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ''} {{
-                {query_fields}
+                {fields.add_temp_fields(temp_fields)}
             }}
         """)
 
@@ -149,11 +148,10 @@ class Groups:
             if board_groups:  # Only add board if it has matching groups
                 groups.append({
                     'id': board['id'],
-                    'groups': board_groups
+                    'groups': Fields.manage_temp_fields(board_groups, fields, temp_fields)
                 })
 
-        # Clean temporary fields from results
-        return Fields.manage_temp_fields(groups, f"id groups {{ {fields} }}", temp_fields)
+        return groups
 
     async def create(
         self,
@@ -162,8 +160,8 @@ class Groups:
         group_color: Optional[str] = None,
         relative_to: Optional[int] = None,
         position_relative_method: Optional[Literal['before', 'after']] = None,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = GroupFields.BASIC
+    ) -> Group:
         """
         Create a new group on a board.
 
@@ -234,8 +232,8 @@ class Groups:
         group_id: str,
         attribute: Literal['color', 'position', 'relative_position_after', 'relative_position_before', 'title'],
         new_value: str,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = GroupFields.BASIC
+    ) -> Group:
         """
         Update a group.
 
@@ -310,8 +308,8 @@ class Groups:
         group_id: str,
         add_to_top: bool = False,
         group_title: Optional[str] = None,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = GroupFields.BASIC
+    ) -> Group:
         """
         Duplicate a group.
 
@@ -374,8 +372,8 @@ class Groups:
         self,
         board_id: int,
         group_id: str,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = GroupFields.BASIC
+    ) -> Group:
         """
         Archive a group.
 
@@ -434,8 +432,8 @@ class Groups:
         self,
         board_id: int,
         group_id: str,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = GroupFields.BASIC
+    ) -> Group:
         """
         Delete a group.
 
@@ -495,8 +493,8 @@ class Groups:
         board_id: int,
         group_id: str,
         item_name: str,
-        fields: str = 'id',
-    ) -> list[dict[str, Any]]:
+        item_fields: Union[str, Fields] = ItemFields.BASIC,
+    ) -> list[Item]:
         """
         Get all items from a group with names that match ``item_name``
 
@@ -504,7 +502,7 @@ class Groups:
             board_id: The ID of the board to query.
             group_id: A single group ID.
             item_name: The name of the item to match.
-            fields: Fields to return from the matched items.
+            item_fields: Fields to return from the matched items.
 
         Returns:
             List of dictionaries containing item info.
@@ -524,7 +522,7 @@ class Groups:
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     item_name='Item Name',
-                ...     fields='id name'
+                ...     item_fields='id name'
                 ... )
                 [
                     {
@@ -538,7 +536,7 @@ class Groups:
                 ]
         """
 
-        fields = Fields(f"""
+        fields = Fields(f'''
             groups (ids: "{group_id}") {{
                 items_page (
                     query_params: {{
@@ -552,11 +550,11 @@ class Groups:
                 ) {{
                     cursor
                     items {{
-                        {fields}
+                        {item_fields}
                     }}
                 }}
             }}
-        """)
+        ''')
 
         args = {
             'ids': board_id,

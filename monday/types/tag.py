@@ -15,17 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Monday API client"""
+"""
+Type definitions for monday.com API tag related structures.
+"""
 
-__version__ = "0.1.62"
-__authors__ = [
-    {"name": "Dan Hollis", "email": "dh@leetsys.com"}
-]
+from typing import Required, TypedDict
 
-from monday.client import MondayClient
-from monday.fields.board_fields import BoardFields
-from monday.fields.column_fields import ColumnFields
-from monday.fields.group_fields import GroupFields
-from monday.fields.item_fields import ItemFields
-from monday.fields.user_fields import UserFields
-from monday.services.utils.fields import Fields
+
+class Tag(TypedDict, total=False):
+    """
+    Type definitions for monday.com API tag structures.
+
+    These types correspond to Monday.com's tag fields as documented in their API reference:
+    https://developer.monday.com/api-reference/reference/tags-1#fields
+    """
+
+    color: Required[str]
+    """The tag's color"""
+
+    id: Required[str]
+    """The tag's unique identifier"""
+
+    name: Required[str]
+    """The tag's name"""

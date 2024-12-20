@@ -86,13 +86,16 @@ class PaginationError(Exception):
 
     Attributes:
         message: Explanation of the error.
+        json: JSON data returned by the API, if available.
     """
 
     def __init__(
         self,
-        message: str
+        message: str,
+        json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
+        self.json = json
 
 
 class QueryFormatError(Exception):

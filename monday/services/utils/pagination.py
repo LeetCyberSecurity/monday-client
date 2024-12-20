@@ -208,6 +208,9 @@ async def paginated_item_request(
 
         if 'boards' in data['data']:
             for board in data['data']['boards']:
+                if board['items_page'] is None:
+                    logger.error('Failed to extract items from response')
+                    raise PaginationError('Item pagination failed', json=data)
                 board_data = {
                     'board_id': board['id'],
                     'items': board['items_page']['items']

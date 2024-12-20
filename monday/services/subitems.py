@@ -30,14 +30,20 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
-from monday.services.utils import (Fields, build_graphql_query,
-                                   check_query_result)
+from monday.fields.item_fields import ItemFields
+from monday.services.utils.error_handlers import check_query_result
+from monday.services.utils.fields import Fields
+from monday.services.utils.query_builder import build_graphql_query
+from monday.types.column import ColumnType
+from monday.types.query import ColumnValueDict
+from monday.types.subitem import Subitem
 
 if TYPE_CHECKING:
-    from monday import MondayClient
-    from monday.services import Boards, Items
+    from monday.client import MondayClient
+    from monday.services.boards import Boards
+    from monday.services.items import Items
 
 
 class Subitems:
@@ -61,17 +67,17 @@ class Subitems:
             items: The Items instance to use for item-related operations.
             boards: The Boards instance to use for board-related operations.
         """
-        self.client: 'MondayClient' = client
-        self.items: 'Items' = items
-        self.boards: 'Boards' = boards
+        self.client = client
+        self.items = items
+        self.boards = boards
 
     async def query(
         self,
         item_ids: Union[int, list[int]],
         subitem_ids: Optional[Union[int, list[int]]] = None,
-        fields: str = 'id',
+        fields: Union[str, Fields] = ItemFields.BASIC,
         **kwargs: Any
-    ) -> list[dict[str, Union[str, list[dict[str, Any]]]]]:
+    ) -> list[dict[Literal['id', 'subitems'], Union[str, list[Subitem]]]]:
         """
         Query items to return metadata about one or multiple subitems.
 
@@ -171,9 +177,10 @@ class Subitems:
             )
             subitem_board_data = check_query_result(subitem_board_query_result, errors_only=True)
 
+            subitem_ids = subitem_ids if isinstance(subitem_ids, list) else [subitem_ids]
             items = []
             for parent_item in subitem_board_data:
-                parent_subitem_ids = [s for s in subitem_ids if any(int(i['id']) == s for i in parent_item['subitems'])]
+                parent_subitem_ids = [s for s in subitem_ids if any(int(i['id']) == int(s) for i in parent_item['subitems'])]
                 subitem_board_id = parent_item['subitems'][0]['board']['id']
                 query_result = await self.boards.get_items(
                     board_ids=subitem_board_id,
@@ -188,11 +195,11 @@ class Subitems:
     async def create(
         self,
         item_id: int,
-        item_name: str,
-        column_values: Optional[dict[str, Any]] = None,
+        subitem_name: str,
+        column_values: Optional[dict[ColumnType, Union[str, ColumnValueDict]]] = None,
         create_labels_if_missing: bool = False,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Subitem:
         """
         Create a new subitem on an item.
 
@@ -229,7 +236,7 @@ class Subitems:
                 ... )
                 {
                     "id": "123456789",
-                    "name": "New Item",
+                    "name": "New Subitem",
                     "column_values": [
                         {
                             "id": "status",
@@ -247,7 +254,7 @@ class Subitems:
 
         args = {
             'parent_item_id': item_id,
-            'item_name': item_name,
+            'item_name': subitem_name,
             'column_values': column_values,
             'create_labels_if_missing': create_labels_if_missing,
             'fields': fields

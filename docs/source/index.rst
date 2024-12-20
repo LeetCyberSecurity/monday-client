@@ -69,8 +69,19 @@ This is the official documentation for the `monday-client <https://github.com/Le
    services
    fields
    exceptions
-   types
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Utils
+
    utils
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Type Definitions
+
+   query_types
+   return_types
 
 .. toctree::
    :maxdepth: 1

@@ -15,17 +15,28 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Monday API client"""
+"""
+Module containing predefined field sets for monday.com group operations.
 
-__version__ = "0.1.62"
-__authors__ = [
-    {"name": "Dan Hollis", "email": "dh@leetsys.com"}
-]
+This module provides a collection of commonly used field combinations when
+querying monday.com groups, making it easier to maintain consistent field
+sets across group operations.
+"""
 
-from monday.client import MondayClient
-from monday.fields.board_fields import BoardFields
-from monday.fields.column_fields import ColumnFields
-from monday.fields.group_fields import GroupFields
-from monday.fields.item_fields import ItemFields
-from monday.fields.user_fields import UserFields
 from monday.services.utils.fields import Fields
+
+
+class GroupFields:
+    """
+    Collection of predefined field sets for group operations.
+
+    See also:
+        `monday.com API Group fields <https://developer.monday.com/api-reference/reference/groups#fields>`_
+    """
+
+    BASIC = Fields('id title')
+    """Returns the following fields:
+    
+    - id: Group's ID
+    - title: Group's title
+    """

@@ -31,18 +31,22 @@ MondayClient instance.
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
-from monday.services.utils import (Fields, build_graphql_query,
-                                   build_query_params_string,
-                                   check_query_result,
-                                   extract_items_page_value,
-                                   paginated_item_request,
-                                   update_data_in_place)
-from monday.types import QueryParams
+from monday.fields.board_fields import BoardFields
+from monday.services.utils.data_modifiers import update_data_in_place
+from monday.services.utils.error_handlers import check_query_result
+from monday.services.utils.fields import Fields
+from monday.services.utils.pagination import (extract_items_page_value,
+                                              paginated_item_request)
+from monday.services.utils.query_builder import (build_graphql_query,
+                                                 build_query_params_string)
+from monday.types.board import Board, UpdateBoard
+from monday.types.item import Item
+from monday.types.query import ColumnFilter, QueryParams
 
 if TYPE_CHECKING:
-    from monday import MondayClient
+    from monday.client import MondayClient
 
 
 class Boards:
@@ -51,61 +55,6 @@ class Boards:
     """
 
     _logger: logging.Logger = logging.getLogger(__name__)
-
-    BASIC_FIELDS = Fields('id name')
-    """Returns the following fields:
-    - id: Board's ID
-    - name: Board's name
-    """
-
-    DETAILED_FIELDS = Fields('id name board_kind description')
-    """Returns the following fields:
-    - id: Board's ID
-    - name: Board's name
-    - board_kind: The type of board
-    - description: Board's description
-    """
-
-    GROUPS_FIELDS = Fields('id name top_group { id title } groups { id title }')
-    """Returns the following fields:
-    - id: Board's ID
-    - name: Board's name
-    - top_group: The group at the top of the board
-        - id: Group's ID
-        - title: Group's title
-    - groups: The board's visible groups
-        - id: Group's ID
-        - title: Group's title
-    """
-
-    ITEMS_FIELDS = Fields('id name items_count items_page { cursor items { id name } }')
-    """
-    Returns the following fields:
-    - id: Board's ID
-    - name: Board's name
-    - items_count: The number of items on the board
-    - items: List of all items on the board
-        - id: Item's ID
-        - name: Item's name
-    """
-
-    USERS_FIELDS = Fields('id name creator { id email name } owners { id email name } subscribers { id email name }')
-    """Returns the following fields:
-    - id: Board's ID
-    - name: Board's name
-    - creator: The board's creator
-        - id: User's ID
-        - email: User's email
-        - name: User's name
-    - owners: The board's owners
-        - id: User's ID
-        - email: User's email
-        - name: User's name
-    - subscribers: The board's subscribers
-        - id: User's ID
-        - email: User's email
-        - name: User's name
-    """
 
     def __init__(
         self,
@@ -117,7 +66,7 @@ class Boards:
         Args:
             client: The MondayClient instance to use for API requests.
         """
-        self.client: 'MondayClient' = client
+        self.client = client
 
     async def query(
         self,
@@ -130,8 +79,8 @@ class Boards:
         page: int = 1,
         state: Literal['active', 'all', 'archived', 'deleted'] = 'active',
         workspace_ids: Optional[Union[int, list[int]]] = None,
-        fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> list[Board]:
         """
         Query boards to return metadata about one or multiple boards.
 
@@ -205,10 +154,22 @@ class Boards:
 
             data = check_query_result(query_result)
 
-            if not data['data']['boards']:
-                break
-
-            boards_data.extend(data['data']['boards'])
+            if paginate_items and 'items_page' in fields:
+                if 'data' in data and 'next_items_page' in data['data']:
+                    # Handle next_items_page response
+                    items_page = data['data']['next_items_page']
+                    for board in boards_data:
+                        if 'items_page' in board:
+                            board['items_page']['items'].extend(items_page['items'])
+                            board['items_page']['cursor'] = items_page['cursor']
+                elif not data['data'].get('boards'):
+                    break
+                else:
+                    boards_data.extend(data['data']['boards'])
+            else:
+                if not data['data'].get('boards'):
+                    break
+                boards_data.extend(data['data']['boards'])
 
             args['page'] += 1
 
@@ -228,7 +189,7 @@ class Boards:
                     del items_page['cursor']
                     update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
 
-            if fields == self.ITEMS_FIELDS:
+            if fields == BoardFields.ITEMS:
                 for board in boards_data:
                     boards_data_items = board.pop('items_page')
                     board['items'] = boards_data_items['items']
@@ -242,8 +203,8 @@ class Boards:
         limit: int = 25,
         group_id: Optional[str] = None,
         paginate_items: bool = True,
-        fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> list[dict[str, list[Item]]]:
         """
         Retrieves a paginated list of items from specified boards.
 
@@ -436,11 +397,11 @@ class Boards:
     async def get_items_by_column_values(
         self,
         board_id: int,
-        columns: list[dict[Literal['column_id', 'column_values'], Union[str, list[str]]]],
+        columns: list[ColumnFilter],
         limit: int = 25,
         paginate_items: bool = True,
-        fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> list[Item]:
         """
         Retrieves items from a board filtered by specific column values.
 
@@ -531,8 +492,8 @@ class Boards:
         board_id: int,
         column_ids: Union[str, list[str]],
         column_fields: Union[str, Fields] = 'id text',
-        item_fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> list[dict[str, Any]]:
+        item_fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> list[Item]:
         """
         Retrieves specific column values for items on a board.
 
@@ -645,8 +606,8 @@ class Boards:
         folder_id: Optional[int] = None,
         template_id: Optional[int] = None,
         workspace_id: Optional[int] = None,
-        fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> Board:
         """
         Create a new board.
 
@@ -728,7 +689,7 @@ class Boards:
         keep_subscribers: bool = False,
         workspace_id: Optional[int] = None,
         fields: Union[str, Fields] = 'board { id }'
-    ) -> dict[str, Any]:
+    ) -> Board:
         """
         Duplicate a board.
 
@@ -796,7 +757,7 @@ class Boards:
         board_id: int,
         board_attribute: Literal['communication', 'description', 'name'],
         new_value: str
-    ) -> dict[str, Any]:
+    ) -> UpdateBoard:
         """
         Update a board.
 
@@ -862,8 +823,8 @@ class Boards:
     async def archive(
         self,
         board_id: int,
-        fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> Board:
         """
         Archive a board.
 
@@ -918,8 +879,8 @@ class Boards:
     async def delete(
         self,
         board_id: int,
-        fields: Union[str, Fields] = BASIC_FIELDS
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = BoardFields.BASIC
+    ) -> Board:
         """
         Delete a board.
 

@@ -30,10 +30,13 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
-from monday.services.utils import (Fields, build_graphql_query,
-                                   check_query_result)
+from monday.fields.user_fields import UserFields
+from monday.services.utils.error_handlers import check_query_result
+from monday.services.utils.fields import Fields
+from monday.services.utils.query_builder import build_graphql_query
+from monday.types.user import User
 
 if TYPE_CHECKING:
     from monday import MondayClient
@@ -56,7 +59,7 @@ class Users:
         Args:
             client: The MondayClient instance to use for API requests.
         """
-        self.client: 'MondayClient' = client
+        self.client = client
 
     async def query(
         self,
@@ -69,8 +72,8 @@ class Users:
         limit: int = 50,
         page: int = 1,
         paginate: bool = True,
-        fields: str = 'id'
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = UserFields.BASIC
+    ) -> list[User]:
         """
         Query users to return metadata about one or multiple users.
 
@@ -121,6 +124,8 @@ class Users:
 
         fields = Fields(fields)
 
+        temp_fields = ['id'] if 'id' not in fields else []
+
         args = {
             'emails': emails,
             'ids': ids,
@@ -130,7 +135,7 @@ class Users:
             'non_active': non_active,
             'limit': limit,
             'page': page,
-            'fields': fields
+            'fields': fields.add_temp_fields(temp_fields)
         }
 
         query_string = build_graphql_query(
@@ -151,14 +156,12 @@ class Users:
                 break
 
             if current_users == last_response:
-                self._logger.debug('Received duplicate page of users, stopping pagination')
                 break
 
             users_data.extend(current_users)
             last_response = current_users
 
             if len(current_users) < limit:
-                self._logger.debug('Received fewer results than limit, reached last page')
                 break
 
             if not paginate:
@@ -175,4 +178,4 @@ class Users:
                 seen_ids.add(user['id'])
                 unique_users.append(user)
 
-        return unique_users
+        return Fields.manage_temp_fields(unique_users, fields, temp_fields)

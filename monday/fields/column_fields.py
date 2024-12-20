@@ -15,17 +15,29 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Monday API client"""
+"""
+Module containing predefined field sets for monday.com column operations.
 
-__version__ = "0.1.62"
-__authors__ = [
-    {"name": "Dan Hollis", "email": "dh@leetsys.com"}
-]
+This module provides a collection of commonly used field combinations when
+querying monday.com columns, making it easier to maintain consistent field
+sets across column operations.
+"""
 
-from monday.client import MondayClient
-from monday.fields.board_fields import BoardFields
-from monday.fields.column_fields import ColumnFields
-from monday.fields.group_fields import GroupFields
-from monday.fields.item_fields import ItemFields
-from monday.fields.user_fields import UserFields
 from monday.services.utils.fields import Fields
+
+
+class ColumnFields:
+    """
+    Collection of predefined field sets for column operations.
+
+    See also:
+        `monday.com API Column fields <https://developer.monday.com/api-reference/reference/columns#fields>`_
+    """
+
+    BASIC = Fields('id name')
+    """Returns the following fields:
+    
+    - id: Column's ID
+    - text: Column's name
+    - value: Column's raw value
+    """

@@ -30,14 +30,20 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
-from monday.services.utils import (Fields, build_graphql_query,
-                                   check_query_result)
+from monday.fields.column_fields import ColumnFields
+from monday.fields.item_fields import ItemFields
+from monday.services.utils.error_handlers import check_query_result
+from monday.services.utils.fields import Fields
+from monday.services.utils.query_builder import build_graphql_query
+from monday.types.column import ColumnType, ColumnValue
+from monday.types.item import Item
+from monday.types.query import ColumnValueDict
 
 if TYPE_CHECKING:
-    from monday import MondayClient
-    from monday.services import Boards
+    from monday.client import MondayClient
+    from monday.services.boards import Boards
 
 
 class Items:
@@ -59,8 +65,8 @@ class Items:
             client: The MondayClient instance to use for API requests.
             boards: The Boards instance to use for board-related operations.
         """
-        self.client: 'MondayClient' = client
-        self.boards: 'Boards' = boards
+        self.client = client
+        self.boards = boards
 
     async def query(
         self,
@@ -69,13 +75,13 @@ class Items:
         page: int = 1,
         exclude_nonactive: bool = False,
         newest_first: bool = False,
-        fields: str = 'id'
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> list[Item]:
         """
         Query items to return metadata about one or multiple items.
 
         Args:
-            item_ids: The ID or list of IDs of the specific items to return.
+            item_ids: The ID or list of IDs of the specific items to return. Maximum of 100 IDs allowed in a single query.
             limit: The maximum number of items to retrieve per page. Must be greater than 0 and less than 100.
             page: The page number at which to start.
             exclude_nonactive: Excludes items that are inactive, deleted, or belong to deleted items.
@@ -161,13 +167,13 @@ class Items:
         self,
         board_id: int,
         item_name: str,
-        column_values: Optional[dict[str, Any]] = None,
+        column_values: Optional[dict[ColumnType, Union[str, ColumnValueDict]]] = None,
         group_id: Optional[str] = None,
         create_labels_if_missing: bool = False,
         position_relative_method: Optional[Literal['before_at', 'after_at']] = None,
         relative_to: Optional[int] = None,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Create a new item on a board.
 
@@ -252,8 +258,8 @@ class Items:
         board_id: int,
         with_updates: bool = False,
         new_item_name: Optional[str] = None,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Duplicate an item.
 
@@ -337,8 +343,8 @@ class Items:
         self,
         item_id: int,
         group_id: str,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Move an item to a different group.
 
@@ -403,8 +409,8 @@ class Items:
         group_id: str,
         columns_mapping: Optional[list[dict[str, str]]] = None,
         subitems_columns_mapping: Optional[list[dict[str, str]]] = None,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Move an item to a different board.
 
@@ -497,8 +503,8 @@ class Items:
     async def archive(
         self,
         item_id: int,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Archive an item.
 
@@ -552,8 +558,8 @@ class Items:
     async def delete(
         self,
         item_id: int,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Delete an item.
 
@@ -607,8 +613,8 @@ class Items:
     async def clear_updates(
         self,
         item_id: int,
-        fields: str = 'id'
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ItemFields.BASIC
+    ) -> Item:
         """
         Clear an item's updates.
 
@@ -663,8 +669,8 @@ class Items:
         self,
         item_id: int,
         column_ids: Optional[list[str]] = None,
-        fields: str = 'id'
-    ) -> list[dict[str, Any]]:
+        fields: Union[str, Fields] = ColumnFields.BASIC
+    ) -> list[ColumnValue]:
         """
         Retrieves a list of column values for a specific item.
 
@@ -740,10 +746,10 @@ class Items:
     async def change_column_values(
         self,
         item_id: int,
-        column_values: dict[str, Any],
+        column_values: dict[ColumnType, Union[str, ColumnValueDict]],
         create_labels_if_missing: bool = False,
-        fields: str = 'id',
-    ) -> dict[str, Any]:
+        fields: Union[str, Fields] = ColumnFields.BASIC,
+    ) -> ColumnValue:
         """
         Change an item's column values.
 

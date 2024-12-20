@@ -292,12 +292,24 @@ class Fields:
         Remove temporary fields from query results that weren't in original fields.
 
         Args:
-            data: Query result data (dict or list)
+            data: Query result data
             original_fields: Space-separated string, set of field names, or Fields object
             temp_fields: List of field names that were temporarily added
 
         Returns:
             Data structure with temporary fields removed if they weren't in original fields
+
+        Example:
+            >>> data = {
+            ...     'id': '123456789',
+            ...     'name': 'Task',
+            ...     'temp_status': 'active',
+            ...     'board': {'id': '987654321', 'temp_field': 'value'}
+            ... }
+            >>> original = 'id name board { id }'
+            >>> temp_fields = ['temp_status', 'temp_field']
+            >>> Fields.manage_temp_fields(data, original, temp_fields)
+            {'id': '123456789', 'name': 'Task', 'board': {'id': '987654321'}}
         """
         # Convert original_fields to Fields object if needed
         if isinstance(original_fields, str):

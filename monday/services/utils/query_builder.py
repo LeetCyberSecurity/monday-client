@@ -22,7 +22,7 @@ import logging
 from typing import Any, Literal
 
 from monday.exceptions import QueryFormatError
-from monday.types import QueryParams
+from monday.types.query import QueryParams
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def convert_numeric_args(args_dict: dict) -> dict:
         if value is None:
             continue
         elif isinstance(value, bool):
-            converted[key] = value
+            converted[key] = value  # Preserve boolean values
         elif isinstance(value, list):
             # Handle lists of values
             converted[key] = []
@@ -98,7 +98,7 @@ def build_graphql_query(
     # Special handling for common field types
     for key, value in args.items():
         key = key.strip()
-        if not value:
+        if value is None:
             continue
         elif isinstance(value, bool):
             processed_args[key] = str(value).lower()
@@ -147,7 +147,7 @@ def build_graphql_query(
 
     fields = processed_args.pop('fields', None)
 
-    args_str = ', '.join(f'{k}: {v}' for k, v in processed_args.items() if v)
+    args_str = ', '.join(f'{k}: {v}' for k, v in processed_args.items() if v is not None)
 
     return f"""
         {query_type} {{
