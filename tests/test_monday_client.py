@@ -45,7 +45,8 @@ async def test_init():
     assert client.url == 'https://api.monday.com/v2'
     assert client.headers == {
         'Content-Type': 'application/json',
-        'Authorization': 'test_api_key'
+        'Authorization': 'test_api_key',
+        'API-Version': '2024-10'
     }
     assert client._rate_limit_seconds == 60
     assert client.max_retries == 4
@@ -162,7 +163,11 @@ async def test_execute_request(client_instance):
     mock_post.assert_called_once_with(
         'https://api.monday.com/v2',
         json={'query': 'test_query'},
-        headers={'Content-Type': 'application/json', 'Authorization': 'test_api_key'}
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'test_api_key',
+            'API-Version': '2024-10'
+        }
     )
 
 

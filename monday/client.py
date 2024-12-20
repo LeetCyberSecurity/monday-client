@@ -57,6 +57,7 @@ class MondayClient:
     Args:
         api_key: The API key for authenticating with the monday.com API.
         url: The endpoint URL for the monday.com API.
+        version: The monday.com API version to use.
         headers: Additional HTTP headers used for API requests.
         max_retries: Maximum amount of retry attempts before raising an error.
 
@@ -92,6 +93,7 @@ class MondayClient:
         self,
         api_key: str,
         url: str = 'https://api.monday.com/v2',
+        version: str = '2024-10',
         headers: Optional[dict[str, Any]] = None,
         max_retries: int = 4
     ):
@@ -101,11 +103,17 @@ class MondayClient:
         Args:
             api_key: The API key for authenticating with the monday.com API.
             url: The endpoint URL for the monday.com API.
+            version: The monday.com API version to use.
             headers: Additional HTTP headers used for API requests.
             max_retries: Maximum amount of retry attempts before raising an error.
         """
         self.url = url
-        self.headers = {'Content-Type': 'application/json', 'Authorization': f'{api_key}', **(headers or {})}
+        self.headers = {
+            'Content-Type': 'application/json',
+            'Authorization': api_key,
+            'API-Version': version,
+            **(headers or {})
+        }
         self.max_retries = int(max_retries)
         self.boards = Boards(self)
         """
