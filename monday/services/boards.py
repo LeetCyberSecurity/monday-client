@@ -143,7 +143,6 @@ class Boards:
         boards_data = []
 
         while True:
-
             query_string = build_graphql_query(
                 'boards',
                 'query',
@@ -151,48 +150,45 @@ class Boards:
             )
 
             query_result = await self.client.post_request(query_string)
-
             data = check_query_result(query_result)
 
-            if paginate_items and 'items_page' in fields:
-                if 'data' in data and 'next_items_page' in data['data']:
+            # Handle pagination and data collection
+            if not data['data'].get('boards'):
+                if paginate_items and 'items_page' in fields and 'next_items_page' in data['data']:
                     # Handle next_items_page response
                     items_page = data['data']['next_items_page']
                     for board in boards_data:
                         if 'items_page' in board:
                             board['items_page']['items'].extend(items_page['items'])
                             board['items_page']['cursor'] = items_page['cursor']
-                elif not data['data'].get('boards'):
-                    break
                 else:
-                    boards_data.extend(data['data']['boards'])
-            else:
-                if not data['data'].get('boards'):
                     break
+            else:
                 boards_data.extend(data['data']['boards'])
 
             args['page'] += 1
 
-        if 'items_page' in fields:
-            if paginate_items:
-                for board in boards_data:
-                    items_page = extract_items_page_value(board)
-                    if not items_page or not items_page['cursor']:
-                        continue
-                    query_result = await paginated_item_request(
-                        self.client,
-                        query_string,
-                        limit=items_page_limit,
-                        cursor=items_page['cursor']
-                    )
-                    items_page['items'].extend(query_result['items'])
-                    del items_page['cursor']
-                    update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
+        # Process items if needed
+        if 'items_page' in fields and paginate_items:
+            for board in boards_data:
+                items_page = extract_items_page_value(board)
+                if not items_page or not items_page['cursor']:
+                    continue
 
+                query_result = await paginated_item_request(
+                    self.client,
+                    query_string,
+                    limit=items_page_limit,
+                    cursor=items_page['cursor']
+                )
+                items_page['items'].extend(query_result['items'])
+                del items_page['cursor']
+                update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
+
+            # Convert items_page to items if using BoardFields.ITEMS
             if fields == BoardFields.ITEMS:
                 for board in boards_data:
-                    boards_data_items = board.pop('items_page')
-                    board['items'] = boards_data_items['items']
+                    board['items'] = board.pop('items_page')['items']
 
         return boards_data
 
