@@ -34,7 +34,7 @@ class ColumnFields:
         `monday.com API Column fields <https://developer.monday.com/api-reference/reference/columns#fields>`_
     """
 
-    BASIC = Fields('id name')
+    BASIC = Fields('id text value')
     """Returns the following fields:
     
     - id: Column's ID
