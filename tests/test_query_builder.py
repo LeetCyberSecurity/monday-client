@@ -23,7 +23,7 @@ from monday.exceptions import QueryFormatError
 from monday.services.utils.query_builder import (build_graphql_query,
                                                  build_query_params_string,
                                                  convert_numeric_args,
-                                                 map_color_to_hex)
+                                                 map_hex_to_color)
 
 
 def test_convert_numeric_args_basic():
@@ -199,20 +199,20 @@ def test_build_query_params_string_empty():
 ])
 def test_map_color_to_hex_valid(color, expected):
     """Test mapping valid color hex codes to names."""
-    assert map_color_to_hex(color) == expected
+    assert map_hex_to_color(color) == expected
 
 
 def test_map_color_to_hex_invalid():
     """Test mapping invalid color hex codes."""
     with pytest.raises(QueryFormatError) as exc_info:
-        map_color_to_hex('#invalid')
-    assert 'Invalid color #invalid' in str(exc_info.value)
+        map_hex_to_color('#invalid')
+    assert 'Invalid color hex #invalid' in str(exc_info.value)
 
 
 def test_map_color_to_hex_unmapped():
     """Test mapping unmapped hex codes."""
     with pytest.raises(QueryFormatError) as exc_info:
-        map_color_to_hex('#cab641')
+        map_hex_to_color('#cab641')
     assert 'currently not mapped' in str(exc_info.value)
 
 

@@ -213,25 +213,25 @@ def build_query_params_string(
     return '{' + ', '.join(parts) + '}' if parts else ''
 
 
-def map_color_to_hex(
-    color: str
+def map_hex_to_color(
+    color_hex: str
 ) -> str:
     """
-    Maps a color string to it's hex value.
+    Maps a color's hex value to its string representation in monday.com.
 
     Args:
-        color: The string representation of the color
+        color_hex: The hex representation of the color
 
     Returns:
-        The hex representation of the color
+        The string representation of the color used by monday.com
     """
 
     unmapped_hex = {
         '#cab641'
     }
 
-    if color in unmapped_hex:
-        raise QueryFormatError(f'{color} is currently not mapped to a string value on monday.com')
+    if color_hex in unmapped_hex:
+        raise QueryFormatError(f'{color_hex} is currently not mapped to a string value on monday.com')
 
     hex_color_map = {
         '#ff5ac4': 'light-pink',
@@ -254,7 +254,7 @@ def map_color_to_hex(
         '#808080': 'trolley-grey'
     }
 
-    if color not in hex_color_map:
-        raise QueryFormatError(f'Invalid color {color}')
+    if color_hex not in hex_color_map:
+        raise QueryFormatError(f'Invalid color hex {color_hex}')
 
-    return hex_color_map[color]
+    return hex_color_map[color_hex]

@@ -31,7 +31,7 @@ class MondayAPIError(Exception):
 
     def __init__(
         self,
-        message,
+        message: str,
         json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)

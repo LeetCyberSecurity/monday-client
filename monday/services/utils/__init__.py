@@ -8,4 +8,4 @@ from monday.services.utils.pagination import (extract_cursor_from_response,
                                               paginated_item_request)
 from monday.services.utils.query_builder import (build_graphql_query,
                                                  build_query_params_string,
-                                                 map_color_to_hex)
+                                                 map_hex_to_color)

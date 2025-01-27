@@ -37,7 +37,7 @@ from monday.fields.item_fields import ItemFields
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
 from monday.services.utils.query_builder import (build_graphql_query,
-                                                 map_color_to_hex)
+                                                 map_hex_to_color)
 from monday.types.group import Group
 from monday.types.item import Item
 
@@ -280,7 +280,7 @@ class Groups:
         fields = Fields(fields)
 
         if attribute == 'color':
-            new_value = map_color_to_hex(new_value)
+            new_value = map_hex_to_color(new_value)
 
         args = {
             'board_id': board_id,
