@@ -11,7 +11,7 @@ authors = [
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "GNU General Public License v3 or later (GPLv3+)" }
+license = { text = "GPL-3.0-only" }
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -43,6 +43,9 @@ dev = [
 "Documentation" = "https://monday-client.readthedocs.io/"
 "Bug Reports" = "https://github.com/LeetCyberSecurity/monday-client/issues"
 "Source" = "https://github.com/LeetCyberSecurity/monday-client"
+
+[tool.setuptools]
+license-files = []
 
 [tool.setuptools.dynamic]
 version = { attr = "monday.__version__" }
