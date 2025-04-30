@@ -533,6 +533,22 @@ class Fields:
             if pos >= len(content):
                 break
 
+            # Handle GraphQL fragment spreads (... on Type)
+            if pos + 3 <= len(content) and content[pos:pos + 3] == '...':
+                fragment_start = pos
+                # Find the end of the fragment (next closing brace or end of string)
+                fragment_end = content.find('}', pos)
+                if fragment_end == -1:
+                    fragment_end = len(content)
+                else:
+                    fragment_end += 1  # Include the closing brace
+
+                # Extract the full fragment
+                fragment = content[fragment_start:fragment_end].strip()
+                result.append(fragment)
+                pos = fragment_end
+                continue
+
             if content[pos] == '{':
                 end_pos, inner_content = self._parse_structure(content, pos + 1)
                 if inner_content:
@@ -602,15 +618,16 @@ class Fields:
                         field_order.append(field)
 
         # Build result using original field order
-        result = []
+        processed_result = []
         for field in field_order:
             args, content = seen_fields.get(field)
             if content is not None:
-                result.append(f"{field}{args} {{ {content} }}")
+                processed_result.append(f"{field}{args} {{ {content} }}")
             else:
-                result.append(f"{field}{args}")
+                processed_result.append(f"{field}{args}")
 
-        return ' '.join(result)
+        # Combine the regular fields with any fragments we found
+        return ' '.join(processed_result + result)
 
     def _deduplicate_nested_fields(self, fields_str: str) -> str:
         """
