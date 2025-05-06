@@ -146,6 +146,15 @@ def build_graphql_query(
             processed_args[key] = value
 
     fields = processed_args.pop('fields', None)
+    if fields:
+        # Ensure fields are properly formatted with their arguments and nested structures
+        fields_str = str(fields)
+        # Remove any extra whitespace between fields
+        fields_str = ' '.join(fields_str.split())
+        # Ensure proper spacing around braces and parentheses
+        fields_str = fields_str.replace('{', ' { ').replace('}', ' } ').replace('(', ' ( ').replace(')', ' ) ')
+        fields_str = ' '.join(fields_str.split())
+        fields = fields_str
 
     args_str = ', '.join(f'{k}: {v}' for k, v in processed_args.items() if v is not None)
 

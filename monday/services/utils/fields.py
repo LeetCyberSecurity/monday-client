@@ -375,40 +375,36 @@ class Fields:
         fields_str = self._deduplicate_nested_fields(fields_str)
 
         fields = []
+        i = 0
         current_field = []
         nested_level = 0
-        i = 0
-        last_parent = None
+        in_args = False
+        args_level = 0
 
         while i < len(fields_str):
             char = fields_str[i]
 
-            if char == '{':
-                if nested_level == 0:
-                    # Get the last field as parent before starting nested content
-                    if fields:
-                        last_parent = fields[-1]
+            if char == '(':
+                if not in_args:
+                    in_args = True
+                args_level += 1
+                current_field.append(char)
+            elif char == ')':
+                args_level -= 1
+                current_field.append(char)
+                if args_level == 0:
+                    in_args = False
+            elif char == '{':
                 nested_level += 1
                 current_field.append(char)
             elif char == '}':
                 nested_level -= 1
                 current_field.append(char)
-
-                if nested_level == 0 and last_parent:
-                    # Complete a nested structure
-                    nested_content = ''.join(current_field).strip()
-                    complete_field = f"{last_parent} {nested_content}"
-                    # Replace the parent field with the complete field
-                    if last_parent in fields:
-                        fields.remove(last_parent)
-                        fields.append(complete_field)
-                    last_parent = None
-                    current_field = []
-            elif char.isspace() and nested_level == 0:
-                # Space outside nested structure
+            elif char.isspace() and nested_level == 0 and not in_args:
+                # We're at a top-level space, complete the current field
                 if current_field:
                     field = ''.join(current_field).strip()
-                    if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
+                    if field:
                         fields.append(field)
                     current_field = []
             else:
@@ -416,10 +412,10 @@ class Fields:
 
             i += 1
 
-        # Handle any remaining field
-        if current_field and nested_level == 0:
+        # Add any remaining field
+        if current_field:
             field = ''.join(current_field).strip()
-            if field and not any(field.startswith(f"{f} ") or f == field for f in fields):
+            if field:
                 fields.append(field)
 
         return fields
@@ -518,116 +514,75 @@ class Fields:
             >>> fields._process_nested_content('id name board { id id name }')
             'id name board { id name }'
         """
+        # Quick check for simple fields without nesting or arguments
+        if not any(char in content for char in '{}()'):
+            # Simple list of fields
+            unique_fields = []
+            for field in content.split():
+                if field not in unique_fields:
+                    unique_fields.append(field)
+            return ' '.join(unique_fields)
+
         content = ' '.join(content.split())
         if not content:
             return ''
 
-        result = []
-        seen_fields = {}  # Store field content
-        field_order = []  # Track original order
-        pos = 0
+        # Handle potential GraphQL fragments first
+        if content.startswith('...'):
+            return content
 
-        while pos < len(content):
-            while pos < len(content) and content[pos].isspace():
-                pos += 1
-            if pos >= len(content):
-                break
+        # Check if this is a field with arguments and/or nested content
+        field_name = content.split(' ')[0].split('(')[0]
+        rest_of_content = content[len(field_name):].strip()
 
-            # Handle GraphQL fragment spreads (... on Type)
-            if pos + 3 <= len(content) and content[pos:pos + 3] == '...':
-                fragment_start = pos
-                # Find the end of the fragment (next closing brace or end of string)
-                fragment_end = content.find('}', pos)
-                if fragment_end == -1:
-                    fragment_end = len(content)
-                else:
-                    fragment_end += 1  # Include the closing brace
+        # Extract arguments if present
+        args = ''
+        if rest_of_content.startswith('('):
+            paren_count = 1
+            i = 1
+            while i < len(rest_of_content) and paren_count > 0:
+                if rest_of_content[i] == '(':
+                    paren_count += 1
+                elif rest_of_content[i] == ')':
+                    paren_count -= 1
+                i += 1
+            args = rest_of_content[:i]
+            rest_of_content = rest_of_content[i:].strip()
 
-                # Extract the full fragment
-                fragment = content[fragment_start:fragment_end].strip()
-                result.append(fragment)
-                pos = fragment_end
-                continue
+        # Extract nested content if present
+        nested_content = ''
+        if rest_of_content.startswith('{'):
+            brace_count = 1
+            i = 1
+            while i < len(rest_of_content) and brace_count > 0:
+                if rest_of_content[i] == '{':
+                    brace_count += 1
+                elif rest_of_content[i] == '}':
+                    brace_count -= 1
+                i += 1
+            nested_content = rest_of_content[:i]
+            rest_of_content = rest_of_content[i:].strip()
 
-            if content[pos] == '{':
-                end_pos, inner_content = self._parse_structure(content, pos + 1)
-                if inner_content:
-                    processed = self._process_nested_content(inner_content)
-                    if processed:
-                        result.append(f"{{ {processed} }}")
-                pos = end_pos
-            else:
-                field_start = pos
-                while pos < len(content) and not content[pos].isspace() and content[pos] != '(' and content[pos] != '{':
-                    pos += 1
-                field = content[field_start:pos]
+        # Process nested content recursively if present
+        if nested_content:
+            # Extract inner content between braces
+            inner_content = nested_content[1:-1].strip()
+            processed_inner = self._process_nested_content(inner_content)
+            nested_content = f"{{ {processed_inner} }}"
 
-                # Handle arguments if present
-                args = ''
-                if pos < len(content) and content[pos] == '(':
-                    args_start = pos
-                    paren_count = 1
-                    pos += 1
-                    while pos < len(content) and paren_count > 0:
-                        if content[pos] == '(':
-                            paren_count += 1
-                        elif content[pos] == ')':
-                            paren_count -= 1
-                        pos += 1
-                    args = content[args_start:pos]
+        # Build the processed field
+        processed_field = field_name
+        if args:
+            processed_field += args
+        if nested_content:
+            processed_field += f" {nested_content}"
 
-                # Skip whitespace to check for structure
-                while pos < len(content) and content[pos].isspace():
-                    pos += 1
+        # Process any remaining content as separate fields
+        if rest_of_content:
+            additional_fields = self._process_nested_content(rest_of_content)
+            return f"{processed_field} {additional_fields}"
 
-                if pos < len(content) and content[pos] == '{':
-                    end_pos, inner_content = self._parse_structure(content, pos + 1)
-                    processed = self._process_nested_content(inner_content)
-
-                    if field in seen_fields:
-                        # Merge structures and arguments
-                        existing = seen_fields[field]
-                        if existing is None:
-                            seen_fields[field] = (args, processed)
-                        else:
-                            existing_args, existing_content = existing
-                            merged_args = self._merge_args(existing_args, args)
-                            if existing_content:
-                                existing_fields = Fields(existing_content)
-                                new_fields = Fields(processed)
-                                merged = existing_fields + new_fields
-                                seen_fields[field] = (merged_args, str(merged))
-                            else:
-                                seen_fields[field] = (merged_args, processed)
-                    else:
-                        seen_fields[field] = (args, processed)
-                        field_order.append(field)
-                    pos = end_pos
-                else:
-                    # Handle field with arguments but no nested structure
-                    if field in seen_fields:
-                        existing = seen_fields[field]
-                        if existing is not None:
-                            existing_args, existing_content = existing
-                            merged_args = self._merge_args(existing_args, args)
-                            seen_fields[field] = (merged_args, existing_content)
-                        else:
-                            seen_fields[field] = (args, None)
-                    else:
-                        seen_fields[field] = (args, None)
-                        field_order.append(field)
-
-        # Build result using original field order
-        processed_result = []
-        for field in field_order:
-            args, content = seen_fields.get(field)
-            if content is not None:
-                processed_result.append(f"{field}{args} {{ {content} }}")
-            else:
-                processed_result.append(f"{field}{args}")
-
-        # Combine the regular fields with any fragments we found
-        return ' '.join(processed_result + result)
+        return processed_field
 
     def _deduplicate_nested_fields(self, fields_str: str) -> str:
         """
@@ -651,7 +606,58 @@ class Fields:
         # Normalize whitespace and remove newlines
         fields_str = ' '.join(fields_str.split())
 
-        return self._process_nested_content(fields_str)
+        # Parse fields as separate units to prevent incorrect nesting
+        top_level_fields = []
+        current_field = []
+        i = 0
+        nested_level = 0
+        in_args = False
+        args_level = 0
+
+        while i < len(fields_str):
+            char = fields_str[i]
+            current_field.append(char)
+
+            if char == '(':
+                if not in_args:
+                    in_args = True
+                args_level += 1
+            elif char == ')':
+                args_level -= 1
+                if args_level == 0:
+                    in_args = False
+            elif char == '{':
+                nested_level += 1
+            elif char == '}':
+                nested_level -= 1
+                # If we're back at top level, this field is complete
+                if nested_level == 0 and not in_args:
+                    # Add space to ensure we capture the entire field
+                    if i + 1 < len(fields_str) and not fields_str[i + 1].isspace():
+                        current_field.append(' ')
+            elif char.isspace() and nested_level == 0 and not in_args:
+                # At a space at top level, check if we have a complete field
+                field = ''.join(current_field).strip()
+                if field:
+                    top_level_fields.append(field)
+                    current_field = []
+
+            i += 1
+
+        # Add the last field if there is any
+        if current_field:
+            field = ''.join(current_field).strip()
+            if field:
+                top_level_fields.append(field)
+
+        # Process each top-level field separately
+        processed_fields = []
+        for field in top_level_fields:
+            processed = self._process_nested_content(field)
+            if processed:
+                processed_fields.append(processed)
+
+        return ' '.join(processed_fields)
 
     def _extract_nested_content(self, field: str) -> str:
         """

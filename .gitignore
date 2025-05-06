@@ -30,3 +30,4 @@ old/
 services/models
 setup.py
 *.csv
+*.zip
