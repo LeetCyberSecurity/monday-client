@@ -23,7 +23,10 @@ MANIFEST
 docs/make.bat
 docs/Makefile
 env-test/
+examples/
 fake_client.py
+item_utils.py
+json_utils.py
 monday-env/
 notes.txt
 old/

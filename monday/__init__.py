@@ -17,7 +17,7 @@
 
 """Monday API client"""
 
-__version__ = "0.1.66"
+__version__ = "0.1.67"
 __authors__ = [
     {"name": "Dan Hollis", "email": "dh@leetsys.com"}
 ]
