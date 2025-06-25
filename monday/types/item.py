@@ -21,7 +21,7 @@ Type definitions for monday.com API item related structures.
 
 from __future__ import annotations
 
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal, NotRequired, Required, TypedDict
 
 from monday.types.asset import Asset
 from monday.types.board import Board
@@ -32,91 +32,70 @@ from monday.types.update import Update
 from monday.types.user import User
 
 
-@runtime_checkable
-class Item(Protocol):
+class Item(TypedDict, total=False):
     """
-    Protocol for monday.com API item structures.
+    Type definitions for monday.com API item structures.
 
     These types correspond to Monday.com's item fields as documented in their API reference:
     https://developer.monday.com/api-reference/reference/items#fields
     """
 
-    @property
-    def assets(self) -> Asset | None:
-        """The item's assets/files"""
+    assets: Asset
+    """The item's assets/files"""
 
-    @property
-    def board(self) -> Board | None:
-        """The board that contains the item"""
+    board: Board
+    """The board that contains the item"""
 
-    @property
-    def column_values(self) -> list[ColumnValue] | None:
-        """The item's column values"""
+    column_values: NotRequired[list[ColumnValue]]
+    """The item's column values"""
 
-    @property
-    def column_values_str(self) -> str:
-        """The item's string-formatted column values"""
+    column_values_str: Required[str]
+    """The item's string-formatted column values"""
 
-    @property
-    def created_at(self) -> str | None:
-        """The item's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
+    created_at: str
+    """The item's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    @property
-    def creator(self) -> User | None:
-        """The item's creator"""
+    creator: User
+    """The item's creator"""
 
-    @property
-    def creator_id(self) -> str:
-        """The unique identifier of the item's creator. Returns ``None`` if the item was created by default on the board."""
+    creator_id: Required[str]
+    """The unique identifier of the item's creator. Returns ``None`` if the item was created by default on the board."""
 
-    @property
-    def email(self) -> str:
-        """The item's email"""
+    email: Required[str]
+    """The item's email"""
 
-    @property
-    def group(self) -> Group | None:
-        """The item's group"""
+    group: Group
+    """The item's group"""
 
-    @property
-    def id(self) -> str:
-        """The item's unique identifier"""
+    id: Required[str]
+    """The item's unique identifier"""
 
-    @property
-    def linked_items(self) -> list[Item]:
-        """The item's linked items"""
+    linked_items: Required[list[Item]]
+    """The item's linked items"""
 
-    @property
-    def name(self) -> str:
-        """The item's name"""
+    name: Required[str]
+    """The item's name"""
 
-    @property
-    def parent_item(self) -> Item | None:
-        """A subitem's parent item. If used for a parent item, it will return ``None``"""
+    parent_item: Item
+    """A subitem's parent item. If used for a parent item, it will return ``None``"""
 
-    @property
-    def relative_link(self) -> str | None:
-        """The item's relative path"""
+    relative_link: str
+    """The item's relative path"""
 
-    @property
-    def state(self) -> Literal['active', 'archived', 'deleted'] | None:
-        """The item's state"""
+    state: Literal['active', 'archived', 'deleted']
+    """The item's state"""
 
-    @property
-    def subitems(self) -> list[Subitem] | None:
-        """The item's subitems"""
+    subitems: list[Subitem]
+    """The item's subitems"""
 
-    @property
-    def subscribers(self) -> list[User]:
-        """The item's subscribers"""
+    subscribers: Required[list[User]]
+    """The item's subscribers"""
 
-    @property
-    def updated_at(self) -> str | None:
-        """The date the item was last updated. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
+    updated_at: str
+    """The date the item was last updated. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    @property
-    def updates(self) -> list[Update] | None:
-        """The item's updates"""
+    updates: list[Update]
+    """The item's updates"""
 
-    @property
-    def url(self) -> str:
-        """The item's URL"""
+    url: Required[str]
+    """The item's URL"""
