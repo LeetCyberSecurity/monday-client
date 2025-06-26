@@ -41,6 +41,7 @@ Example:
     'id name description'
 """
 
+import ast
 import logging
 from typing import Union
 
@@ -77,39 +78,23 @@ class Fields:
     def __init__(self, fields: Union[str, 'Fields']):
         """
         Initialize a Fields instance.
-
-        Args:
-            fields: Either a space-separated string of field names or another Fields instance. Can include nested structures using GraphQL syntax.
-
-        Raises:
-            ValueError: If the field string is malformed
-
-        Example:
-            >>> fields = Fields('id name items { id title }')  # Valid
-            >>> fields = Fields('item { id } { name }')  # Raises ValueError
         """
-        # If fields is already a Fields instance, extract its field list
         if isinstance(fields, Fields):
-            self.fields = fields.fields.copy()  # Make a copy to prevent shared state
+            fields_str = str(fields)
         else:
-            # Validate fields before parsing
-            self._validate_fields(str(fields))
-            # Convert field string to list of individual fields
-            self.fields = self._parse_fields(str(fields))
+            fields_str = str(fields)
+        # Validate fields before parsing/deduplication
+        self._validate_fields(fields_str)
+        # Always deduplicate and merge
+        deduped = self._deduplicate_nested_fields(fields_str)
+        self.fields = self._parse_fields(deduped)
 
     def __str__(self) -> str:
         """
         Convert back to a GraphQL-compatible field string.
-
-        Returns:
-            Space-separated string of fields in their original order.
-
-        Example:
-            >>> fields = Fields('id name items { id title }')
-            >>> str(fields)
-            'id name items { id title }'
         """
-        return ' '.join(self.fields)  # No sorting, maintain order
+        # Output deduplicated, merged field string
+        return ' '.join(self.fields)
 
     def __repr__(self) -> str:
         """
@@ -145,10 +130,10 @@ class Fields:
         if isinstance(other, str):
             other = Fields(other)
 
-        # Concatenate the fields lists
-        combined = self.fields + other.fields
-
-        return Fields(' '.join(combined))
+        # Create a combined string and let the parser handle deduplication
+        # Track the original order by combining the input strings
+        combined_str = str(self) + ' ' + str(other)
+        return Fields(combined_str)
 
     def __sub__(self, other: Union['Fields', str]) -> 'Fields':
         """
@@ -178,7 +163,7 @@ class Fields:
         for field in self.fields:
             # Check if this is a nested field
             if '{' in field:
-                base_field = field.split(' {')[0]
+                base_field = field.split(' {')[0].split(' (')[0]
 
                 # Find corresponding field in other
                 other_field = next((f for f in other.fields if f.startswith(f"{base_field} {{")
@@ -197,7 +182,17 @@ class Fields:
                         # Recursively subtract nested fields
                         diff_nested = self_nested_fields - other_nested_fields
                         if str(diff_nested):  # If there are remaining fields
-                            result_fields.append(f"{base_field} {{ {str(diff_nested)} }}")
+                            # Preserve arguments if they exist
+                            args_start = field.find('(')
+                            args_end = field.find(')')
+                            if args_start != -1 and args_end != -1:
+                                args = field[args_start:args_end + 1]
+                                result_fields.append(f"{base_field}{args} {{ {str(diff_nested)} }}")
+                            else:
+                                result_fields.append(f"{base_field} {{ {str(diff_nested)} }}")
+                    else:
+                        # Other field has no nested content, so remove this field entirely
+                        continue
                 else:
                     result_fields.append(field)
             else:
@@ -274,13 +269,10 @@ class Fields:
             >>> str(new_fields)
             'id name temp1 temp2'
         """
-        # Only add temp fields that aren't already present
-        new_fields = [f for f in temp_fields if f not in self.fields]
-
-        # Add temp fields
-        all_fields = self.fields + new_fields
-
-        return Fields(' '.join(all_fields))
+        # Create a combined string with temp fields and let the parser handle merging
+        temp_str = ' '.join(temp_fields)
+        combined_str = str(self) + ' ' + temp_str
+        return Fields(combined_str)
 
     @staticmethod
     def manage_temp_fields(
@@ -365,59 +357,52 @@ class Fields:
 
         Returns:
             List of normalized field strings
-
-        Example:
-            >>> fields = Fields('')
-            >>> fields._parse_fields('id name board { id title }')
-            ['id', 'name', 'board { id title }']
         """
-        # First deduplicate the entire string
-        fields_str = self._deduplicate_nested_fields(fields_str)
-
         fields = []
         i = 0
-        current_field = []
-        nested_level = 0
-        in_args = False
-        args_level = 0
-
-        while i < len(fields_str):
-            char = fields_str[i]
-
-            if char == '(':
-                if not in_args:
-                    in_args = True
-                args_level += 1
-                current_field.append(char)
-            elif char == ')':
-                args_level -= 1
-                current_field.append(char)
-                if args_level == 0:
-                    in_args = False
-            elif char == '{':
-                nested_level += 1
-                current_field.append(char)
-            elif char == '}':
-                nested_level -= 1
-                current_field.append(char)
-            elif char.isspace() and nested_level == 0 and not in_args:
-                # We're at a top-level space, complete the current field
-                if current_field:
-                    field = ''.join(current_field).strip()
-                    if field:
-                        fields.append(field)
-                    current_field = []
-            else:
-                current_field.append(char)
-
-            i += 1
-
-        # Add any remaining field
-        if current_field:
-            field = ''.join(current_field).strip()
-            if field:
+        n = len(fields_str)
+        while i < n:
+            # Skip whitespace
+            while i < n and fields_str[i].isspace():
+                i += 1
+            if i >= n:
+                break
+            start = i
+            # Read field name (and possible arguments)
+            while i < n and not fields_str[i].isspace() and fields_str[i] != '{':
+                if fields_str[i] == '(':  # handle arguments
+                    depth = 1
+                    i += 1
+                    while i < n and depth > 0:
+                        if fields_str[i] == '(':
+                            depth += 1
+                        elif fields_str[i] == ')':
+                            depth -= 1
+                        i += 1
+                else:
+                    i += 1
+            end_field = i
+            # Skip whitespace after field name
+            while i < n and fields_str[i].isspace():
+                i += 1
+            # If next is a nested block, capture the whole block
+            if i < n and fields_str[i] == '{':
+                brace_depth = 1
+                i += 1
+                nested_start = i
+                while i < n and brace_depth > 0:
+                    if fields_str[i] == '{':
+                        brace_depth += 1
+                    elif fields_str[i] == '}':
+                        brace_depth -= 1
+                    i += 1
+                nested_content = fields_str[nested_start:i - 1].strip()
+                field = f'{fields_str[start:end_field].strip()} {{ {nested_content} }}'
                 fields.append(field)
-
+            else:
+                field = fields_str[start:end_field].strip()
+                if field:
+                    fields.append(field)
         return fields
 
     @staticmethod
@@ -567,6 +552,9 @@ class Fields:
         if nested_content:
             # Extract inner content between braces
             inner_content = nested_content[1:-1].strip()
+            # If the inner content itself starts with a brace, flatten it
+            if inner_content.startswith('{') and inner_content.endswith('}'):
+                inner_content = inner_content[1:-1].strip()
             processed_inner = self._process_nested_content(inner_content)
             nested_content = f"{{ {processed_inner} }}"
 
@@ -585,79 +573,86 @@ class Fields:
         return processed_field
 
     def _deduplicate_nested_fields(self, fields_str: str) -> str:
-        """
-        Deduplicate fields within a nested structure.
+        parsed_fields = self._parse_fields(fields_str)
+        seen = {}
+        for field in parsed_fields:
+            # Extract base field name and arguments
+            base = field.split(' {')[0].strip()
+            args = ''
+            if '(' in base:
+                base_name, args = base.split('(', 1)
+                base_name = base_name.strip()
+                args = '(' + args
+            else:
+                base_name = base
+            # If this field has nested content, recursively deduplicate
+            if '{' in field:
+                nested_content = self._extract_nested_content(field)
+                if base_name in seen:
+                    # Merge arguments
+                    prev_field = seen[base_name]
+                    prev_args = ''
+                    if '(' in prev_field:
+                        _, prev_args = prev_field.split('(', 1)
+                        prev_args = '(' + prev_args.split(')')[0] + ')'
+                    # Pass full field strings for canonical order
+                    merged_args = self._merge_args(args, prev_args, field, prev_field)
+                    # Merge nested content recursively
+                    prev_nested = self._extract_nested_content(prev_field)
+                    merged_nested = self._deduplicate_nested_fields(f'{prev_nested} {nested_content}')
+                    # Rebuild the field
+                    seen[base_name] = f'{base_name}{merged_args} {{ {merged_nested} }}'
+                else:
+                    dedup_nested = self._deduplicate_nested_fields(nested_content)
+                    seen[base_name] = f'{base_name}{args} {{ {dedup_nested} }}'
+            else:
+                if base_name in seen:
+                    # Merge arguments for non-nested fields
+                    prev_field = seen[base_name]
+                    prev_args = ''
+                    if '(' in prev_field:
+                        _, prev_args = prev_field.split('(', 1)
+                        prev_args = '(' + prev_args.split(')')[0] + ')'
+                    # Pass full field strings for canonical order
+                    merged_args = self._merge_args(args, prev_args, field, prev_field)
+                    seen[base_name] = f'{base_name}{merged_args}'
+                else:
+                    seen[base_name] = f'{base_name}{args}'
+        return ' '.join(seen.values())
 
-        Args:
-            fields_str: String containing fields, potentially nested
-
-        Returns:
-            Deduplicated fields string
-
-        Example:
-            >>> fields = Fields('')
-            >>> fields._deduplicate_nested_fields('id id name name board { id id }')
-            'id name board { id }'
-        """
-        # Handle empty or whitespace-only strings
-        if not fields_str.strip():
-            return ''
-
-        # Normalize whitespace and remove newlines
-        fields_str = ' '.join(fields_str.split())
-
-        # Parse fields as separate units to prevent incorrect nesting
-        top_level_fields = []
-        current_field = []
-        i = 0
-        nested_level = 0
-        in_args = False
-        args_level = 0
-
-        while i < len(fields_str):
-            char = fields_str[i]
-            current_field.append(char)
-
-            if char == '(':
-                if not in_args:
-                    in_args = True
-                args_level += 1
-            elif char == ')':
-                args_level -= 1
-                if args_level == 0:
-                    in_args = False
-            elif char == '{':
-                nested_level += 1
-            elif char == '}':
-                nested_level -= 1
-                # If we're back at top level, this field is complete
-                if nested_level == 0 and not in_args:
-                    # Add space to ensure we capture the entire field
-                    if i + 1 < len(fields_str) and not fields_str[i + 1].isspace():
-                        current_field.append(' ')
-            elif char.isspace() and nested_level == 0 and not in_args:
-                # At a space at top level, check if we have a complete field
-                field = ''.join(current_field).strip()
-                if field:
-                    top_level_fields.append(field)
-                    current_field = []
-
-            i += 1
-
-        # Add the last field if there is any
-        if current_field:
-            field = ''.join(current_field).strip()
-            if field:
-                top_level_fields.append(field)
-
-        # Process each top-level field separately
-        processed_fields = []
-        for field in top_level_fields:
-            processed = self._process_nested_content(field)
-            if processed:
-                processed_fields.append(processed)
-
-        return ' '.join(processed_fields)
+    def _merge_field_structures(self, field1: str, field2: str) -> str:
+        base1 = field1.split(' {')[0].strip()
+        base2 = field2.split(' {')[0].strip()
+        # Extract arguments if present
+        args1 = ''
+        args2 = ''
+        if '(' in base1:
+            base1, args1 = base1.split('(', 1)
+            args1 = '(' + args1
+        if '(' in base2:
+            base2, args2 = base2.split('(', 1)
+            args2 = '(' + args2
+        # Use the full field strings for canonical order
+        merged_args = self._merge_args(args1, args2, field1, field2)
+        # Extract nested content
+        nested1 = self._extract_nested_content(field1)
+        nested2 = self._extract_nested_content(field2)
+        # Merge nested content recursively
+        if nested1 and nested2:
+            merged_nested = self._deduplicate_nested_fields(f'{nested1} {nested2}')
+        elif nested1:
+            merged_nested = self._deduplicate_nested_fields(nested1)
+        elif nested2:
+            merged_nested = self._deduplicate_nested_fields(nested2)
+        else:
+            merged_nested = ''
+        # Build result
+        result = base1
+        if merged_args:
+            result += merged_args
+        if merged_nested:
+            result += f' {{ {merged_nested} }}'
+        return result
 
     def _extract_nested_content(self, field: str) -> str:
         """
@@ -800,59 +795,86 @@ class Fields:
 
         return args_dict
 
-    @staticmethod
-    def _format_value(value) -> str:
+    def _extract_arg_keys_and_array_values_in_order(self, field_str: str) -> tuple[list[str], dict[str, list]]:
         """
-        Format a value based on its type for GraphQL arguments.
-
-        Args:
-            value: Value to format (can be string, bool, number, or array)
-
-        Returns:
-            Formatted string representation of the value
-
-        Example:
-            >>> fields = Fields('')
-            >>> fields._format_value([('string', 'test'), ('number', 123)])
-            '["test", 123]'
-            >>> fields._format_value(True)
-            'true'
-            >>> fields._format_value("test")
-            '"test"'
+        Extract the order of argument keys and array values from the full field string.
+        Returns a tuple: (list of argument keys in order, dict of key -> list of array values in order)
         """
-        if isinstance(value, list):
-            formatted = []
-            for val_type, val in value:
-                if val_type == 'string':
-                    formatted.append(f'"{val}"')
-                elif val_type == 'array':
-                    formatted.append(val)
-                else:
-                    formatted.append(str(val))
-            return f"[{', '.join(formatted)}]"
-        if isinstance(value, bool):
-            return str(value).lower()
-        if isinstance(value, str):
-            return f'"{value}"'
-        return str(value)
+        import re
+        arg_keys = []
+        array_values = {}
+        seen_keys = set()
+        # Find all argument lists in the field string
+        for match in re.finditer(r'\(([^)]*)\)', field_str):
+            args_content = match.group(1)
+            # Split by comma, but handle nested brackets/quotes
+            i = 0
+            n = len(args_content)
+            while i < n:
+                # Skip whitespace
+                while i < n and args_content[i].isspace():
+                    i += 1
+                if i >= n:
+                    break
+                # Find key
+                key_start = i
+                while i < n and args_content[i] != ':':
+                    i += 1
+                if i >= n:
+                    break
+                key = args_content[key_start:i].strip()
+                if key and key not in seen_keys:
+                    arg_keys.append(key)
+                    seen_keys.add(key)
+                i += 1  # skip ':'
+                # Now parse the value
+                value_start = i
+                bracket = 0
+                brace = 0
+                paren = 0
+                in_quotes = False
+                while i < n:
+                    c = args_content[i]
+                    if c == '"' and (i == 0 or args_content[i - 1] != '\\'):
+                        in_quotes = not in_quotes
+                    elif not in_quotes:
+                        if c == '[':
+                            bracket += 1
+                        elif c == ']':
+                            bracket -= 1
+                        elif c == '{':
+                            brace += 1
+                        elif c == '}':
+                            brace -= 1
+                        elif c == '(':
+                            paren += 1
+                        elif c == ')':
+                            paren -= 1
+                        elif c == ',' and bracket == 0 and brace == 0 and paren == 0:
+                            break
+                    i += 1
+                value = args_content[value_start:i].strip()
+                # If value is an array, extract its values
+                if value.startswith('['):
+                    # Use a simple eval for array values (safe because only used for order)
+                    try:
+                        arr = ast.literal_eval(value)
+                        if isinstance(arr, list):
+                            if key not in array_values:
+                                array_values[key] = []
+                            for v in arr:
+                                if v not in array_values[key]:
+                                    array_values[key].append(v)
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        pass
+                # Skip comma
+                if i < n and args_content[i] == ',':
+                    i += 1
+        return arg_keys, array_values
 
-    def _merge_args(self, args1: str, args2: str) -> str:
+    def _merge_args(self, args1: str, args2: str, field_str1: str = '', field_str2: str = '') -> str:
         """
-        Merge two sets of GraphQL field arguments.
-
-        Args:
-            args1: First argument string
-            args2: Second argument string
-
-        Returns:
-            Merged argument string with duplicates resolved
-
-        Example:
-            >>> fields = Fields('')
-            >>> fields._merge_args('(limit: 10)', '(offset: 20)')
-            '(limit: 10, offset: 20)'
-            >>> fields._merge_args('(ids: ["1"])', '(ids: ["2"])')
-            '(ids: ["1", "2"])'
+        Merge two sets of GraphQL field arguments, preserving order of first appearance in the full field string.
         """
         if not args1:
             return args2
@@ -863,39 +885,75 @@ class Fields:
         args1_dict = self._parse_args(args1)
         args2_dict = self._parse_args(args2)
 
-        # Merge arguments
+        # Use the order from the concatenated field strings
+        concat_fields = (field_str1 or '') + ' ' + (field_str2 or '')
+        arg_keys, _ = self._extract_arg_keys_and_array_values_in_order(concat_fields)
+        seen = set()
+        ordered_keys = []
+        for key in arg_keys:
+            if key not in seen:
+                ordered_keys.append(key)
+                seen.add(key)
+
+        # Merge arguments using the order of first appearance
         merged = {}
-        for key, value in args1_dict.items():
-            if key in args2_dict:
-                if isinstance(value, list) and isinstance(args2_dict[key], list):
-                    # Combine arrays and remove duplicates while preserving order
-                    merged[key] = []
-                    seen = set()
-                    # Process values from first array
-                    for v in value:
-                        val_key = (v[0], str(v[1]))
-                        if val_key not in seen:
-                            merged[key].append(v)
-                            seen.add(val_key)
-                    # Process values from second array
-                    for v in args2_dict[key]:
-                        val_key = (v[0], str(v[1]))
-                        if val_key not in seen:
-                            merged[key].append(v)
-                            seen.add(val_key)
-                else:
-                    # Keep the last value for non-array arguments
-                    merged[key] = args2_dict[key]
+        for key in ordered_keys:
+            v1 = args1_dict.get(key)
+            v2 = args2_dict.get(key)
+
+            if isinstance(v1, list) and isinstance(v2, list):
+                merged_list = self._merge_arrays_preserving_order(v1, v2, concat_fields, concat_fields, key=str(key))
+                merged[key] = merged_list
+            elif v1 is not None and v2 is not None and v1 != v2:
+                merged[key] = v2
+            elif v1 is not None:
+                merged[key] = v1
             else:
-                merged[key] = value
+                merged[key] = v2
 
-        # Add remaining args from args2
-        for key, value in args2_dict.items():
-            if key not in merged:
-                merged[key] = value
-
-        # Format the merged arguments
         if merged:
-            formatted_args = [f"{key}: {self._format_value(value)}" for key, value in merged.items()]
-            return f"({', '.join(formatted_args)})"
-        return ""
+            formatted_args = [f'{key}: {self._format_value(merged[key])}' for key in ordered_keys]
+            return f'({", ".join(formatted_args)})'
+        return ''
+
+    def _merge_arrays_preserving_order(self, arr1: list, arr2: list, field_str1: str = '', field_str2: str = '', key: str = '') -> list:
+        """
+        Merge two arrays, preserving the order of first appearance in the full field string.
+        """
+        seen = set()
+        merged = []
+        # Use the order from the concatenated field strings
+        concat_fields = (field_str1 or '') + ' ' + (field_str2 or '')
+        _, arr_order = self._extract_arg_keys_and_array_values_in_order(concat_fields)
+        order = arr_order.get(key, [])
+        for v in order:
+            v_key = str(v)
+            if v_key not in seen:
+                merged.append(('string', v) if isinstance(v, str) else ('int', v))
+                seen.add(v_key)
+        # Add any remaining from arr1 and arr2
+        for arr in (arr1, arr2):
+            for v in arr:
+                v_key = str(v[1])
+                if v_key not in seen:
+                    merged.append(v)
+                    seen.add(v_key)
+        return merged
+
+    @staticmethod
+    def _format_value(value) -> str:
+        if isinstance(value, list):
+            formatted = []
+            for val_type, val in value:
+                if val_type == 'string':
+                    formatted.append(f'"{val}"')
+                elif val_type == 'array':
+                    formatted.append(val)
+                else:
+                    formatted.append(str(val))
+            return f'[{", ".join(formatted)}]'
+        if isinstance(value, bool):
+            return str(value).lower()
+        if isinstance(value, str):
+            return f'"{value}"'
+        return str(value)
