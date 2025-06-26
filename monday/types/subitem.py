@@ -19,7 +19,7 @@
 Type definitions for monday.com API subitem related structures.
 """
 
-from typing import TYPE_CHECKING, Literal, Required, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 from monday.types.asset import Asset
 from monday.types.board import Board
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from monday.types.item import Item
 
 
-class Subitem(TypedDict, total=False):
+class Subitem(TypedDict):
     """
     Type definitions for monday.com API subitem structures.
 
@@ -55,19 +55,19 @@ class Subitem(TypedDict, total=False):
     creator: User
     """The subitem's creator"""
 
-    creator_id: Required[str]
+    creator_id: str
     """The unique identifier of the subitem's creator. Returns ``None`` if the item was created by default on the board."""
 
-    email: Required[str]
+    email: str
     """The subitem's email"""
 
     group: Group
     """The subitem's group"""
 
-    id: Required[str]
+    id: str
     """The subitem's unique identifier"""
 
-    name: Required[str]
+    name: str
     """The subitem's name"""
 
     parent_item: 'Item'
@@ -79,7 +79,7 @@ class Subitem(TypedDict, total=False):
     state: Literal['active', 'archived', 'deleted']
     """The subitem's state"""
 
-    subscribers: Required[list[User]]
+    subscribers: list[User]
     """The subitem's subscribers"""
 
     updated_at: str

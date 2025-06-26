@@ -21,10 +21,10 @@ Type definitions for monday.com API account related structures.
 
 from __future__ import annotations
 
-from typing import Literal, Required, TypedDict
+from typing import Literal, TypedDict
 
 
-class Account(TypedDict, total=False):
+class Account(TypedDict):
     """
     Type definitions for monday.com API account structures.
 
@@ -41,16 +41,16 @@ class Account(TypedDict, total=False):
     first_day_of_the_week: Literal['monday', 'sunday']
     """The first day of the week for the account"""
 
-    id: Required[str]
+    id: str
     """The account's unique identifier"""
 
     logo: str
     """The account's logo"""
 
-    name: Required[str]
+    name: str
     """The account's name"""
 
-    plan: Plan
+    plan: Plan | None
     """The account's payment plan. Returns ``None`` for accounts with the multi-product infrastructure"""
 
     products: AccountProduct
@@ -62,14 +62,14 @@ class Account(TypedDict, total=False):
     sign_up_product_kind: str
     """The product the account first signed up to"""
 
-    slug: Required[str]
+    slug: str
     """The account's slug"""
 
     tier: str
     """The account's tier. For accounts with multiple products, this will return the highest tier across all products"""
 
 
-class AccountProduct(TypedDict, total=False):
+class AccountProduct(TypedDict):
     """
     Type definitions for monday.com API account product structures.
 
@@ -79,6 +79,9 @@ class AccountProduct(TypedDict, total=False):
 
     id: int
     """The unique identifier of the account product"""
+
+    default_workspace_id: str
+    """The account product's default workspace ID"""
 
     kind: Literal[
         'core',
@@ -94,7 +97,7 @@ class AccountProduct(TypedDict, total=False):
     """The account product"""
 
 
-class Plan(TypedDict, total=False):
+class Plan(TypedDict):
     """
     Type definitions for monday.com API account plan structures.
 
@@ -102,7 +105,7 @@ class Plan(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/plan#fields
     """
 
-    max_users: Required[int]
+    max_users: int
     """The maximum number of users allowed on the plan. This will be ``0`` for free and developer accounts"""
 
     period: str

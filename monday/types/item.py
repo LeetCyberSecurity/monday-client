@@ -21,7 +21,7 @@ Type definitions for monday.com API item related structures.
 
 from __future__ import annotations
 
-from typing import Literal, NotRequired, Required, TypedDict
+from typing import Literal, TypedDict
 
 from monday.types.asset import Asset
 from monday.types.board import Board
@@ -32,7 +32,7 @@ from monday.types.update import Update
 from monday.types.user import User
 
 
-class Item(TypedDict, total=False):
+class Item(TypedDict):
     """
     Type definitions for monday.com API item structures.
 
@@ -46,10 +46,10 @@ class Item(TypedDict, total=False):
     board: Board
     """The board that contains the item"""
 
-    column_values: NotRequired[list[ColumnValue]]
+    column_values: list[ColumnValue]
     """The item's column values"""
 
-    column_values_str: Required[str]
+    column_values_str: str
     """The item's string-formatted column values"""
 
     created_at: str
@@ -58,22 +58,22 @@ class Item(TypedDict, total=False):
     creator: User
     """The item's creator"""
 
-    creator_id: Required[str]
+    creator_id: str
     """The unique identifier of the item's creator. Returns ``None`` if the item was created by default on the board."""
 
-    email: Required[str]
+    email: str
     """The item's email"""
 
     group: Group
     """The item's group"""
 
-    id: Required[str]
+    id: str
     """The item's unique identifier"""
 
-    linked_items: Required[list[Item]]
+    linked_items: list[Item]
     """The item's linked items"""
 
-    name: Required[str]
+    name: str
     """The item's name"""
 
     parent_item: Item
@@ -88,7 +88,7 @@ class Item(TypedDict, total=False):
     subitems: list[Subitem]
     """The item's subitems"""
 
-    subscribers: Required[list[User]]
+    subscribers: list[User]
     """The item's subscribers"""
 
     updated_at: str
@@ -97,5 +97,5 @@ class Item(TypedDict, total=False):
     updates: list[Update]
     """The item's updates"""
 
-    url: Required[str]
+    url: str
     """The item's URL"""

@@ -21,14 +21,14 @@ Type definitions for monday.com API workspace related structures.
 
 from __future__ import annotations
 
-from typing import Literal, Required, TypedDict
+from typing import Literal, TypedDict
 
 from monday.types.account import AccountProduct
 from monday.types.team import Team
 from monday.types.user import User
 
 
-class Workspace(TypedDict, total=False):
+class Workspace(TypedDict):
     """
     Type definitions for monday.com API workspace structures.
 
@@ -54,7 +54,7 @@ class Workspace(TypedDict, total=False):
     kind: Literal['closed', 'open']
     """The workspace's kind"""
 
-    name: Required[str]
+    name: str
     """The workspace's name"""
 
     owners_subscribers: list[User]
@@ -66,7 +66,7 @@ class Workspace(TypedDict, total=False):
     state: Literal['active', 'archived', 'deleted']
     """The state of the workspace"""
 
-    team_owners_subscribers: list[Required[Team]]
+    team_owners_subscribers: list[Team]
     """The workspace's team owners"""
 
     teams_subscribers: list[Team]
@@ -76,7 +76,7 @@ class Workspace(TypedDict, total=False):
     """The users subscribed to the workspace"""
 
 
-class WorkspaceSettings(TypedDict, total=False):
+class WorkspaceSettings(TypedDict):
     """
     Type definitions for monday.com API workspace settings structures.
 
@@ -88,7 +88,7 @@ class WorkspaceSettings(TypedDict, total=False):
     """The workspace's icon"""
 
 
-class WorkspaceIcon(TypedDict, total=False):
+class WorkspaceIcon(TypedDict):
     """
     Type definitions for monday.com API workspace icon structures.
 

@@ -19,12 +19,12 @@
 Type definitions for monday.com API group related structures.
 """
 
-from typing import Required, TypedDict
+from typing import TypedDict
 
 from monday.types.items_page import ItemsPage
 
 
-class Group(TypedDict, total=False):
+class Group(TypedDict):
     """
     Type definitions for monday.com API group structures.
 
@@ -35,20 +35,20 @@ class Group(TypedDict, total=False):
     archived: bool
     """Returns ``True`` if the group is archived"""
 
-    color: Required[str]
+    color: str
     """The group's color"""
 
     deleted: bool
     """Returns ``True`` if the group is deleted"""
 
-    id: Required[str]
+    id: str
     """The group's unique identifier"""
 
-    items_page: Required[ItemsPage]
+    items_page: ItemsPage
     """The group's items"""
 
-    position: Required[str]
+    position: str
     """The group's position on the board"""
 
-    title: Required[str]
+    title: str
     """The group's title"""

@@ -19,10 +19,10 @@
 Type definitions for monday.com API tag related structures.
 """
 
-from typing import Required, TypedDict
+from typing import TypedDict
 
 
-class Tag(TypedDict, total=False):
+class Tag(TypedDict):
     """
     Type definitions for monday.com API tag structures.
 
@@ -30,11 +30,11 @@ class Tag(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/tags-1#fields
     """
 
-    color: Required[str]
+    color: str
     """The tag's color"""
 
-    id: Required[str]
+    id: str
     """The tag's unique identifier"""
 
-    name: Required[str]
+    name: str
     """The tag's name"""

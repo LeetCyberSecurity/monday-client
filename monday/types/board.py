@@ -21,7 +21,7 @@ Type definitions for monday.com API board related structures.
 
 from __future__ import annotations
 
-from typing import Any, Literal, Required, TypedDict
+from typing import Any, Literal, TypedDict
 
 from monday.types.column import Column
 from monday.types.group import Group
@@ -33,7 +33,7 @@ from monday.types.user import User
 from monday.types.workspace import Workspace
 
 
-class Board(TypedDict, total=False):
+class Board(TypedDict):
     """
     Type definitions for monday.com API board structures.
 
@@ -56,7 +56,7 @@ class Board(TypedDict, total=False):
     communication: dict[str, Any]
     """The board's communication value"""
 
-    creator: Required[User]
+    creator: User
     """The board's creator"""
 
     description: str
@@ -65,7 +65,7 @@ class Board(TypedDict, total=False):
     groups: list[Group]
     """The board's visible groups"""
 
-    id: Required[str]
+    id: str
     """The board's unique identifier"""
 
     item_terminology: str
@@ -77,31 +77,31 @@ class Board(TypedDict, total=False):
     items_page: dict[Literal['items_page'], ItemsPage]
     """The board's items"""
 
-    name: Required[str]
+    name: str
     """The board's name"""
 
-    owners: Required[list[User]]
+    owners: list[User]
     """The board's owners"""
 
-    permissions: Required[Literal['assignee', 'collaborators', 'everyone', 'owners']]
+    permissions: Literal['assignee', 'collaborators', 'everyone', 'owners']
     """The board's permissions"""
 
-    state: Required[Literal['active', 'all', 'archived', 'deleted']]
+    state: Literal['active', 'all', 'archived', 'deleted']
     """The board's state"""
 
-    subscribers: Required[list[User]]
+    subscribers: list[User]
     """The board's subscribers"""
 
     tags: list[Tag]
     """The specific tags on the board"""
 
-    team_owners: Required[list[Team]]
+    team_owners: list[Team]
     """The board's team owners"""
 
-    team_subscribers: Required[list[Team]]
+    team_subscribers: list[Team]
     """The board's team subscribers"""
 
-    top_group: Required[Group]
+    top_group: Group
     """The group at the top of the board"""
 
     type: Literal['board', 'custom_object', 'document', 'sub_items_board']
@@ -113,7 +113,7 @@ class Board(TypedDict, total=False):
     updates: list[Update]
     """The board's updates"""
 
-    url: Required[str]
+    url: str
     """The board's URL"""
 
     views: list[BoardView]
@@ -126,7 +126,7 @@ class Board(TypedDict, total=False):
     """The unique identifier of the board's workspace. Returns ``None`` for the Main workspace."""
 
 
-class ActivityLog(TypedDict, total=False):
+class ActivityLog(TypedDict):
     """
     Type definitions for monday.com API activity log structures.
 
@@ -134,29 +134,29 @@ class ActivityLog(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/activity-logs#fields
     """
 
-    account_id: Required[str]
+    account_id: str
     """The unique identifier of the account that initiated the event"""
 
-    data: Required[str]
+    data: str
     """The item's column values"""
 
-    entity: Required[Literal['board', 'pulse']]
+    entity: Literal['board', 'pulse']
     """The entity of the event that was changed"""
 
-    event: Required[str]
+    event: str
     """The action that took place"""
 
-    id: Required[str]
+    id: str
     """The unique identifier of the activity log event"""
 
-    user_id: Required[str]
+    user_id: str
     """The unique identifier of the user who initiated the event"""
 
-    created_at: Required[str]
+    created_at: str
     """The time of the event in 17-digit unix time"""
 
 
-class BoardView(TypedDict, total=False):
+class BoardView(TypedDict):
     """
     Type definitions for monday.com API board view structures.
 
@@ -164,19 +164,19 @@ class BoardView(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/board-views#fields
     """
 
-    id: Required[str]
+    id: str
     """The view's unique identifier"""
 
-    name: Required[str]
+    name: str
     """The view's name"""
 
-    settings_str: Required[str]
+    settings_str: str
     """The view's settings"""
 
-    type: Required[str]
+    type: str
     """The view's type"""
 
-    view_specific_data_str: Required[str]
+    view_specific_data_str: str
     """Specific board view data (only supported for forms)"""
 
 

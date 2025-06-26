@@ -19,13 +19,13 @@
 Type definitions for monday.com API team related structures.
 """
 
-from typing import TYPE_CHECKING, Required, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from monday.types.user import User
 
 
-class Team(TypedDict, total=False):
+class Team(TypedDict):
     """
     Type definitions for monday.com API team structures.
 
@@ -33,13 +33,13 @@ class Team(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/teams#fields
     """
 
-    id: Required[str]
+    id: str
     """The team's unique identifier"""
 
-    name: Required[str]
+    name: str
     """The team's name"""
 
-    owners: Required[list['User']]
+    owners: list['User']
     """The users that are the team's owners (see :class:`User <monday.types.User>`)"""
 
     picture_url: str

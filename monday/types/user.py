@@ -21,13 +21,13 @@ Type definitions for monday.com API user related structures.
 
 from __future__ import annotations
 
-from typing import Literal, Required, TypedDict
+from typing import Literal, TypedDict
 
 from monday.types.account import Account
 from monday.types.team import Team
 
 
-class User(TypedDict, total=False):
+class User(TypedDict):
     """
     Type definitions for monday.com API user structures.
 
@@ -35,7 +35,7 @@ class User(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/users#fields
     """
 
-    account: Required[Account]
+    account: Account
     """The user's account"""
 
     birthday: str
@@ -50,13 +50,13 @@ class User(TypedDict, total=False):
     current_language: str
     """The user's language"""
 
-    email: Required[str]
+    email: str
     """The user's email"""
 
-    enabled: Required[bool]
+    enabled: bool
     """Returns ``True`` if the user is enabled"""
 
-    id: Required[str]
+    id: str
     """The user's unique identifier"""
 
     is_admin: bool
@@ -86,7 +86,7 @@ class User(TypedDict, total=False):
     mobile_phone: str
     """The user's mobile phone number"""
 
-    name: Required[str]
+    name: str
     """The user's name"""
 
     out_of_office: OutOfOffice
@@ -119,14 +119,14 @@ class User(TypedDict, total=False):
     title: str
     """The user's title"""
 
-    url: Required[str]
+    url: str
     """The user's profile URL"""
 
     utc_hours_diff: int
     """The user's UTC hours difference"""
 
 
-class OutOfOffice(TypedDict, total=False):
+class OutOfOffice(TypedDict):
     """Type definition for monday.com API user out of office settings"""
 
     active: bool

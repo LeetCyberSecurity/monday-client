@@ -21,7 +21,7 @@ Type definitions for monday.com API query related structures.
 
 from __future__ import annotations
 
-from typing import Literal, Required, TypedDict, Union
+from typing import Literal, TypedDict, Union
 
 
 class ColumnFilter(TypedDict):
@@ -49,17 +49,17 @@ class ColumnFilter(TypedDict):
     """The value(s) to filter for. Can be a single string or list of strings"""
 
 
-class OrderBy(TypedDict, total=False):
+class OrderBy(TypedDict):
     """Structure for ordering items in queries."""
 
-    column_id: Required[str]
+    column_id: str
     """The ID of the column to order by"""
 
     direction: Literal['asc', 'desc']
     """The direction to order items. Defaults to 'asc' if not specified"""
 
 
-class QueryParams(TypedDict, total=False):
+class QueryParams(TypedDict):
     """Structure for complex item queries.
 
     Example:
@@ -92,16 +92,16 @@ class QueryParams(TypedDict, total=False):
     """Optional ordering configuration"""
 
 
-class QueryRule(TypedDict, total=False):
+class QueryRule(TypedDict):
     """Structure for defining item query rules."""
 
-    column_id: Required[str]
+    column_id: str
     """The ID of the column to filter on"""
 
     compare_attribute: str
     """The attribute to compare (optional)"""
 
-    compare_value: Required[list[Union[str, int]]]
+    compare_value: list[Union[str, int]]
     """List of values to compare against"""
 
     operator: Literal[
@@ -125,7 +125,7 @@ class PersonOrTeam(TypedDict):
     """The type of the people column"""
 
 
-class ColumnValueDict(TypedDict, total=False):
+class ColumnValueDict(TypedDict):
     """Structure for complex column values that require JSON objects."""
 
     text: str

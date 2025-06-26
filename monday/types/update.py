@@ -19,7 +19,7 @@
 Type definitions for monday.com API update related structures.
 """
 
-from typing import TYPE_CHECKING, Literal, Required, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 from monday.types.asset import Asset
 from monday.types.user import User
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from monday.types.item import Item
 
 
-class Like(TypedDict, total=False):
+class Like(TypedDict):
     """
     Type definitions for monday.com API like structures.
 
@@ -45,7 +45,7 @@ class Like(TypedDict, total=False):
     creator_id: str
     """The unique identifier of the like's creator"""
 
-    id: Required[str]
+    id: str
     """The like's unique identifier"""
 
     reaction_type: Literal[
@@ -64,7 +64,7 @@ class Like(TypedDict, total=False):
     """The like's last updated date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
 
-class Reply(TypedDict, total=False):
+class Reply(TypedDict):
     """
     Type definitions for monday.com API reply structures.
 
@@ -72,7 +72,7 @@ class Reply(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/other-types#reply
     """
 
-    body: Required[str]
+    body: str
     """The reply's HTML-formatted body"""
 
     created_at: str
@@ -84,16 +84,16 @@ class Reply(TypedDict, total=False):
     creator_id: str
     """The unique identifier of the reply's creator"""
 
-    id: Required[str]
+    id: str
     """The reply's unique identifier"""
 
-    kind: Required[str]
+    kind: str
     """The reply's kind"""
 
-    likes: Required[list[Like]]
+    likes: list[Like]
     """The reply's likes"""
 
-    pinned_to_top: Required[list[int]]
+    pinned_to_top: list[int]
     """The reply's pin to top data"""
 
     text_body: str
@@ -103,7 +103,7 @@ class Reply(TypedDict, total=False):
     """The reply's last updated date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
 
-class Watcher(TypedDict, total=False):
+class Watcher(TypedDict):
     """
     Type definitions for monday.com API watcher/viewer structures.
 
@@ -111,17 +111,17 @@ class Watcher(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/viewers#fields
     """
 
-    medium: Required[Literal['email', 'mobile', 'web']]
+    medium: Literal['email', 'mobile', 'web']
     """The medium the user's viewed the update from"""
 
     user: User
     """The user who viewed the update"""
 
-    user_id: Required[str]
+    user_id: str
     """The unique identifier of the user who viewed the update"""
 
 
-class Update(TypedDict, total=False):
+class Update(TypedDict):
     """
     Type definitions for monday.com API update structures.
 
@@ -132,7 +132,7 @@ class Update(TypedDict, total=False):
     assets: list[Asset]
     """The update's assets/files"""
 
-    body: Required[str]
+    body: str
     """The update's HTML-formatted body"""
 
     created_at: str
@@ -144,10 +144,10 @@ class Update(TypedDict, total=False):
     creator_id: str
     """The unique identifier of the update's creator"""
 
-    edited_at: Required[str]
+    edited_at: str
     """The update's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    id: Required[str]
+    id: str
     """The update's unique identifier"""
 
     item: 'Item'
@@ -156,10 +156,10 @@ class Update(TypedDict, total=False):
     item_id: str
     """The update's item ID"""
 
-    likes: Required[list[Like]]
+    likes: list[Like]
     """The update's likes"""
 
-    pinned_to_top: Required[list[int]]
+    pinned_to_top: list[int]
     """The update's pin to top data"""
 
     replies: list[Reply]
@@ -171,5 +171,5 @@ class Update(TypedDict, total=False):
     updated_at: str
     """The date the update was last edited"""
 
-    watchers: Required[Watcher]
+    watchers: Watcher
     """The update's viewers"""

@@ -16,10 +16,10 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Type definitions for monday.com API item related structures.
+Type definitions for monday.com API column related structures.
 """
 
-from typing import Literal, Optional, Required, TypedDict
+from typing import Literal, Optional, TypedDict
 
 ColumnType = Literal[
     'auto_number',
@@ -65,7 +65,7 @@ ColumnType = Literal[
 """ColumnType accepts enum values to specify which column type to filter, read, or update in your query or mutation."""
 
 
-class Column(TypedDict, total=False):
+class Column(TypedDict):
     """
     Type definitions for monday.com API column structures.
 
@@ -79,23 +79,23 @@ class Column(TypedDict, total=False):
     description: str
     """The column's description"""
 
-    id: Required[str]
+    id: str
     """The column's unique identifier"""
 
-    settings_str: Required[str]
+    settings_str: str
     """The column's settings"""
 
-    title: Required[str]
+    title: str
     """The column's title"""
 
-    type: Required[ColumnType]
+    type: ColumnType
     """The column's type"""
 
     width: int
     """The column's width"""
 
 
-class ColumnValue(TypedDict, total=False):
+class ColumnValue(TypedDict):
     """
     Type definitions for monday.com API column value structures.
 
@@ -103,10 +103,10 @@ class ColumnValue(TypedDict, total=False):
     https://developer.monday.com/api-reference/reference/column-values-v2#fields
     """
 
-    column: Required[Column]
+    column: Column
     """The column the value belongs to"""
 
-    id: Required[str]
+    id: str
     """The column's unique identifier"""
 
     text: str
@@ -117,3 +117,6 @@ class ColumnValue(TypedDict, total=False):
 
     value: dict[str, Optional[str]]
     """The column's raw value"""
+
+    display_value: str
+    """The display value when using fragments in query"""
