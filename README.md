@@ -27,8 +27,6 @@ For detailed documentation, visit the [official documentation site](https://mond
 pip install monday-client
 ```
 
-This installs additional tools for testing, code quality, and documentation.
-
 ## Quick Start
 
 ```python
@@ -44,6 +42,11 @@ async def main():
 asyncio.run(main())
 ```
 
+## Common Imports
+
+```python
+from monday import MondayClient, Fields
+```
 
 ## Usage
 
@@ -97,10 +100,6 @@ logging.config.dictConfig(logging_config)
 logger = logging.getLogger(__name__)
 ```
 
-## License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](https://github.com/LeetCyberSecurity/monday-client/blob/main/LICENSE) file for details.
-
 ## Testing
 
 This project uses `pytest` for all testing.
@@ -142,3 +141,15 @@ For development and testing, install with development dependencies:
 ```bash
 pip install -e ".[dev]"
 ```
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/LeetCyberSecurity/monday-client) or see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Support
+
+For questions or support, open an issue on [GitHub Issues](https://github.com/LeetCyberSecurity/monday-client/issues).
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](https://github.com/LeetCyberSecurity/monday-client/blob/main/LICENSE) file for details.
