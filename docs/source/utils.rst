@@ -22,19 +22,10 @@ Utils
 .. automodule:: monday.services.utils
     :member-order: bysource
 
-.. raw:: html
+Fields
+~~~~~~
 
-    <div>
-        <h2 id="fields">Fields<a class="headerlink" href="#fields" 
-            title="Link to this heading" 
-            style="color: #2980b9;"
-            onclick="navigator.clipboard.writeText(window.location.href.split('#')[0] + this.getAttribute('href')); 
-            document.querySelector(this.getAttribute('href')).scrollIntoView({behavior: 'auto'}); 
-            return false;"
-            >&#xf0c1;</a></h2>
-    </div>
-
-.. autoclass:: monday.Fields
+.. automodule:: monday.services.utils.fields
     :members:
     :undoc-members:
 
@@ -48,18 +39,6 @@ Error Handlers
 ~~~~~~~~~~~~~~
 
 .. automodule:: monday.services.utils.error_handlers
-    :member-order: bysource
-
-Item Utils
-~~~~~~~~~~
-
-.. automodule:: monday.services.utils.item_utils
-    :member-order: bysource
-
-JSON Utils
-~~~~~~~~~~
-
-.. automodule:: monday.services.utils.json_utils
     :member-order: bysource
 
 Pagination

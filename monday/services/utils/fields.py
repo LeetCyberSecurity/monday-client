@@ -25,6 +25,9 @@ It handles field parsing, combination, and deduplication while maintaining field
 nested structure integrity.
 
 Example:
+
+.. code-block:: python
+
     Basic field combination:
     >>> fields1 = Fields('id name')
     >>> fields2 = Fields('name description')
@@ -168,7 +171,7 @@ class Fields:
                 base_field = field.split(' {')[0].split(' (')[0]
 
                 # Find corresponding field in other
-                other_field = next((f for f in other.fields if f.startswith(f"{base_field} {{")
+                other_field = next((f for f in other.fields if f.startswith(f'{base_field} {{')
                                     or f == base_field), None)
 
                 if other_field:
@@ -189,9 +192,9 @@ class Fields:
                             args_end = field.find(')')
                             if args_start != -1 and args_end != -1:
                                 args = field[args_start:args_end + 1]
-                                result_fields.append(f"{base_field}{args} {{ {str(diff_nested)} }}")
+                                result_fields.append(f'{base_field}{args} {{ {str(diff_nested)} }}')
                             else:
-                                result_fields.append(f"{base_field} {{ {str(diff_nested)} }}")
+                                result_fields.append(f'{base_field} {{ {str(diff_nested)} }}')
                     else:
                         # Other field has no nested content, so remove this field entirely
                         continue
@@ -313,7 +316,7 @@ class Fields:
         result_fields = []
         for base_field, nested_fields in field_map.items():
             if nested_fields is not None:
-                result_fields.append(f"{base_field} {{ {str(nested_fields)} }}")
+                result_fields.append(f'{base_field} {{ {str(nested_fields)} }}')
             else:
                 result_fields.append(base_field)
 
@@ -474,7 +477,7 @@ class Fields:
         parent_fields = set()
 
         for field in temp_fields:
-            # Look for nested structures like "field { ... }"
+            # Look for nested structures like 'field { ... }'
             if '{' in field:
                 # Extract the base field name before the opening brace
                 base_field = field.split(' {')[0].strip()
@@ -962,19 +965,19 @@ class Fields:
             if inner_content.startswith('{') and inner_content.endswith('}'):
                 inner_content = inner_content[1:-1].strip()
             processed_inner = self._process_nested_content(inner_content)
-            nested_content = f"{{ {processed_inner} }}"
+            nested_content = f'{{ {processed_inner} }}'
 
         # Build the processed field
         processed_field = field_name
         if args:
             processed_field += args
         if nested_content:
-            processed_field += f" {nested_content}"
+            processed_field += f' {nested_content}'
 
         # Process any remaining content as separate fields
         if rest_of_content:
             additional_fields = self._process_nested_content(rest_of_content)
-            return f"{processed_field} {additional_fields}"
+            return f'{processed_field} {additional_fields}'
 
         return processed_field
 

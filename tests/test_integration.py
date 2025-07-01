@@ -44,16 +44,16 @@ from monday.types.item import Item, ItemList
 from monday.types.user import User
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def client():
     """Create a MondayClient instance with API key from environment."""
     api_key = os.getenv('MONDAY_API_KEY')
     if not api_key:
-        pytest.skip("MONDAY_API_KEY environment variable not set")
+        pytest.skip('MONDAY_API_KEY environment variable not set')
     return MondayClient(api_key)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def test_board_id():
     """Get test board ID from environment or use a default."""
     # You can set this in your environment or use a known board ID
@@ -192,7 +192,7 @@ class TestMondayAPITestEnvironment:
             assert isinstance(users, list)
         except Exception as e:
             # If even this fails, the API key might be invalid
-            pytest.fail(f"Basic API access failed: {e}")
+            pytest.fail(f'Basic API access failed: {e}')
 
 
 # Utility functions for integration tests
@@ -220,7 +220,7 @@ class TestMondayAPIMutations:
         """Test creating and deleting an item (requires write permissions)."""
         # Create a unique item name with timestamp to avoid conflicts
         unique_id = str(uuid.uuid4())[:8]
-        item_name = f"Integration Test Item {unique_id}"
+        item_name = f'Integration Test Item {unique_id}'
 
         try:
             # Create the item
@@ -261,22 +261,22 @@ class TestMondayAPIMutations:
                     fields='id name'
                 )
                 # If we get here, the item still exists
-                pytest.fail("Item was not properly deleted")
+                pytest.fail('Item was not properly deleted')
             except Exception:
                 # Expected - item should not be found
                 pass
 
         except Exception as e:
             # If we can't create/delete items, skip the test but log the reason
-            pytest.skip(f"Cannot perform item mutations: {e}")
+            pytest.skip(f'Cannot perform item mutations: {e}')
 
     @pytest.mark.asyncio
     async def test_update_item(self, client, test_board_id):
         """Test updating an existing item."""
         # Create a test item first
         unique_id = str(uuid.uuid4())[:8]
-        original_name = f"Update Test Item {unique_id}"
-        updated_name = f"Updated Item {unique_id}"
+        original_name = f'Update Test Item {unique_id}'
+        updated_name = f'Updated Item {unique_id}'
 
         try:
             # Create the item
@@ -312,13 +312,13 @@ class TestMondayAPIMutations:
             await client.items.delete(item_id=item_id)
 
         except Exception as e:
-            pytest.skip(f"Cannot perform item updates: {e}")
+            pytest.skip(f'Cannot perform item updates: {e}')
 
     @pytest.mark.asyncio
     async def test_duplicate_item(self, client, test_board_id):
         """Test duplicating an item."""
         unique_id = str(uuid.uuid4())[:8]
-        original_name = f"Duplicate Test Item {unique_id}"
+        original_name = f'Duplicate Test Item {unique_id}'
 
         try:
             # Create the original item
@@ -346,13 +346,13 @@ class TestMondayAPIMutations:
             await client.items.delete(item_id=duplicated_item.id)
 
         except Exception as e:
-            pytest.skip(f"Cannot perform item duplication: {e}")
+            pytest.skip(f'Cannot perform item duplication: {e}')
 
     @pytest.mark.asyncio
     async def test_archive_and_restore_item(self, client, test_board_id):
         """Test archiving and restoring an item."""
         unique_id = str(uuid.uuid4())[:8]
-        item_name = f"Archive Test Item {unique_id}"
+        item_name = f'Archive Test Item {unique_id}'
 
         try:
             # Create the item
@@ -383,13 +383,13 @@ class TestMondayAPIMutations:
             await client.items.delete(item_id=item_id)
 
         except Exception as e:
-            pytest.skip(f"Cannot perform item archiving: {e}")
+            pytest.skip(f'Cannot perform item archiving: {e}')
 
     @pytest.mark.asyncio
     async def test_create_and_delete_board(self, client):
         """Test creating and deleting a board (requires workspace permissions)."""
         unique_id = str(uuid.uuid4())[:8]
-        board_name = f"Integration Test Board {unique_id}"
+        board_name = f'Integration Test Board {unique_id}'
 
         try:
             # Create the board
@@ -422,4 +422,4 @@ class TestMondayAPIMutations:
             assert delete_result is not None
 
         except Exception as e:
-            pytest.skip(f"Cannot perform board mutations: {e}")
+            pytest.skip(f'Cannot perform board mutations: {e}')

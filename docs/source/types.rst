@@ -132,20 +132,6 @@ Item Types
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.ItemsPage
-   :no-members:
-   :show-inheritance:
-
-   .. attribute:: cursor
-      :type: str
-
-      cursor for retrieving the next page of items
-
-   .. attribute:: items
-      :type: list[Item]
-
-      List of items
-
 Subitem Types
 """""""""""""
 
@@ -205,17 +191,7 @@ For example:
 
 .. code-block:: python
 
-    @dataclass
-    class OrderBy:
-        column_id: str
-        direction: Literal['asc', 'desc'] = 'asc'
-
-You can create and use these dataclasses to build complex queries:
-
-.. code-block:: python
-
-    from monday.types import QueryParams, QueryRule, OrderBy
-    
+    from monday.services.utils.query_builder import QueryParams, QueryRule, OrderBy
     # Create a query to find items with status "Done" or "In Progress"
     query_params = QueryParams(
         rules=[
@@ -231,26 +207,5 @@ You can create and use these dataclasses to build complex queries:
             direction='desc'
         )
     )
-    
     # Use the query parameters
-    items = await monday_client.items.query(query_params=query_params)
-
-.. autoclass:: monday.types.ColumnFilter
-    :members:
-    :show-inheritance:
-
-.. autoclass:: monday.types.OrderBy
-    :members:
-    :show-inheritance:
-
-.. autoclass:: monday.types.PersonOrTeam
-    :members:
-    :show-inheritance:
-
-.. autoclass:: monday.types.QueryParams
-    :members:
-    :show-inheritance:
-
-.. autoclass:: monday.types.QueryRule
-    :members:
-    :show-inheritance: 
+    items = await monday_client.items.query(query_params=query_params) 

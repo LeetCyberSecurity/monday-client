@@ -26,9 +26,9 @@ import pytest
 from monday.client import MondayClient
 from monday.exceptions import MondayAPIError
 from monday.services.boards import Boards
+from monday.services.utils.query_builder import ColumnFilter
 from monday.types.column import ColumnValue
 from monday.types.item import Item, ItemList
-from monday.types.query import ColumnFilter
 
 
 @pytest.fixture(scope='module')

@@ -36,10 +36,10 @@ from monday.fields.column_fields import ColumnFields
 from monday.fields.item_fields import ItemFields
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
-from monday.services.utils.query_builder import build_graphql_query
+from monday.services.utils.query_builder import (ColumnFilter,
+                                                 build_graphql_query)
 from monday.types.column import ColumnType, ColumnValue
 from monday.types.item import Item
-from monday.types.query import ColumnFilter
 
 if TYPE_CHECKING:
     from monday.client import MondayClient

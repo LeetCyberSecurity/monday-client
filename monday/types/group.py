@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from monday.types.items_page import ItemsPage
+    from monday.services.utils.pagination import ItemsPage
 
 
 @dataclass
@@ -120,7 +120,7 @@ class Group:
     # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Group:
         """Create from dictionary."""
-        from monday.types.items_page import ItemsPage
+        from monday.services.utils.pagination import ItemsPage
 
         return cls(
             archived=data.get('archived', False),

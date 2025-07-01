@@ -39,11 +39,11 @@ from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
 from monday.services.utils.pagination import (extract_items_page_value,
                                               paginated_item_request)
-from monday.services.utils.query_builder import (build_graphql_query,
+from monday.services.utils.query_builder import (ColumnFilter, QueryParams,
+                                                 build_graphql_query,
                                                  build_query_params_string)
 from monday.types.board import Board, UpdateBoard
 from monday.types.item import Item, ItemList
-from monday.types.query import ColumnFilter, QueryParams
 
 if TYPE_CHECKING:
     from monday.client import MondayClient
@@ -123,8 +123,13 @@ class Boards:
 
         fields = Fields(fields)
 
+        # Only add items_page { cursor } if items_page exists but doesn't have arguments
+        # and doesn't already include cursor
         if paginate_items and 'items_page' in fields and 'cursor' not in fields:
-            fields += 'items_page { cursor }'
+            # Check if items_page already has arguments (contains parentheses)
+            fields_str = str(fields)
+            if 'items_page (' not in fields_str:
+                fields += 'items_page { cursor }'
 
         board_ids = [board_ids] if board_ids is not None and not isinstance(board_ids, list) else board_ids
 

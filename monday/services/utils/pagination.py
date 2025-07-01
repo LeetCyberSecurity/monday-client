@@ -18,7 +18,7 @@
 """
 Module for handling pagination in monday.com API requests.
 
-This module provides utilities for handling paginated requests and extracting
+This module provides utilities and types for handling paginated requests and extracting
 pagination-related data from API responses.
 """
 
@@ -34,6 +34,46 @@ if TYPE_CHECKING:
     from monday import MondayClient
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ItemsPage:
+    """
+    Represents a paginated page of Monday.com items with cursor for navigation.
+
+    This dataclass maps to the Monday.com API items page structure, containing
+    a list of items and a cursor for retrieving the next page.
+
+    See also:
+        https://developer.monday.com/api-reference/reference/items#fields
+    """
+
+    items: list[Any] | None = None
+    """List of items"""
+
+    cursor: str = ''
+    """cursor for retrieving the next page of items"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {}
+
+        if self.items:
+            result['items'] = [item.to_dict() if hasattr(item, 'to_dict') else item for item in self.items]
+        if self.cursor:
+            result['cursor'] = self.cursor
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'ItemsPage':
+        """Create from dictionary."""
+        from monday.types.item import Item
+
+        return cls(
+            items=[Item.from_dict(item) if hasattr(Item, 'from_dict') else item for item in data.get('items', [])] if data.get('items') else None,
+            cursor=str(data.get('cursor', ''))
+        )
 
 
 @dataclass

@@ -26,7 +26,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 def update_data_in_place(
     data: Union[dict[str, Any], list[Any]],
     modify_fn: Callable[[dict[str, Any]], None]
-) -> None:
+) -> bool:
     """
     Update items in a nested data structure in place.
 
@@ -38,7 +38,8 @@ def update_data_in_place(
         modify_fn: A function that will be applied to each item.
 
     Returns:
-        None. The function modifies the data structure in place.
+        bool: True if the modification was applied, False otherwise.
+        The function modifies the data structure in place.
     """
     if isinstance(data, dict):
         for key, value in data.items():

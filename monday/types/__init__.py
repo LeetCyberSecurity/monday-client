@@ -5,9 +5,6 @@ from monday.types.board import (ActivityLog, Board, BoardView, UndoData,
 from monday.types.column import Column, ColumnType, ColumnValue
 from monday.types.group import Group, GroupList
 from monday.types.item import Item, ItemList
-from monday.types.items_page import ItemsPage
-from monday.types.query import (ColumnFilter, OrderBy, PersonOrTeam,
-                                QueryParams, QueryRule)
 from monday.types.subitem import Subitem, SubitemList
 from monday.types.tag import Tag
 from monday.types.team import Team

@@ -28,9 +28,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
+    from monday.services.utils.pagination import ItemsPage
     from monday.types.column import Column
     from monday.types.group import Group
-    from monday.types.items_page import ItemsPage
     from monday.types.user import User
     from monday.types.workspace import Workspace
 
@@ -178,9 +178,9 @@ class Board:
     # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Board:
         """Create from dictionary."""
+        from monday.services.utils.pagination import ItemsPage
         from monday.types.column import Column
         from monday.types.group import Group
-        from monday.types.items_page import ItemsPage
         from monday.types.user import User
         from monday.types.workspace import Workspace
 
