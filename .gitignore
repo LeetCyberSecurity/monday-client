@@ -9,6 +9,7 @@ dist/
 downloads/
 eggs/
 .eggs/
+env/
 lib64/
 parts/
 sdist/
@@ -20,6 +21,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 .pytest_cache/
+config.yml
 docs/make.bat
 docs/Makefile
 env-test/
@@ -30,7 +32,10 @@ json_utils.py
 monday-env/
 notes.txt
 old/
+scorecard.py
+scripts/
 services/models
 setup.py
+token/
 *.csv
 *.zip

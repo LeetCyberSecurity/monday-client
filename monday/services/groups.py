@@ -22,7 +22,7 @@ This module provides a comprehensive set of functions and classes for interactin
 with groups on monday.com boards.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions to ensure proper 
+for making API requests. It also utilizes various utility functions to ensure proper
 data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
@@ -38,7 +38,7 @@ from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
 from monday.services.utils.query_builder import (build_graphql_query,
                                                  map_hex_to_color)
-from monday.types.group import Group
+from monday.types.group import Group, GroupList
 from monday.types.item import Item
 
 if TYPE_CHECKING:
@@ -70,11 +70,11 @@ class Groups:
 
     async def query(
         self,
-        board_ids: Union[int, list[int]],
+        board_ids: Union[int | str, list[int | str]],
         group_ids: Optional[Union[str, list[str]]] = None,
         group_name: Optional[Union[str, list[str]]] = None,
         fields: Union[str, Fields] = GroupFields.BASIC
-    ) -> list[dict[Literal['id', 'groups'], Union[str, list[Group]]]]:
+    ) -> list[GroupList]:
         """
         Query groups from boards. Optionally specify the group names and/or IDs to filter by.
 
@@ -85,7 +85,7 @@ class Groups:
             fields: Fields to return from the queried groups.
 
         Returns:
-            List of dictionaries containing group info for each board.
+            List of GroupList dataclass instances containing board IDs and their associated Group dataclass instances.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -98,25 +98,16 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.query(
-                ...     board_id=987654321,
+                >>> result = await monday_client.groups.query(
+                ...     board_ids=987654321,
                 ...     fields='id title'
                 ... )
-                [
-                    {
-                        "id": "987654321",
-                        "groups": [
-                            {
-                                "id": "group",
-                                "title": "Group Name"
-                            },
-                            {
-                                "id": "group_2",
-                                "title": "Group Name"
-                            }
-                        ]
-                    }
-                ]
+                >>> result[0].board_id
+                "987654321"
+                >>> result[0].groups[0].id
+                "group"
+                >>> result[0].groups[0].title
+                "Group Name"
         """
 
         fields = Fields(fields)
@@ -137,28 +128,29 @@ class Groups:
             fields=group_fields
         )
 
-        groups = []
+        groups: list[GroupList] = []
         for board in boards_data:
-            board_groups = board.get('groups', [])
+            board_groups = board.groups if board.groups else []
             if group_name:
                 board_groups = [
                     group for group in board_groups
-                    if group['title'] in (group_name if isinstance(group_name, list) else [group_name])
+                    if group.title in (group_name if isinstance(group_name, list) else [group_name])
                 ]
             if board_groups:  # Only add board if it has matching groups
-                groups.append({
-                    'id': board['id'],
-                    'groups': Fields.manage_temp_fields(board_groups, fields, temp_fields)
-                })
+                groups.append(GroupList(board_id=board.id, groups=board_groups))
 
-        return groups
+        result_data = Fields.manage_temp_fields([g.to_dict() for g in groups], fields, temp_fields)
+        if isinstance(result_data, list):
+            return [GroupList.from_dict(g) for g in result_data]
+        else:
+            return [GroupList.from_dict(result_data)]
 
     async def create(
         self,
-        board_id: int,
+        board_id: int | str,
         group_name: str,
         group_color: Optional[str] = None,
-        relative_to: Optional[int] = None,
+        relative_to: Optional[str] = None,
         position_relative_method: Optional[Literal['before', 'after']] = None,
         fields: Union[str, Fields] = GroupFields.BASIC
     ) -> Group:
@@ -174,7 +166,7 @@ class Groups:
             fields: Fields to return from the created group.
 
         Returns:
-            Dictionary containing info for the new group.
+            Group dataclass instance containing info for the new group.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -187,17 +179,18 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.create(
+                >>> group = await monday_client.groups.create(
                 ...     board_id=987654321,
                 ...     group_name='Group Name',
                 ...     group_color='#0086c0',
                 ...     fields='id title'
                 ... )
-                {
-                    "id": "group",
-                    "title": "Group Name",
-                    "color": "#0086c0"
-                }
+                >>> group.id
+                "group"
+                >>> group.title
+                "Group Name"
+                >>> group.color
+                "#0086c0"
 
         Note:
             See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`.
@@ -224,11 +217,11 @@ class Groups:
 
         data = check_query_result(query_result)
 
-        return data['data']['create_group']
+        return Group.from_dict(data['data']['create_group'])
 
     async def update(
         self,
-        board_id: int,
+        board_id: int | str,
         group_id: str,
         attribute: Literal['color', 'position', 'relative_position_after', 'relative_position_before', 'title'],
         new_value: str,
@@ -245,7 +238,7 @@ class Groups:
             fields: Fields to return from the updated group.
 
         Returns:
-            Dictionary containing info for the updated group.
+            Group dataclass instance containing info for the updated group.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -258,23 +251,24 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.update(
+                >>> group = await monday_client.groups.update(
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     attribute='color',
                 ...     new_value='#7f5347',
                 ...     fields='id title color'
                 ... )
-                {
-                    "id": "group",
-                    "title": "Group Name",
-                    "color": "#7F5347"
-                }
+                >>> group.id
+                "group"
+                >>> group.title
+                "Group Name"
+                >>> group.color
+                "#7F5347"
 
         Note:
             When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`.
 
-            When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below. 
+            When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below.
         """
 
         fields = Fields(fields)
@@ -300,11 +294,11 @@ class Groups:
 
         data = check_query_result(query_result)
 
-        return data['data']['update_group']
+        return Group.from_dict(data['data']['update_group'])
 
     async def duplicate(
         self,
-        board_id: int,
+        board_id: int | str,
         group_id: str,
         add_to_top: bool = False,
         group_title: Optional[str] = None,
@@ -321,7 +315,7 @@ class Groups:
             fields: Fields to return from the duplicated group.
 
         Returns:
-            Dictionary containing info for the duplicated group.
+            Group dataclass instance containing info for the duplicated group.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -335,15 +329,15 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.duplicate(
+                >>> group = await monday_client.groups.duplicate(
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     fields='id title'
                 ... )
-                {
-                    "id": "group_2",
-                    "title": "Duplicate of Group Name"
-                }
+                >>> group.id
+                "group_2"
+                >>> group.title
+                "Duplicate of Group Name"
         """
 
         fields = Fields(fields)
@@ -366,11 +360,11 @@ class Groups:
 
         data = check_query_result(query_result)
 
-        return data['data']['duplicate_group']
+        return Group.from_dict(data['data']['duplicate_group'])
 
     async def archive(
         self,
-        board_id: int,
+        board_id: int | str,
         group_id: str,
         fields: Union[str, Fields] = GroupFields.BASIC
     ) -> Group:
@@ -383,7 +377,7 @@ class Groups:
             fields: Fields to return from the archived group.
 
         Returns:
-            Dictionary containing info for the archived group.
+            Group dataclass instance containing info for the archived group.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -396,16 +390,17 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.archive(
+                >>> group = await monday_client.groups.archive(
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     fields='id title archived'
                 ... )
-                {
-                    "id": "group",
-                    "title": "Group Name",
-                    "archived": true
-                }
+                >>> group.id
+                "group"
+                >>> group.title
+                "Group Name"
+                >>> group.archived
+                True
         """
 
         fields = Fields(fields)
@@ -426,11 +421,11 @@ class Groups:
 
         data = check_query_result(query_result)
 
-        return data['data']['archive_group']
+        return Group.from_dict(data['data']['archive_group'])
 
     async def delete(
         self,
-        board_id: int,
+        board_id: int | str,
         group_id: str,
         fields: Union[str, Fields] = GroupFields.BASIC
     ) -> Group:
@@ -443,7 +438,7 @@ class Groups:
             fields: Fields to return from the deleted group.
 
         Returns:
-            Dictionary containing info for the deleted group.
+            Group dataclass instance containing info for the deleted group.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -456,16 +451,17 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.delete(
+                >>> group = await monday_client.groups.delete(
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     fields='id title deleted'
                 ... )
-                {
-                    "id": "group",
-                    "title": "Group Name",
-                    "deleted": true
-                }
+                >>> group.id
+                "group"
+                >>> group.title
+                "Group Name"
+                >>> group.deleted
+                True
         """
 
         fields = Fields(fields)
@@ -486,11 +482,11 @@ class Groups:
 
         data = check_query_result(query_result)
 
-        return data['data']['delete_group']
+        return Group.from_dict(data['data']['delete_group'])
 
     async def get_items_by_name(
         self,
-        board_id: int,
+        board_id: int | str,
         group_id: str,
         item_name: str,
         item_fields: Union[str, Fields] = ItemFields.BASIC,
@@ -505,7 +501,7 @@ class Groups:
             item_fields: Fields to return from the matched items.
 
         Returns:
-            List of dictionaries containing item info.
+            List of Item dataclass instances containing item info.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -518,22 +514,20 @@ class Groups:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.groups.get_items_by_name(
+                >>> items = await monday_client.groups.get_items_by_name(
                 ...     board_id=987654321,
                 ...     group_id='group',
                 ...     item_name='Item Name',
                 ...     item_fields='id name'
                 ... )
-                [
-                    {
-                        "id": "123456789",
-                        "name": "Item Name"
-                    },
-                    {
-                        "id": "012345678",
-                        "name": "Item Name"
-                    }
-                ]
+                >>> items[0].id
+                "123456789"
+                >>> items[0].name
+                "Item Name"
+                >>> items[1].id
+                "012345678"
+                >>> items[1].name
+                "Item Name"
         """
 
         fields = Fields(f'''
@@ -571,4 +565,4 @@ class Groups:
 
         data = check_query_result(query_result)
 
-        return data['data']['boards'][0]['groups'][0]['items_page']['items']
+        return [Item.from_dict(item) for item in data['data']['boards'][0]['groups'][0]['items_page']['items']]

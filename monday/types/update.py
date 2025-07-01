@@ -16,160 +16,113 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Type definitions for monday.com API update related structures.
+Monday.com API update type definitions and structures.
+
+This module contains dataclasses that represent Monday.com update objects,
+including updates (comments) and their relationships to items and users.
 """
 
-from typing import TYPE_CHECKING, Literal, TypedDict
+from __future__ import annotations
 
-from monday.types.asset import Asset
-from monday.types.user import User
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from monday.types.item import Item
+    from monday.types.asset import Asset
+    from monday.types.user import User
 
 
-class Like(TypedDict):
+@dataclass
+class Update:
     """
-    Type definitions for monday.com API like structures.
+    Represents a Monday.com update (comment) with its content and metadata.
 
-    These types correspond to Monday.com's like fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/other-types#like
-    """
+    This dataclass maps to the Monday.com API update object structure, containing
+    fields like body, creator, replies, and associated assets.
 
-    created_at: str
-    """The like's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
-
-    creator: User
-    """The user that liked the update"""
-
-    creator_id: str
-    """The unique identifier of the like's creator"""
-
-    id: str
-    """The like's unique identifier"""
-
-    reaction_type: Literal[
-        'Clap',
-        'Happy',
-        'Like',
-        'Love',
-        'PlusOne',
-        'Rocks',
-        'Trophy',
-        'Wow'
-    ]
-    """The reaction type"""
-
-    updated_at: str
-    """The like's last updated date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
-
-
-class Reply(TypedDict):
-    """
-    Type definitions for monday.com API reply structures.
-
-    These types correspond to Monday.com's reply fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/other-types#reply
+    See also:
+        https://developer.monday.com/api-reference/reference/updates#fields
     """
 
-    body: str
-    """The reply's HTML-formatted body"""
-
-    created_at: str
-    """The reply's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
-
-    creator: User
-    """The reply's creator"""
-
-    creator_id: str
-    """The unique identifier of the reply's creator"""
-
-    id: str
-    """The reply's unique identifier"""
-
-    kind: str
-    """The reply's kind"""
-
-    likes: list[Like]
-    """The reply's likes"""
-
-    pinned_to_top: list[int]
-    """The reply's pin to top data"""
-
-    text_body: str
-    """The reply's text body"""
-
-    updated_at: str
-    """The reply's last updated date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
-
-
-class Watcher(TypedDict):
-    """
-    Type definitions for monday.com API watcher/viewer structures.
-
-    These types correspond to Monday.com's watcher/viewer fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/viewers#fields
-    """
-
-    medium: Literal['email', 'mobile', 'web']
-    """The medium the user's viewed the update from"""
-
-    user: User
-    """The user who viewed the update"""
-
-    user_id: str
-    """The unique identifier of the user who viewed the update"""
-
-
-class Update(TypedDict):
-    """
-    Type definitions for monday.com API update structures.
-
-    These types correspond to Monday.com's update fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/updates#fields
-    """
-
-    assets: list[Asset]
+    assets: list[Asset] | None = None
     """The update's assets/files"""
 
-    body: str
-    """The update's HTML-formatted body"""
+    body: str = ''
+    """The update's body"""
 
-    created_at: str
+    created_at: str = ''
     """The update's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    creator: User
+    creator: User | None = None
     """The update's creator"""
 
-    creator_id: str
-    """The unique identifier of the update's creator"""
+    creator_id: str = ''
+    """The update's creator unique identifier"""
 
-    edited_at: str
-    """The update's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
-
-    id: str
+    id: str = ''
     """The update's unique identifier"""
 
-    item: 'Item'
-    """The update's :class:`Item <monday.types.Item>`"""
+    item_id: str = ''
+    """The update's item unique identifier"""
 
-    item_id: str
-    """The update's item ID"""
+    parent_id: str = ''
+    """The update's parent unique identifier"""
 
-    likes: list[Like]
-    """The update's likes"""
-
-    pinned_to_top: list[int]
-    """The update's pin to top data"""
-
-    replies: list[Reply]
+    replies: list['Update'] | None = None
     """The update's replies"""
 
-    text_body: str
+    text_body: str = ''
     """The update's text body"""
 
-    updated_at: str
-    """The date the update was last edited"""
+    updated_at: str = ''
+    """The update's last update date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    watchers: Watcher
-    """The update's viewers"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {}
+
+        if self.assets:
+            result['assets'] = [asset.to_dict() if hasattr(asset, 'to_dict') else asset for asset in self.assets]
+        if self.body:
+            result['body'] = self.body
+        if self.created_at:
+            result['created_at'] = self.created_at
+        if self.creator:
+            result['creator'] = self.creator.to_dict()
+        if self.creator_id:
+            result['creator_id'] = self.creator_id
+        if self.id:
+            result['id'] = self.id
+        if self.item_id:
+            result['item_id'] = self.item_id
+        if self.parent_id:
+            result['parent_id'] = self.parent_id
+        if self.replies:
+            result['replies'] = [reply.to_dict() if hasattr(reply, 'to_dict') else reply for reply in self.replies]
+        if self.text_body:
+            result['text_body'] = self.text_body
+        if self.updated_at:
+            result['updated_at'] = self.updated_at
+
+        return result
+
+    @classmethod
+    # pylint: disable=import-outside-toplevel
+    def from_dict(cls, data: dict[str, Any]) -> Update:
+        """Create from dictionary."""
+        from monday.types.asset import Asset
+        from monday.types.user import User
+
+        return cls(
+            assets=[Asset.from_dict(asset) if hasattr(Asset, 'from_dict') else asset for asset in data.get('assets', [])] if data.get('assets') else None,
+            body=str(data.get('body', '')),
+            created_at=str(data.get('created_at', '')),
+            creator=User.from_dict(data['creator']) if data.get('creator') else None,
+            creator_id=str(data.get('creator_id', '')),
+            id=str(data.get('id', '')),
+            item_id=str(data.get('item_id', '')),
+            parent_id=str(data.get('parent_id', '')),
+            replies=[Update.from_dict(reply) if hasattr(Update, 'from_dict') else reply for reply in data.get('replies', [])] if data.get('replies') else None,
+            text_body=str(data.get('text_body', '')),
+            updated_at=str(data.get('updated_at', ''))
+        )

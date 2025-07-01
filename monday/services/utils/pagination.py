@@ -15,10 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-"""Utility functions and classes for handling pagination."""
+"""
+Module for handling pagination in monday.com API requests.
+
+This module provides utilities for handling paginated requests and extracting
+pagination-related data from API responses.
+"""
 
 import json
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from monday.exceptions import PaginationError
@@ -28,6 +34,32 @@ if TYPE_CHECKING:
     from monday import MondayClient
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+@dataclass
+class PaginatedResult:
+    """
+    Type definition for paginated request results.
+
+    This structure is used by pagination utilities to return structured
+    results from paginated API requests.
+    """
+
+    items: list[Any]
+    """The list of items retrieved from the paginated request"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        return {
+            'items': [item.to_dict() if hasattr(item, 'to_dict') else item for item in self.items]
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'PaginatedResult':
+        """Create from dictionary."""
+        return cls(
+            items=data.get('items', [])
+        )
 
 
 def extract_items_page_value(
@@ -162,7 +194,7 @@ async def paginated_item_request(
     query: str,
     limit: int = 25,
     cursor: Optional[str] = None
-) -> dict[str, Any]:
+) -> PaginatedResult:
     """
     Executes a paginated request to retrieve items from monday.com.
 
@@ -173,7 +205,7 @@ async def paginated_item_request(
         cursor: Starting cursor for pagination.
 
     Returns:
-        A dictionary containing the list of retrieved items.
+        PaginatedResult dataclass instance containing the list of retrieved items.
 
     Raises:
         PaginationError: If item extraction fails.
@@ -203,7 +235,7 @@ async def paginated_item_request(
 
         response_data = await client.post_request(paginated_query)
         if 'error' in response_data:
-            return response_data
+            return PaginatedResult(items=[])
         data = check_query_result(response_data)
 
         if 'boards' in data['data']:
@@ -234,4 +266,4 @@ async def paginated_item_request(
         if not cursor:
             break
 
-    return {'items': combined_items}
+    return PaginatedResult(items=combined_items)

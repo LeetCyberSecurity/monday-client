@@ -16,10 +16,16 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Type definitions for monday.com API column related structures.
+Monday.com API column type definitions and structures.
+
+This module contains dataclasses that represent Monday.com column objects,
+including columns, column values, and column types.
 """
 
-from typing import Literal, Optional, TypedDict
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Literal
 
 ColumnType = Literal[
     'auto_number',
@@ -65,58 +71,160 @@ ColumnType = Literal[
 """ColumnType accepts enum values to specify which column type to filter, read, or update in your query or mutation."""
 
 
-class Column(TypedDict):
+@dataclass
+class Column:
     """
-    Type definitions for monday.com API column structures.
+    Represents a Monday.com column with its properties and settings.
 
-    These types correspond to Monday.com's column fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/columns#fields
+    This dataclass maps to the Monday.com API column object structure, containing
+    fields like title, type, settings, and metadata.
+
+    See also:
+        https://developer.monday.com/api-reference/reference/columns#fields
     """
 
-    archived: bool
+    archived: bool = False
     """Returns ``True`` if the column is archived"""
 
-    description: str
+    description: str = ''
     """The column's description"""
 
-    id: str
+    id: str = ''
     """The column's unique identifier"""
 
-    settings_str: str
-    """The column's settings"""
+    settings_str: str = ''
+    """The column's settings as a JSON string"""
 
-    title: str
+    title: str = ''
     """The column's title"""
 
-    type: ColumnType
+    type: str = ''
     """The column's type"""
 
-    width: int
+    width: int = 0
     """The column's width"""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {}
 
-class ColumnValue(TypedDict):
+        if self.archived:
+            result['archived'] = self.archived
+        if self.description:
+            result['description'] = self.description
+        if self.id:
+            result['id'] = self.id
+        if self.settings_str:
+            result['settings_str'] = self.settings_str
+        if self.title:
+            result['title'] = self.title
+        if self.type:
+            result['type'] = self.type
+        if self.width:
+            result['width'] = self.width
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Column:
+        """Create from dictionary."""
+        return cls(
+            archived=data.get('archived', False),
+            description=str(data.get('description', '')),
+            id=str(data.get('id', '')),
+            settings_str=str(data.get('settings_str', '')),
+            title=str(data.get('title', '')),
+            type=str(data.get('type', '')),
+            width=int(data.get('width', 0))
+        )
+
+
+@dataclass
+class ColumnValue:
     """
-    Type definitions for monday.com API column value structures.
+    Represents a Monday.com column value with its data and metadata.
 
-    These types correspond to Monday.com's column fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/column-values-v2#fields
+    This dataclass maps to the Monday.com API column value object structure, containing
+    fields like text, value, type, and associated column metadata.
+
+    See also:
+        https://developer.monday.com/api-reference/reference/column-values#fields
     """
 
-    column: Column
-    """The column the value belongs to"""
+    additional_info: str = ''
+    """The column value's additional info"""
 
-    id: str
-    """The column's unique identifier"""
+    id: str = ''
+    """The column value's unique identifier"""
 
-    text: str
-    """The text representation of the column's value. Not every column supports the text value."""
+    text: str = ''
+    """The column value's text"""
 
-    type: ColumnType
-    """The column's type"""
+    title: str = ''
+    """The column value's title"""
 
-    value: dict[str, Optional[str]]
-    """The column's raw value"""
+    type: str = ''
+    """The column value's type"""
 
-    display_value: str
-    """The display value when using fragments in query"""
+    value: str = ''
+    """The column value's value"""
+
+    # Additional fields for complex column value structures
+    column: Column | None = None
+    """The column metadata associated with this value"""
+
+    display_value: str = ''
+    """Display value for fragment queries like ... on MirrorValue, ... on BoardRelationValue"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {}
+
+        if self.additional_info:
+            result['additional_info'] = self.additional_info
+        if self.id:
+            result['id'] = self.id
+        if self.text:
+            result['text'] = self.text
+        if self.title:
+            result['title'] = self.title
+        if self.type:
+            result['type'] = self.type
+        if self.value:
+            result['value'] = self.value
+        if self.column:
+            result['column'] = self.column.to_dict()
+        if self.display_value:
+            result['display_value'] = self.display_value
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ColumnValue:
+        """Create from dictionary."""
+        # Handle column metadata if present
+        column_data = data.get('column')
+        column = Column.from_dict(column_data) if column_data else None
+
+        return cls(
+            additional_info=str(data.get('additional_info', '')),
+            id=str(data.get('id', '')),
+            text=str(data.get('text', '')),
+            title=str(data.get('title', '')),
+            type=str(data.get('type', '')),
+            value=str(data.get('value', '')),
+            column=column,
+            display_value=str(data.get('display_value', ''))
+        )
+
+    def get_column_title(self) -> str:
+        """Get the column title, either from column metadata or fallback to title field."""
+        if self.column and self.column.title:
+            return self.column.title
+        return self.title
+
+    def get_display_value(self) -> str:
+        """Get the display value, with fallback to text."""
+        if self.display_value:
+            return self.display_value
+        return self.text

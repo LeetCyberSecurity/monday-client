@@ -1,4 +1,4 @@
-# This file is part of monday-client.
+# This file is part of monday.com API query related structures.
 #
 # Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
 #
@@ -17,29 +17,35 @@
 
 """
 Type definitions for monday.com API query related structures.
+
+These types help construct queries for the Monday.com API, including filters,
+ordering, and complex query rules.
 """
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict, Union
+from dataclasses import dataclass, field
+from typing import Any, Literal, Union
 
 
-class ColumnFilter(TypedDict):
-    """Structure for filtering items by column values.
+@dataclass
+class ColumnFilter:
+    """
+    Structure for filtering items by column values.
 
     Example:
         .. code-block:: python
 
-            column_filter = {
-                'column_id': 'status',
-                'column_values': ['Done', 'In Progress']
-            }
+            column_filter = ColumnFilter(
+                column_id='status',
+                column_values=['Done', 'In Progress']
+            )
 
             # Or with a single value
-            column_filter = {
-                'column_id': 'text',
-                'column_values': 'Search term'
-            }
+            column_filter = ColumnFilter(
+                column_id='text',
+                column_values='Search term'
+            )
     """
 
     column_id: str
@@ -48,58 +54,54 @@ class ColumnFilter(TypedDict):
     column_values: Union[str, list[str]]
     """The value(s) to filter for. Can be a single string or list of strings"""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        return {
+            'column_id': self.column_id,
+            'column_values': self.column_values
+        }
 
-class OrderBy(TypedDict):
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ColumnFilter:
+        """Create from dictionary."""
+        return cls(
+            column_id=str(data['column_id']),
+            column_values=data['column_values']
+        )
+
+
+@dataclass
+class OrderBy:
     """Structure for ordering items in queries."""
 
     column_id: str
     """The ID of the column to order by"""
 
-    direction: Literal['asc', 'desc']
+    direction: Literal['asc', 'desc'] = 'asc'
     """The direction to order items. Defaults to 'asc' if not specified"""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        return {
+            'column_id': self.column_id,
+            'direction': self.direction
+        }
 
-class QueryParams(TypedDict):
-    """Structure for complex item queries.
-
-    Example:
-        .. code-block:: python
-
-            query_params = {
-                'rules': [{
-                    'column_id': 'status',
-                    'compare_value': ['Done', 'In Progress'],
-                    'operator': 'any_of'
-                }],
-                'operator': 'and',
-                'order_by': {
-                    'column_id': 'date',
-                    'direction': 'desc'
-                }
-            }
-    """
-
-    ids: list[int]
-    """The specific item IDs to return. The maximum is 100."""
-
-    rules: list[QueryRule]
-    """List of query rules to apply"""
-
-    operator: Literal['and', 'or']
-    """How to combine multiple rules. Defaults to 'and' if not specified"""
-
-    order_by: OrderBy
-    """Optional ordering configuration"""
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> OrderBy:
+        """Create from dictionary."""
+        return cls(
+            column_id=str(data['column_id']),
+            direction=data.get('direction', 'asc')
+        )
 
 
-class QueryRule(TypedDict):
+@dataclass
+class QueryRule:
     """Structure for defining item query rules."""
 
     column_id: str
     """The ID of the column to filter on"""
-
-    compare_attribute: str
-    """The attribute to compare (optional)"""
 
     compare_value: list[Union[str, int]]
     """List of values to compare against"""
@@ -111,34 +113,120 @@ class QueryRule(TypedDict):
         'between', 'not_contains_text', 'contains_text',
         'contains_terms', 'starts_with', 'ends_with',
         'within_the_next', 'within_the_last'
-    ]
+    ] = 'any_of'
     """The comparison operator to use. Defaults to ``any_of`` if not specified"""
 
+    compare_attribute: str = ''
+    """The attribute to compare (optional)"""
 
-class PersonOrTeam(TypedDict):
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {
+            'column_id': self.column_id,
+            'compare_value': self.compare_value,
+            'operator': self.operator
+        }
+        if self.compare_attribute:
+            result['compare_attribute'] = self.compare_attribute
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> QueryRule:
+        """Create from dictionary."""
+        # Handle cases where column_id might not be present but compare_attribute is
+        column_id = data.get('column_id', '')
+        if not column_id and 'compare_attribute' in data:
+            # Use compare_attribute as column_id if column_id is not present
+            column_id = data['compare_attribute']
+
+        return cls(
+            column_id=str(column_id),
+            compare_value=data['compare_value'],
+            operator=data.get('operator', 'any_of'),
+            compare_attribute=data.get('compare_attribute', '')
+        )
+
+
+@dataclass
+class QueryParams:
+    """
+    Structure for complex item queries.
+
+    Example:
+        .. code-block:: python
+
+            query_params = QueryParams(
+                rules=[
+                    QueryRule(
+                        column_id='status',
+                        compare_value=['Done', 'In Progress'],
+                        operator='any_of'
+                    )
+                ],
+                operator='and',
+                order_by=OrderBy(
+                    column_id='date',
+                    direction='desc'
+                )
+            )
+    """
+
+    rules: list[QueryRule] = field(default_factory=list)
+    """List of query rules to apply"""
+
+    operator: Literal['and', 'or'] = 'and'
+    """How to combine multiple rules. Defaults to 'and' if not specified"""
+
+    order_by: OrderBy | None = None
+    """Optional ordering configuration"""
+
+    ids: list[int] = field(default_factory=list)
+    """The specific item IDs to return. The maximum is 100."""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {
+            'rules': [rule.to_dict() for rule in self.rules],
+            'operator': self.operator
+        }
+        if self.order_by:
+            result['order_by'] = self.order_by.to_dict()
+        if self.ids:
+            result['ids'] = self.ids
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> QueryParams:
+        """Create from dictionary."""
+        return cls(
+            rules=[QueryRule.from_dict(rule) for rule in data.get('rules', [])],
+            operator=data.get('operator', 'and'),
+            order_by=OrderBy.from_dict(data['order_by']) if data.get('order_by') else None,
+            ids=data.get('ids', [])
+        )
+
+
+@dataclass
+class PersonOrTeam:
     """Structure for person/team references in column values."""
 
-    id: int
+    id: str
     """Unique identifier of the person or team"""
 
     kind: Literal['person', 'team']
     """The type of the people column"""
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        return {
+            'id': self.id,
+            'kind': self.kind
+        }
 
-class ColumnValueDict(TypedDict):
-    """Structure for complex column values that require JSON objects."""
-
-    text: str
-    """Text value for text-based columns"""
-
-    index: int
-    """Index value for status columns"""
-
-    label: str
-    """Label value for status columns"""
-
-    date: str
-    """Date string in YYYY-MM-DD format"""
-
-    personsAndTeams: list[PersonOrTeam]
-    """List of people/teams for people columns"""
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> PersonOrTeam:
+        """Create from dictionary."""
+        return cls(
+            id=str(data['id'], ''),
+            kind=data['kind']
+        )

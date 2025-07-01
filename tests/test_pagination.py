@@ -168,6 +168,7 @@ def test_extract_items_from_query_simple():
     }
     '''
     result = extract_items_from_query(query)
+    assert result is not None
     assert 'items {' in result
     assert 'id' in result
     assert 'name' in result
@@ -190,6 +191,7 @@ def test_extract_items_from_query_complex():
     }
     '''
     result = extract_items_from_query(query)
+    assert result is not None
     assert 'items {' in result
     assert 'column_values' in result
 
@@ -242,7 +244,11 @@ async def test_paginated_item_request_single_page():
         limit=25
     )
 
-    assert result == {'items': [{'board_id': '1', 'items': [{'id': 1}, {'id': 2}]}]}
+    assert len(result.items) == 1
+    assert result.items[0]['board_id'] == '1'
+    assert len(result.items[0]['items']) == 2
+    assert result.items[0]['items'][0]['id'] == 1
+    assert result.items[0]['items'][1]['id'] == 2
     assert mock_client.post_request.await_count == 1
 
 
@@ -281,7 +287,11 @@ async def test_paginated_item_request_multiple_pages():
         limit=25
     )
 
-    assert result == {'items': [{'board_id': '1', 'items': [{'id': 1}, {'id': 2}]}]}
+    assert len(result.items) == 1
+    assert result.items[0]['board_id'] == '1'
+    assert len(result.items[0]['items']) == 2
+    assert result.items[0]['items'][0]['id'] == 1
+    assert result.items[0]['items'][1]['id'] == 2
     assert mock_client.post_request.await_count == 2
 
 
@@ -299,7 +309,7 @@ async def test_paginated_item_request_error():
         limit=25
     )
 
-    assert result == {'error': 'Some error occurred'}
+    assert len(result.items) == 0
     assert mock_client.post_request.await_count == 1
 
 
@@ -348,7 +358,8 @@ async def test_paginated_item_request_with_custom_cursor():
         cursor='custom_cursor'
     )
 
-    assert result == {'items': [{'id': 1}]}
+    assert len(result.items) == 1
+    assert result.items[0]['id'] == 1
     assert mock_client.post_request.await_count == 1
 
 

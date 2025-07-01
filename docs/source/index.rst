@@ -78,10 +78,9 @@ This is the official documentation for the `monday-client <https://github.com/Le
 
 .. toctree::
    :maxdepth: 1
-   :caption: Type Definitions
+   :caption: Types
 
-   query_types
-   return_types
+   types
 
 .. toctree::
    :maxdepth: 1

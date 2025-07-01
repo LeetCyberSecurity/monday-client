@@ -16,25 +16,57 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Type definitions for monday.com API tag related structures.
+Monday.com API tag type definitions and structures.
+
+This module contains dataclasses that represent Monday.com tag objects,
+including tags with their colors and names for item categorization.
 """
 
-from typing import TypedDict
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
 
 
-class Tag(TypedDict):
+@dataclass
+class Tag:
     """
-    Type definitions for monday.com API tag structures.
+    Represents a Monday.com tag with its color and name.
 
-    These types correspond to Monday.com's tag fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/tags-1#fields
+    This dataclass maps to the Monday.com API tag object structure, containing
+    fields like name, color, and unique identifier.
+
+    See also:
+        https://developer.monday.com/api-reference/reference/tags#fields
     """
 
-    color: str
+    color: str = ''
     """The tag's color"""
 
-    id: str
+    id: str = ''
     """The tag's unique identifier"""
 
-    name: str
+    name: str = ''
     """The tag's name"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {}
+
+        if self.color:
+            result['color'] = self.color
+        if self.id:
+            result['id'] = self.id
+        if self.name:
+            result['name'] = self.name
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Tag:
+        """Create from dictionary."""
+        return cls(
+            color=str(data.get('color', '')),
+            id=str(data.get('id', '')),
+            name=str(data.get('name', ''))
+        )

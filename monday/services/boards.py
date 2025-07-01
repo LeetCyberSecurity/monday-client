@@ -22,7 +22,7 @@ This module provides a comprehensive set of functions and classes for interactin
 with monday.com boards.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions to ensure proper 
+for making API requests. It also utilizes various utility functions to ensure proper
 data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
@@ -31,7 +31,7 @@ MondayClient instance.
 
 import json
 import logging
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 from monday.fields.board_fields import BoardFields
 from monday.services.utils.data_modifiers import update_data_in_place
@@ -42,7 +42,7 @@ from monday.services.utils.pagination import (extract_items_page_value,
 from monday.services.utils.query_builder import (build_graphql_query,
                                                  build_query_params_string)
 from monday.types.board import Board, UpdateBoard
-from monday.types.item import Item
+from monday.types.item import Item, ItemList
 from monday.types.query import ColumnFilter, QueryParams
 
 if TYPE_CHECKING:
@@ -70,7 +70,7 @@ class Boards:
 
     async def query(
         self,
-        board_ids: Optional[Union[int, list[int]]] = None,
+        board_ids: Optional[Union[int | str, list[int | str]]] = None,
         paginate_items: bool = True,
         board_kind: Literal['private', 'public', 'share', 'all'] = 'all',
         order_by: Literal['created', 'used'] = 'created',
@@ -78,7 +78,7 @@ class Boards:
         boards_limit: int = 25,
         page: int = 1,
         state: Literal['active', 'all', 'archived', 'deleted'] = 'active',
-        workspace_ids: Optional[Union[int, list[int]]] = None,
+        workspace_ids: Optional[Union[int | str, list[int | str]]] = None,
         fields: Union[str, Fields] = BoardFields.BASIC
     ) -> list[Board]:
         """
@@ -97,7 +97,7 @@ class Boards:
             fields: Fields to return from the queried board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            List of dictionaries containing queried board data.
+            List of Board dataclass instances containing queried board data.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -109,17 +109,16 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.query(
+                >>> boards = await monday_client.boards.query(
                 ...     board_ids=987654321,
                 ...     fields='id name state'
                 ... )
-                [
-                    {
-                        "id": "987654321",
-                        "name": "Board 1",
-                        "state": "active"
-                    }
-                ]
+                >>> boards[0].id
+                "987654321"
+                >>> boards[0].name
+                "Board 1"
+                >>> boards[0].state
+                "active"
         """
 
         fields = Fields(fields)
@@ -127,7 +126,7 @@ class Boards:
         if paginate_items and 'items_page' in fields and 'cursor' not in fields:
             fields += 'items_page { cursor }'
 
-        board_ids = [board_ids] if not isinstance(board_ids, list) else board_ids
+        board_ids = [board_ids] if board_ids is not None and not isinstance(board_ids, list) else board_ids
 
         args = {
             'ids': board_ids,
@@ -181,7 +180,9 @@ class Boards:
                     limit=items_page_limit,
                     cursor=items_page['cursor']
                 )
-                items_page['items'].extend(query_result['items'])
+                # Extract items from PaginatedResult
+                new_items = query_result.items if query_result.items else []
+                items_page['items'].extend(new_items)
                 del items_page['cursor']
                 update_data_in_place(board, lambda ip, items_page=items_page: ip.update(items_page))
 
@@ -190,30 +191,32 @@ class Boards:
                 for board in boards_data:
                     board['items'] = board.pop('items_page')['items']
 
-        return boards_data
+        # Convert raw dictionaries to Board dataclass instances
+        boards = [Board.from_dict(board) for board in boards_data]
+        return boards
 
     async def get_items(
         self,
-        board_ids: Union[int, list[int]],
-        query_params: Optional[QueryParams] = None,
+        board_ids: Union[int | str, list[int | str]],
+        query_params: Optional[Union[QueryParams, dict[str, Any]]] = None,
         limit: int = 25,
         group_id: Optional[str] = None,
         paginate_items: bool = True,
         fields: Union[str, Fields] = BoardFields.BASIC
-    ) -> list[dict[str, list[Item]]]:
+    ) -> list[ItemList]:
         """
         Retrieves a paginated list of items from specified boards.
 
         Args:
             board_ids: The ID or list of IDs of the boards from which to retrieve items.
-            query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query. Use this to customize the results based on specific criteria.
+            query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query. Use this to customize the results based on specific criteria. Can be a QueryParams object or a dictionary.
             limit: The maximum number of items to retrieve per page.
             group_id: Only retrieve items from the specified group ID.
             paginate_items: Whether to paginate items.
             fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            A list of dictionaries containing the board IDs and their combined items retrieved.
+            A list of ItemList dataclass instances containing the board IDs and their combined items retrieved.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -226,7 +229,7 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.get_items(
+                >>> item_lists = await monday_client.boards.get_items(
                 ...     board_ids=987654321,
                 ...     query_params={
                 ...         'rules': [
@@ -244,26 +247,12 @@ class Boards:
                 ...     },
                 ...     fields='id column_values { id text }'   
                 ... )
-                [
-                    {
-                        "id": "987654321",
-                        "items": [
-                            {
-                                "id": "123456789",
-                                "column_values": [
-                                    {
-                                        "id": "status",
-                                        "text": "Done"
-                                    },
-                                    {
-                                        "id": "status_2",
-                                        "text": "Working on it"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+                >>> item_lists[0].board_id
+                "987654321"
+                >>> item_lists[0].items[0].id
+                "123456789"
+                >>> item_lists[0].items[0].column_values[0].text
+                "Done"
 
         Note:
             The ``query_params`` argument allows complex filtering and sorting of items.
@@ -355,22 +344,26 @@ class Boards:
             See the `monday.com API documentation (items page) <https://developer.monday.com/api-reference/reference/items-page#queries>`_ for more details on query params.
         """
 
+        # Convert dictionary to QueryParams object if needed
+        if isinstance(query_params, dict):
+            query_params = QueryParams.from_dict(query_params)
+
         query_params_str = build_query_params_string(query_params) if query_params else ''
 
         group_query = f'groups (ids: "{group_id}") {{' if group_id else ''
         group_query_end = '}' if group_id else ''
-        fields = Fields(f"""
-            id 
-            {group_query} 
+        field_str = f"""
+            id
+            {group_query}
             items_page (
-                limit: {limit} 
-                {f', query_params: {query_params_str}' if query_params_str else ''}
+                limit: {limit}{f', query_params: {query_params_str}' if query_params_str else ''}
             ) {{
                 cursor
                 items {{ {fields} }}
             }}
             {group_query_end}
-        """)
+        """
+        fields = Fields(field_str)
 
         data = await self.query(
             board_ids,
@@ -383,16 +376,22 @@ class Boards:
             boards = []
             for board in data:
                 try:
-                    boards.append({'id': board['id'], 'items': board['groups'][0]['items_page']['items']})
+                    if board.groups and board.groups[0] and board.groups[0].items_page:
+                        items = board.groups[0].items_page.items if board.groups[0].items_page.items else []
+                        boards.append(ItemList(board_id=board.id, items=items))
+                    else:
+                        boards.append(ItemList(board_id=board.id, items=[]))
                 except IndexError:
-                    boards.append({'id': board['id'], 'items': []})
+                    boards.append(ItemList(board_id=board.id, items=[]))
             return boards
 
-        return [{'id': b['id'], 'items': b['items_page']['items']} for b in data]
+        items = [ItemList(board_id=b.id, items=b.items_page.items if b.items_page and b.items_page.items else []) for b in data]
+
+        return items
 
     async def get_items_by_column_values(
         self,
-        board_id: int,
+        board_id: int | str,
         columns: list[ColumnFilter],
         limit: int = 25,
         paginate_items: bool = True,
@@ -409,7 +408,7 @@ class Boards:
             fields: Fields to return from the matching items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            A list of dictionaries containing the combined items retrieved.
+            A list of Item dataclass instances containing the combined items retrieved.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -423,7 +422,7 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.get_items_by_column_values(
+                >>> items = await monday_client.boards.get_items_by_column_values(
                 ...     board_id=987654321,
                 ...     columns=[
                 ...         {
@@ -437,21 +436,12 @@ class Boards:
                 ...     ],
                 ...     fields='id column_values { id text }'
                 ... )
-                [
-                    {
-                        "id": "123456789",
-                        "column_values": [
-                            {
-                                "id": "status",
-                                "text": "Done"
-                            },
-                            {
-                                "id": "text__1",
-                                "text": "This item is done"
-                            }
-                        ]
-                    }
-                ]
+                >>> items[0].id
+                "123456789"
+                >>> items[0].column_values[0].id
+                "status"
+                >>> items[0].column_values[0].text
+                "Done"
         """
 
         fields = Fields(fields)
@@ -474,18 +464,20 @@ class Boards:
                 query_string,
                 limit=limit
             )
-            if 'error' in data:
-                check_query_result(data)
+            # Extract items from PaginatedResult
+            items = data.items if data.items else []
         else:
             query_result = await self.client.post_request(query_string)
             data = check_query_result(query_result)
-            data = {'items': data['data']['items_page_by_column_values']['items']}
+            items = data['data']['items_page_by_column_values']['items']
 
-        return data['items']
+        items_list = [Item.from_dict(item) for item in items]
+
+        return items_list
 
     async def get_column_values(
         self,
-        board_id: int,
+        board_id: int | str,
         column_ids: Union[str, list[str]],
         column_fields: Union[str, Fields] = 'id text',
         item_fields: Union[str, Fields] = BoardFields.BASIC
@@ -500,7 +492,7 @@ class Boards:
             item_fields: Fields to return from the matching items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            A list of dictionaries containing the combined items retrieved and their column values.
+            A list of Item dataclass instances containing the combined items retrieved and their column values.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -587,21 +579,36 @@ class Boards:
             fields=fields
         )
 
-        data = check_query_result(query_result, errors_only=True)
+        if not query_result:
+            return []
 
-        return data[0]['items']
+        # Handle case where query_result is empty or doesn't have the expected structure
+        if len(query_result) == 0:
+            return []
+
+        try:
+            items = query_result[0].items
+            if isinstance(items, list):
+                # Convert to Item instances if they're not already
+                items_list = [item if isinstance(item, Item) else Item.from_dict(item) for item in items]
+                return items_list
+        except (IndexError, AttributeError):
+            # Handle case where query_result[0] doesn't have items attribute
+            return []
+
+        return []
 
     async def create(
         self,
         name: str,
         board_kind: Optional[Literal['private', 'public', 'share']] = 'public',
-        owner_ids: Optional[list[int]] = None,
-        subscriber_ids: Optional[list[int]] = None,
-        subscriber_teams_ids: Optional[list[int]] = None,
-        description: Optional[str] = None,
-        folder_id: Optional[int] = None,
-        template_id: Optional[int] = None,
-        workspace_id: Optional[int] = None,
+        owner_ids: Optional[list[int | str]] = None,
+        subscriber_ids: Optional[list[int | str]] = None,
+        subscriber_teams_ids: Optional[list[int | str]] = None,
+        description: Optional[str | str] = None,
+        folder_id: Optional[int | str] = None,
+        template_id: Optional[int | str] = None,
+        workspace_id: Optional[int | str] = None,
         fields: Union[str, Fields] = BoardFields.BASIC
     ) -> Board:
         """
@@ -620,7 +627,7 @@ class Boards:
             fields: Fields to return from the created board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            Dictionary containing info for the new board.
+            Board dataclass instance containing info for the new board.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -634,19 +641,20 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.create(
+                >>> board = await monday_client.boards.create(
                 ...     name='Board 1',
                 ...     workspace_id=1234567,
                 ...     description='Board 1 description',
                 ...     fields='id name state description workspace_id'
                 ... )
-                {
-                    "id": "987654321",
-                    "name": "Board 1",
-                    "state": "active",
-                    "description": "Board 1 description",
-                    "workspace_id": "1234567"
-                }
+                >>> board.id
+                "987654321"
+                >>> board.name
+                "Board 1"
+                >>> board.state
+                "active"
+                >>> board.description
+                "Board 1 description"
         """
 
         fields = Fields(fields)
@@ -674,16 +682,16 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data['data']['create_board']
+        return Board.from_dict(data['data']['create_board'])
 
     async def duplicate(
         self,
-        board_id: int,
+        board_id: int | str,
         board_name: Optional[str] = None,
         duplicate_type: Literal['with_structure', 'with_pulses', 'with_pulses_and_updates'] = 'with_structure',
-        folder_id: Optional[int] = None,
+        folder_id: Optional[int | str] = None,
         keep_subscribers: bool = False,
-        workspace_id: Optional[int] = None,
+        workspace_id: Optional[int | str] = None,
         fields: Union[str, Fields] = 'board { id }'
     ) -> Board:
         """
@@ -699,7 +707,7 @@ class Boards:
             fields: Fields to return from the duplicated board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            Dictionary containing info for the duplicated board.
+            Board dataclass instance containing info for the duplicated board.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -713,15 +721,16 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.duplicate(
+                >>> board = await monday_client.boards.duplicate(
                 ...     board_id=987654321,
                 ...     fields='id name state'
                 ... )
-                {
-                    "id": "987654321",
-                    "name": "Duplicate of Board 1",
-                    "state": "active"
-                }
+                >>> board.id
+                "987654321"
+                >>> board.name
+                "Duplicate of Board 1"
+                >>> board.state
+                "active"
         """
 
         fields = Fields(fields) + 'board { id }'
@@ -746,11 +755,11 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data['data']['duplicate_board']['board']
+        return Board.from_dict(data['data']['duplicate_board']['board'])
 
     async def update(
         self,
-        board_id: int,
+        board_id: int | str,
         board_attribute: Literal['communication', 'description', 'name'],
         new_value: str
     ) -> UpdateBoard:
@@ -763,7 +772,7 @@ class Boards:
             new_value: The new attribute value.
 
         Returns:
-            Dictionary containing updated board info.
+            UpdateBoard dataclass instance containing updated board info.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -776,21 +785,15 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.update(
+                >>> result = await monday_client.boards.update(
                 ...     board_id=987654321,
                 ...     board_attribute='name',
                 ...     new_value='New Board Name'
                 ... )
-                {
-                    "success": true,
-                    "undo_data": {
-                        "undo_record_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                        "action_type": "modify_project",
-                        "entity_type": "Board",
-                        "entity_id": 987654321,
-                        "count": 1
-                    }
-                }
+                >>> result.success
+                True
+                >>> result.undo_data.undo_record_id
+                "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
         """
 
         args = {
@@ -814,11 +817,11 @@ class Boards:
         except TypeError:
             data = data['data']['update_board']
 
-        return data
+        return UpdateBoard.from_dict(data)
 
     async def archive(
         self,
-        board_id: int,
+        board_id: int | str,
         fields: Union[str, Fields] = BoardFields.BASIC
     ) -> Board:
         """
@@ -829,7 +832,7 @@ class Boards:
             fields: Fields to return from the archived board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            Dictionary containing info for the archived board.
+            Board dataclass instance containing info for the archived board.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -842,15 +845,16 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.archive(
+                >>> board = await monday_client.boards.archive(
                 ...     board_id=987654321,
                 ...     fields='id name state'
                 ... )
-                {
-                    "id": "987654321",
-                    "name": "Board 1",
-                    "state": "archived"
-                }
+                >>> board.id
+                "987654321"
+                >>> board.name
+                "Board 1"
+                >>> board.state
+                "archived"
         """
 
         fields = Fields(fields)
@@ -870,11 +874,11 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data['data']['archive_board']
+        return Board.from_dict(data['data']['archive_board'])
 
     async def delete(
         self,
-        board_id: int,
+        board_id: int | str,
         fields: Union[str, Fields] = BoardFields.BASIC
     ) -> Board:
         """
@@ -885,7 +889,7 @@ class Boards:
             fields: Fields to return from the deleted board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
 
         Returns:
-            Dictionary containing info for the deleted board.
+            Board dataclass instance containing info for the deleted board.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -898,15 +902,16 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.boards.delete(
+                >>> board = await monday_client.boards.delete(
                 ...     board_id=987654321,
                 ...     fields='id name state'
                 ... )
-                {
-                    "id": "987654321",
-                    "name": "Board 1",
-                    "state": "deleted"
-                }
+                >>> board.id
+                "987654321"
+                >>> board.name
+                "Board 1"
+                >>> board.state
+                "deleted"
         """
 
         fields = Fields(fields)
@@ -926,4 +931,4 @@ class Boards:
 
         data = check_query_result(query_result)
 
-        return data['data']['delete_board']
+        return Board.from_dict(data['data']['delete_board'])

@@ -39,44 +39,44 @@ Services
 
 Boards
 ~~~~~~
-.. automethod:: monday.services.Boards.archive
-.. automethod:: monday.services.Boards.create
-.. automethod:: monday.services.Boards.delete
-.. automethod:: monday.services.Boards.duplicate
-.. automethod:: monday.services.Boards.get_column_values
+.. automethod:: monday.services.Boards.query
 .. automethod:: monday.services.Boards.get_items
 .. automethod:: monday.services.Boards.get_items_by_column_values
-.. automethod:: monday.services.Boards.query
+.. automethod:: monday.services.Boards.get_column_values
+.. automethod:: monday.services.Boards.create
+.. automethod:: monday.services.Boards.duplicate
 .. automethod:: monday.services.Boards.update
+.. automethod:: monday.services.Boards.archive
+.. automethod:: monday.services.Boards.delete
 
 .. _services_section_groups:
 
 Groups
 ~~~~~~
-.. automethod:: monday.services.Groups.archive
-.. automethod:: monday.services.Groups.create
-.. automethod:: monday.services.Groups.delete
-.. automethod:: monday.services.Groups.duplicate
-.. automethod:: monday.services.Groups.get_items_by_name
 .. automethod:: monday.services.Groups.query
+.. automethod:: monday.services.Groups.create
 .. automethod:: monday.services.Groups.update
+.. automethod:: monday.services.Groups.duplicate
+.. automethod:: monday.services.Groups.archive
+.. automethod:: monday.services.Groups.delete
+.. automethod:: monday.services.Groups.get_items_by_name
 
 .. _services_section_items:
 
 Items
 ~~~~~
-.. automethod:: monday.services.Items.archive
-.. automethod:: monday.services.Items.change_column_values
-.. automethod:: monday.services.Items.clear_updates
-.. automethod:: monday.services.Items.create
-.. automethod:: monday.services.Items.delete
-.. automethod:: monday.services.Items.duplicate
-.. automethod:: monday.services.Items.get_column_values
-.. automethod:: monday.services.Items.get_id
-.. automethod:: monday.services.Items.get_name
-.. automethod:: monday.services.Items.move_to_board
-.. automethod:: monday.services.Items.move_to_group
 .. automethod:: monday.services.Items.query
+.. automethod:: monday.services.Items.create
+.. automethod:: monday.services.Items.duplicate
+.. automethod:: monday.services.Items.move_to_group
+.. automethod:: monday.services.Items.move_to_board
+.. automethod:: monday.services.Items.archive
+.. automethod:: monday.services.Items.delete
+.. automethod:: monday.services.Items.clear_updates
+.. automethod:: monday.services.Items.get_column_values
+.. automethod:: monday.services.Items.change_column_values
+.. automethod:: monday.services.Items.get_name
+.. automethod:: monday.services.Items.get_id
 
 .. _services_section_subitems:
 

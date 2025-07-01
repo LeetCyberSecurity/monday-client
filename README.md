@@ -27,6 +27,8 @@ For detailed documentation, visit the [official documentation site](https://mond
 pip install monday-client
 ```
 
+This installs additional tools for testing, code quality, and documentation.
+
 ## Quick Start
 
 ```python
@@ -98,3 +100,45 @@ logger = logging.getLogger(__name__)
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](https://github.com/LeetCyberSecurity/monday-client/blob/main/LICENSE) file for details.
+
+## Testing
+
+This project uses `pytest` for all testing.
+
+- **Unit tests:**
+  Run all unit tests (default):
+  ```bash
+  python -m pytest
+  ```
+
+- **Integration tests:**
+  Require a valid API key and explicit marking:
+  ```bash
+  # Set up environment variables
+  export MONDAY_API_KEY=your_api_key
+  export MONDAY_TEST_BOARD_ID=123456789
+  
+  # Run integration tests (requires -m integration flag)
+  python -m pytest -m integration
+  
+  # Run specific integration test file
+  python -m pytest tests/test_integration.py -m integration -v
+  ```
+
+- **Mutation tests:**
+  Test data creation, updates, and deletion (requires write permissions):
+  ```bash
+  export MONDAY_API_KEY=your_api_key
+  python -m pytest -m mutation
+  ```
+  ⚠️ **Warning:** These tests will create and delete real data on your monday.com account.
+
+See [docs/TESTING.md](docs/TESTING.md) for more details on test types, configuration, and best practices.
+
+## Development Setup
+
+For development and testing, install with development dependencies:
+
+```bash
+pip install -e ".[dev]"
+```

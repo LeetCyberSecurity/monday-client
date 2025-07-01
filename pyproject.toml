@@ -11,8 +11,8 @@ authors = [
 description = "Python library for interacting with the monday.com API. Respects monday.com API rate limits and query complexity limits."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "GPL-3.0-only"
 classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
@@ -35,7 +35,24 @@ keywords = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-asyncio"
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+    "isort",
+    "autopep8",
+    "pylint"
+]
+test = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock"
+]
+docs = [
+    "sphinx>=8.1.3",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-autodoc-typehints>=2.5.0",
+    "myst-parser>=4.0.0"
 ]
 
 [project.urls]
@@ -52,5 +69,23 @@ include = ["monday*"]
 namespaces = false
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: Unit tests (default, no external dependencies)",
+    "integration: Integration tests (require API key and network)",
+    "mutation: Mutation tests (create, update, delete data)",
+    "slow: Tests that take longer to run",
+    "api: Tests that make API calls",
+    "performance: Performance tests"
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "-m", "not integration and not slow"
+]
+console_output_style = "progress"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

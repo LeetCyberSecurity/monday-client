@@ -32,11 +32,26 @@ This page documents all premade field options available across different service
 
 .. _fields_section_boards:
 
+Board Fields
+~~~~~~~~~~~~
+
 .. autoclass:: monday.BoardFields
     :members:
     :show-inheritance:
 
+.. _fields_section_columns:
+
+Column Fields
+~~~~~~~~~~~~~
+
+.. autoclass:: monday.ColumnFields
+    :members:
+    :show-inheritance:
+
 .. _fields_section_groups:
+
+Group Fields
+~~~~~~~~~~~~
 
 .. autoclass:: monday.GroupFields
     :members:
@@ -44,13 +59,17 @@ This page documents all premade field options available across different service
 
 .. _fields_section_items:
 
+Item Fields
+~~~~~~~~~~~
+
 .. autoclass:: monday.ItemFields
     :members:
     :show-inheritance:
 
-.. _fields_section_subitems:
-
 .. _fields_section_users:
+
+User Fields
+~~~~~~~~~~~
 
 .. autoclass:: monday.UserFields
     :members:

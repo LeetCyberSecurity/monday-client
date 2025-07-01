@@ -16,74 +16,132 @@
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Type definitions for monday.com API subitem related structures.
+Monday.com API subitem type definitions and structures.
+
+This module contains dataclasses that represent Monday.com subitem objects,
+including subitems and their relationships to parent items and boards.
 """
 
-from typing import TYPE_CHECKING, Literal, TypedDict
+from __future__ import annotations
 
-from monday.types.asset import Asset
-from monday.types.board import Board
-from monday.types.column import ColumnValue
-from monday.types.group import Group
-from monday.types.update import Update
-from monday.types.user import User
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from monday.types.item import Item
+    from monday.types.board import Board
+    from monday.types.group import Group
 
 
-class Subitem(TypedDict):
+@dataclass
+class SubitemList:
     """
-    Type definitions for monday.com API subitem structures.
+    Type definition for a list of subitems associated with a parent item.
 
-    These types correspond to Monday.com's subitem fields as documented in their API reference:
-    https://developer.monday.com/api-reference/reference/subitems#fields
+    This structure is used by the Subitems.query() method to return subitems
+    grouped by their parent item ID.
     """
 
-    assets: Asset
-    """The subitem's assets/files"""
+    item_id: str
+    """The ID of the parent item that contains the subitems"""
 
-    board: Board
-    """The board that contains the subitem"""
+    subitems: list[Subitem]
+    """The list of subitems belonging to the parent item"""
 
-    column_values: list[ColumnValue]
-    """The subitem's column values"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        return {
+            'id': self.item_id,
+            'subitems': [subitem.to_dict() if hasattr(subitem, 'to_dict') else subitem for subitem in self.subitems]
+        }
 
-    created_at: str
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SubitemList:
+        """Create from dictionary."""
+        return cls(
+            item_id=str(data.get('id', '')),
+            subitems=[Subitem.from_dict(subitem) if isinstance(subitem, dict) else subitem for subitem in data.get('subitems', [])]
+        )
+
+
+@dataclass
+class Subitem:
+    """
+    Represents a Monday.com subitem with its properties and relationships.
+
+    This dataclass maps to the Monday.com API subitem object structure, containing
+    fields like name, state, and associated board/group information.
+
+    See also:
+        https://developer.monday.com/api-reference/reference/subitems#fields
+    """
+
+    board: Board | None = None
+    """The subitem's board"""
+
+    created_at: str = ''
     """The subitem's creation date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    creator: User
-    """The subitem's creator"""
+    creator_id: str = ''
+    """The subitem's creator unique identifier"""
 
-    creator_id: str
-    """The unique identifier of the subitem's creator. Returns ``None`` if the item was created by default on the board."""
-
-    email: str
-    """The subitem's email"""
-
-    group: Group
+    group: Group | None = None
     """The subitem's group"""
 
-    id: str
+    id: str = ''
     """The subitem's unique identifier"""
 
-    name: str
+    item_id: str = ''
+    """The subitem's parent item unique identifier"""
+
+    name: str = ''
     """The subitem's name"""
 
-    parent_item: 'Item'
-    """The subitem's parent :class:`Item <monday.types.Item>`"""
-
-    relative_link: str
-    """The subitem's relative path"""
-
-    state: Literal['active', 'archived', 'deleted']
+    state: str = ''
     """The subitem's state"""
 
-    subscribers: list[User]
-    """The subitem's subscribers"""
+    updated_at: str = ''
+    """The subitem's last update date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    updated_at: str
-    """The date the subitem was last updated. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        result = {}
 
-    updates: list[Update]
-    """The subitem's updates"""
+        if self.board:
+            result['board'] = self.board.to_dict()
+        if self.created_at:
+            result['created_at'] = self.created_at
+        if self.creator_id:
+            result['creator_id'] = self.creator_id
+        if self.group:
+            result['group'] = self.group.to_dict()
+        if self.id:
+            result['id'] = self.id
+        if self.item_id:
+            result['item_id'] = self.item_id
+        if self.name:
+            result['name'] = self.name
+        if self.state:
+            result['state'] = self.state
+        if self.updated_at:
+            result['updated_at'] = self.updated_at
+
+        return result
+
+    @classmethod
+    # pylint: disable=import-outside-toplevel
+    def from_dict(cls, data: dict[str, Any]) -> Subitem:
+        """Create from dictionary."""
+        from monday.types.board import Board
+        from monday.types.group import Group
+
+        return cls(
+            board=Board.from_dict(data['board']) if data.get('board') else None,
+            created_at=str(data.get('created_at', '')),
+            creator_id=str(data.get('creator_id', '')),
+            group=Group.from_dict(data['group']) if data.get('group') else None,
+            id=str(data.get('id', '')),
+            item_id=str(data.get('item_id', '')),
+            name=str(data.get('name', '')),
+            state=str(data.get('state', '')),
+            updated_at=str(data.get('updated_at', ''))
+        )

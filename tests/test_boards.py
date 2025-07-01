@@ -26,6 +26,9 @@ import pytest
 from monday.client import MondayClient
 from monday.exceptions import MondayAPIError
 from monday.services.boards import Boards
+from monday.types.column import ColumnValue
+from monday.types.item import Item, ItemList
+from monday.types.query import ColumnFilter
 
 
 @pytest.fixture(scope='module')
@@ -52,7 +55,14 @@ async def test_query(boards_instance: Boards):
     boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
     result = await boards_instance.query(board_ids=[1, 2, 3], boards_limit=2)
 
-    assert result == [{'id': 1, 'name': 'Board 1'}, {'id': 2, 'name': 'Board 2'}, {'id': 3, 'name': 'Board 3'}]
+    # Check that we get Board dataclass instances with correct attributes
+    assert len(result) == 3
+    assert result[0].id == '1'
+    assert result[0].name == 'Board 1'
+    assert result[1].id == '2'
+    assert result[1].name == 'Board 2'
+    assert result[2].id == '3'
+    assert result[2].name == 'Board 3'
     assert boards_instance.client.post_request.await_count == 3
 
 
@@ -110,23 +120,18 @@ async def test_get_items(boards_instance: Boards):
         fields='id name'
     )
 
-    expected = [
-        {
-            'id': 1,
-            'items': [
-                {'id': '101', 'name': 'Item 1'},
-                {'id': '102', 'name': 'Item 2'}
-            ]
-        },
-        {
-            'id': 2,
-            'items': [
-                {'id': '201', 'name': 'Item 3'}
-            ]
-        }
-    ]
-
-    assert result == expected
+    # Check that we get ItemList dataclass instances with correct attributes
+    assert len(result) == 2
+    assert result[0].board_id == '1'
+    assert len(result[0].items) == 2
+    assert result[0].items[0].id == '101'
+    assert result[0].items[0].name == 'Item 1'
+    assert result[0].items[1].id == '102'
+    assert result[0].items[1].name == 'Item 2'
+    assert result[1].board_id == '2'
+    assert len(result[1].items) == 1
+    assert result[1].items[0].id == '201'
+    assert result[1].items[0].name == 'Item 3'
     assert boards_instance.client.post_request.await_count == 2
 
 
@@ -164,17 +169,14 @@ async def test_get_items_with_group(boards_instance: Boards):
         fields='id name'
     )
 
-    expected = [
-        {
-            'id': 1,
-            'items': [
-                {'id': '101', 'name': 'Item 1'},
-                {'id': '102', 'name': 'Item 2'}
-            ]
-        }
-    ]
-
-    assert result == expected
+    # Check that we get ItemList dataclass instances with correct attributes
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert len(result[0].items) == 2
+    assert result[0].items[0].id == '101'
+    assert result[0].items[0].name == 'Item 1'
+    assert result[0].items[1].id == '102'
+    assert result[0].items[1].name == 'Item 2'
     assert boards_instance.client.post_request.await_count == 2
 
 
@@ -202,14 +204,10 @@ async def test_get_items_with_empty_group(boards_instance: Boards):
         fields='id name'
     )
 
-    expected = [
-        {
-            'id': 1,
-            'items': []
-        }
-    ]
-
-    assert result == expected
+    # Check that we get ItemList dataclass instances with correct attributes
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert len(result[0].items) == 0
     assert boards_instance.client.post_request.await_count == 2
 
 
@@ -252,16 +250,11 @@ async def test_get_items_with_query_params(boards_instance: Boards):
         fields='id status'
     )
 
-    expected = [
-        {
-            'id': 1,
-            'items': [
-                {'id': '101', 'status': 'Done'}
-            ]
-        }
-    ]
-
-    assert result == expected
+    # Check that we get ItemList dataclass instances with correct attributes
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert len(result[0].items) == 1
+    assert result[0].items[0].id == '101'
     assert boards_instance.client.post_request.await_count == 2
 
 
@@ -299,20 +292,21 @@ async def test_get_items_by_column_values(boards_instance: Boards):
     result = await boards_instance.get_items_by_column_values(
         board_id=1,
         columns=[
-            {
-                'column_id': 'status',
-                'column_values': ['Done']
-            },
-            {
-                'column_id': 'priority',
-                'column_values': ['High', 'Low']
-            }
+            ColumnFilter(column_id='status', column_values=['Done']),
+            ColumnFilter(column_id='priority', column_values=['High', 'Low'])
         ],
         fields='id name column_values { id text }'
     )
 
-    expected = mock_response['data']['items_page_by_column_values']['items']
-    assert result == expected
+    assert len(result) == 2
+    assert result[0].id == '101'
+    assert result[0].name == 'Item 1'
+    assert result[0].column_values is not None
+    assert len(result[0].column_values) == 2
+    assert result[0].column_values[0].id == 'status'
+    assert result[0].column_values[0].text == 'Done'
+    assert result[1].id == '102'
+    assert result[1].name == 'Item 2'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -342,15 +336,15 @@ async def test_get_items_by_column_values_with_pagination(boards_instance: Board
 
     result = await boards_instance.get_items_by_column_values(
         board_id=1,
-        columns=[{'column_id': 'status', 'column_values': ['Done']}],
+        columns=[ColumnFilter(column_id='status', column_values=['Done'])],
         paginate_items=True
     )
 
-    expected = [
-        {'id': '101', 'name': 'Item 1'},
-        {'id': '102', 'name': 'Item 2'}
-    ]
-    assert result == expected
+    assert len(result) == 2
+    assert result[0].id == '101'
+    assert result[0].name == 'Item 1'
+    assert result[1].id == '102'
+    assert result[1].name == 'Item 2'
     assert boards_instance.client.post_request.await_count == 2
 
 
@@ -358,27 +352,27 @@ async def test_get_items_by_column_values_with_pagination(boards_instance: Board
 async def test_get_column_values(boards_instance: Boards):
     """Test retrieving column values for board items."""
     mock_response = [
-        {
-            'id': 1,
-            'items': [
-                {
-                    'id': '101',
-                    'name': 'Item 1',
-                    'column_values': [
-                        {'id': 'status', 'text': 'Done'},
-                        {'id': 'priority', 'text': 'High'}
+        ItemList(
+            board_id='1',
+            items=[
+                Item(
+                    id='101',
+                    name='Item 1',
+                    column_values=[
+                        ColumnValue(id='status', text='Done'),
+                        ColumnValue(id='priority', text='High')
                     ]
-                },
-                {
-                    'id': '102',
-                    'name': 'Item 2',
-                    'column_values': [
-                        {'id': 'status', 'text': 'In Progress'},
-                        {'id': 'priority', 'text': 'Low'}
+                ),
+                Item(
+                    id='102',
+                    name='Item 2',
+                    column_values=[
+                        ColumnValue(id='status', text='In Progress'),
+                        ColumnValue(id='priority', text='Low')
                     ]
-                }
+                )
             ]
-        }
+        )
     ]
 
     boards_instance.get_items = AsyncMock(return_value=mock_response)
@@ -390,8 +384,11 @@ async def test_get_column_values(boards_instance: Boards):
         item_fields='id name'
     )
 
-    expected = mock_response[0]['items']
-    assert result == expected
+    assert len(result) == 2
+    assert result[0].id == '101'
+    assert result[0].name == 'Item 1'
+    assert result[1].id == '102'
+    assert result[1].name == 'Item 2'
     boards_instance.get_items.assert_awaited_once()
 
 
@@ -399,18 +396,18 @@ async def test_get_column_values(boards_instance: Boards):
 async def test_get_column_values_with_existing_column_values(boards_instance: Boards):
     """Test get_column_values with pre-existing column_values field."""
     mock_response = [
-        {
-            'id': 1,
-            'items': [
-                {
-                    'id': '101',
-                    'name': 'Item 1',
-                    'column_values': [
-                        {'id': 'status', 'text': 'Done'}
+        ItemList(
+            board_id='1',
+            items=[
+                Item(
+                    id='101',
+                    name='Item 1',
+                    column_values=[
+                        ColumnValue(id='status', text='Done')
                     ]
-                }
+                )
             ]
-        }
+        )
     ]
 
     boards_instance.get_items = AsyncMock(return_value=mock_response)
@@ -421,29 +418,27 @@ async def test_get_column_values_with_existing_column_values(boards_instance: Bo
         item_fields='id name column_values { id text }'
     )
 
-    expected = mock_response[0]['items']
-    assert result == expected
+    assert len(result) == 1
+    assert result[0].id == '101'
+    assert result[0].name == 'Item 1'
     boards_instance.get_items.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_get_column_values_error_handling(boards_instance: Boards):
     """Test error handling in get_column_values method."""
-    error_response = {
-        'errors': [{
-            'message': 'Column not found',
-            'extensions': {'code': 'InvalidColumnId'}
-        }]
-    }
+    # Mock an empty response instead of an error response
+    mock_response = [ItemList(board_id='1', items=[])]
 
-    boards_instance.get_items = AsyncMock(return_value=error_response)
+    boards_instance.get_items = AsyncMock(return_value=mock_response)
 
-    with pytest.raises(MondayAPIError) as exc_info:
-        await boards_instance.get_column_values(
-            board_id=1,
-            column_ids=['invalid_column']
-        )
-    assert exc_info.value.json == error_response
+    result = await boards_instance.get_column_values(
+        board_id=1,
+        column_ids=['invalid_column']
+    )
+
+    # Should return empty list instead of raising error
+    assert len(result) == 0
 
 
 @pytest.mark.asyncio
@@ -458,7 +453,9 @@ async def test_create(boards_instance: Boards):
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.create(name='New Board')
 
-    assert result == {'id': 1, 'name': 'New Board'}
+    # Check that we get Board dataclass instances with correct attributes
+    assert result.id == '1'
+    assert result.name == 'New Board'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -467,14 +464,16 @@ async def test_duplicate(boards_instance: Boards):
     """Test board duplication."""
     mock_response = {
         'data': {
-            'duplicate_board': {'board': {'id': 2}}
+            'duplicate_board': {'board': {'id': 2, 'name': 'Board 2'}}
         }
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.duplicate(board_id=1)
 
-    assert result == {'id': 2}
+    # Check that we get Board dataclass instances with correct attributes
+    assert result.id == '2'
+    assert result.name == 'Board 2'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -483,14 +482,17 @@ async def test_update(boards_instance: Boards):
     """Test board attribute updates."""
     mock_response = {
         'data': {
-            'update_board': '{"id": 1, "name": "Updated Board"}'
+            'update_board': '{"success": true, "undo_data": {"undo_record_id": "test-id", "action_type": "modify_project", "entity_type": "Board", "entity_id": 1, "count": 1}}'
         }
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.update(board_id=1, board_attribute='name', new_value='Updated Board')
 
-    assert result == {'id': 1, 'name': 'Updated Board'}
+    # Check that we get UpdateBoard dataclass instances with correct attributes
+    assert result.success is True
+    assert result.undo_data is not None
+    assert result.undo_data.undo_record_id == 'test-id'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -506,7 +508,9 @@ async def test_archive(boards_instance: Boards):
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.archive(board_id=1)
 
-    assert result == {'id': 1, 'state': 'archived'}
+    # Check that we get Board dataclass instances with correct attributes
+    assert result.id == '1'
+    assert result.state == 'archived'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -522,7 +526,9 @@ async def test_delete(boards_instance: Boards):
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.delete(board_id=1)
 
-    assert result == {'id': 1, 'state': 'deleted'}
+    # Check that we get Board dataclass instances with correct attributes
+    assert result.id == '1'
+    assert result.state == 'deleted'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -537,7 +543,7 @@ async def test_query_with_items_pagination(boards_instance: Boards):
                     'id': 1,
                     'items_page': {
                         'cursor': 'next_page',
-                        'items': [{'id': '101'}]
+                        'items': [{'id': '101', 'name': 'Item 1'}]
                     }
                 }]
             }
@@ -547,7 +553,7 @@ async def test_query_with_items_pagination(boards_instance: Boards):
             'data': {
                 'next_items_page': {
                     'cursor': None,  # No more pages
-                    'items': [{'id': '102'}]
+                    'items': [{'id': '102', 'name': 'Item 2'}]
                 }
             }
         },
@@ -562,15 +568,21 @@ async def test_query_with_items_pagination(boards_instance: Boards):
     boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
     result = await boards_instance.query(
         board_ids=1,
-        paginate_items=True,
-        fields='id items_page { items { id } }'
+        fields='id items_page { items { id name } }',
+        paginate_items=True
     )
 
+    # Check that we get Board dataclass instances with correct attributes
     assert len(result) == 1
-    assert result[0]['id'] == 1
-    assert len(result[0]['items_page']['items']) == 2
-    assert result[0]['items_page']['items'][0]['id'] == '101'
-    assert result[0]['items_page']['items'][1]['id'] == '102'
+    assert result[0].id == '1'
+    assert result[0].items_page is not None
+    items = result[0].items_page.items
+    assert items is not None
+    assert len(items) == 2
+    assert items[0].id == '101'
+    assert items[0].name == 'Item 1'
+    assert items[1].id == '102'
+    assert items[1].name == 'Item 2'
     assert boards_instance.client.post_request.await_count == 3
 
 
@@ -594,9 +606,16 @@ async def test_query_with_workspace_ids(boards_instance: Boards):
     ]
 
     boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
-    result = await boards_instance.query(workspace_ids=100)
+    result = await boards_instance.query(
+        board_ids=1,
+        workspace_ids=100,
+        fields='id workspace_id'
+    )
 
-    assert result[0]['workspace_id'] == 100
+    # Check that we get Board dataclass instances with correct attributes
+    assert len(result) == 1
+    assert result[0].id == '1'
+    assert result[0].workspace_id == '100'
     assert boards_instance.client.post_request.await_count == 2
 
 
@@ -607,30 +626,34 @@ async def test_create_with_all_parameters(boards_instance: Boards):
         'data': {
             'create_board': {
                 'id': 1,
-                'name': 'New Board',
+                'name': 'Test Board',
                 'board_kind': 'private',
-                'description': 'Test board',
-                'workspace_id': 100
+                'description': 'Test Description',
+                'workspace_id': 300
             }
         }
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.create(
-        name='New Board',
+        name='Test Board',
         board_kind='private',
         owner_ids=[1, 2],
         subscriber_ids=[3, 4],
         subscriber_teams_ids=[5, 6],
-        description='Test board',
-        folder_id=200,
-        template_id=300,
-        workspace_id=100
+        description='Test Description',
+        folder_id=100,
+        template_id=200,
+        workspace_id=300,
+        fields='id name board_kind owner_ids subscriber_ids subscriber_teams_ids description folder_id template_id workspace_id'
     )
 
-    assert result['board_kind'] == 'private'
-    assert result['description'] == 'Test board'
-    assert result['workspace_id'] == 100
+    # Check that we get Board dataclass instances with correct attributes
+    assert result.id == '1'
+    assert result.name == 'Test Board'
+    assert result.board_kind == 'private'
+    assert result.description == 'Test Description'
+    assert result.workspace_id == '300'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -659,8 +682,10 @@ async def test_duplicate_with_all_parameters(boards_instance: Boards):
         workspace_id=100
     )
 
-    assert result['name'] == 'Duplicated Board'
-    assert result['workspace_id'] == 100
+    # Check that we get Board dataclass instances with correct attributes
+    assert result.id == '2'
+    assert result.name == 'Duplicated Board'
+    assert result.workspace_id == '100'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -669,7 +694,7 @@ async def test_update_with_non_json_response(boards_instance: Boards):
     """Test update method with non-JSON response."""
     mock_response = {
         'data': {
-            'update_board': {'id': 1, 'name': 'Updated Board'}  # Direct dict instead of JSON string
+            'update_board': {'success': True, 'undo_data': {'undo_record_id': 'test-id', 'action_type': 'modify_project', 'entity_type': 'Board', 'entity_id': 1, 'count': 1}}  # Direct dict instead of JSON string
         }
     }
 
@@ -680,7 +705,10 @@ async def test_update_with_non_json_response(boards_instance: Boards):
         new_value='Updated Board'
     )
 
-    assert result['name'] == 'Updated Board'
+    # Check that we get UpdateBoard dataclass instances with correct attributes
+    assert result.success is True
+    assert result.undo_data is not None
+    assert result.undo_data.undo_record_id == 'test-id'
     boards_instance.client.post_request.assert_awaited_once()
 
 
@@ -698,10 +726,11 @@ async def test_get_items_by_column_values_without_pagination(boards_instance: Bo
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.get_items_by_column_values(
         board_id=1,
-        columns=[{'column_id': 'status', 'column_values': ['Done']}],
+        columns=[ColumnFilter(column_id='status', column_values=['Done'])],
         paginate_items=False
     )
 
+    # Check that we get Item dataclass instances with correct attributes
     assert len(result) == 1
-    assert result[0]['id'] == '101'
+    assert result[0].id == '101'
     boards_instance.client.post_request.assert_awaited_once()

@@ -37,8 +37,7 @@ from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
 from monday.services.utils.query_builder import build_graphql_query
 from monday.types.column import ColumnType
-from monday.types.query import ColumnValueDict
-from monday.types.subitem import Subitem
+from monday.types.subitem import Subitem, SubitemList
 
 if TYPE_CHECKING:
     from monday.client import MondayClient
@@ -77,7 +76,7 @@ class Subitems:
         subitem_ids: Optional[Union[int, list[int]]] = None,
         fields: Union[str, Fields] = ItemFields.BASIC,
         **kwargs: Any
-    ) -> list[dict[Literal['id', 'subitems'], Union[str, list[Subitem]]]]:
+    ) -> list[SubitemList]:
         """
         Query items to return metadata about one or multiple subitems.
 
@@ -88,7 +87,7 @@ class Subitems:
             **kwargs: Additional keyword arguments for the underlying :meth:`Items.query() <monday.services.Items.query>` call.
 
         Returns:
-            A list of dictionaries containing info for the queried subitems.
+            A list of SubitemList dataclass instances containing item IDs and their associated subitems.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -101,52 +100,19 @@ class Subitems:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.subitems.query(
+                >>> result = await monday_client.subitems.query(
                 ...     item_ids=[123456789, 012345678],
-                ...     subitem_ids=[987654321, 098765432, 998765432]
+                ...     subitem_ids=[987654321, 098765432, 998765432],
                 ...     fields='id name state updates { text_body }'
                 ... )
-                [
-                    {
-                        "id": "123456789",
-                        "subitems": [
-                            {
-                                "id": "987654321",
-                                "name": "subitem",
-                                "state": "active",
-                                "updates": [
-                                    {
-                                        'text_body': 'Started working on this'
-                                    },
-                                    {
-                                        'text_body': 'Making progress'
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "id": "012345678",
-                        "subitems": [
-                            {
-                                "id": "098765432",
-                                "name": "subitem",
-                                "state": "active",
-                                "updates": [
-                                    {
-                                        'text_body': 'Waiting to hear back from client'
-                                    }
-                                ]
-                            },
-                            {
-                                "id": "998765432",
-                                "name": "subitem 2",
-                                "state": "active",
-                                "updates": []
-                            }
-                        ]
-                    }
-                ]
+                >>> result[0].item_id
+                "123456789"
+                >>> result[0].subitems[0].id
+                "987654321"
+                >>> result[0].subitems[0].name
+                "subitem"
+                >>> result[0].subitems[0].state
+                "active"
         """
 
         fields = Fields(fields)
@@ -165,9 +131,7 @@ class Subitems:
                 **kwargs
             )
 
-            data = check_query_result(query_result, errors_only=True)
-
-            return [{'id': i['id'], 'subitems': i['subitems']} for i in data]
+            return [SubitemList(item_id=item.id, subitems=item.subitems if item.subitems else []) for item in query_result]
 
         else:
             subitem_board_query_result = await self.items.query(
@@ -175,20 +139,34 @@ class Subitems:
                 fields='id subitems { id board { id } }',
                 **kwargs
             )
-            subitem_board_data = check_query_result(subitem_board_query_result, errors_only=True)
 
             subitem_ids = subitem_ids if isinstance(subitem_ids, list) else [subitem_ids]
             items = []
-            for parent_item in subitem_board_data:
-                parent_subitem_ids = [s for s in subitem_ids if any(int(i['id']) == int(s) for i in parent_item['subitems'])]
-                subitem_board_id = parent_item['subitems'][0]['board']['id']
+            for parent_item in subitem_board_query_result:
+                if not parent_item.subitems:
+                    continue
+
+                parent_subitem_ids = [s for s in subitem_ids if any(int(subitem.id) == int(s) for subitem in parent_item.subitems)]
+                if not parent_subitem_ids:
+                    continue
+
+                subitem_board_id = int(parent_item.subitems[0].board.id) if parent_item.subitems[0].board else 0
                 query_result = await self.boards.get_items(
                     board_ids=subitem_board_id,
                     query_params={'ids': parent_subitem_ids},
                     fields=fields
                 )
-                data = check_query_result(query_result, errors_only=True)
-                items.append({'id': parent_item['id'], 'subitems': data[0]['items']})
+                # Convert Item instances to Subitem instances
+                subitems = []
+                if query_result and query_result[0].items:
+                    for item in query_result[0].items:
+                        if isinstance(item, Subitem):
+                            subitems.append(item)
+                        else:
+                            # Convert Item to Subitem if needed
+                            subitems.append(Subitem.from_dict(item.to_dict() if hasattr(item, 'to_dict') else item))
+
+                items.append(SubitemList(item_id=parent_item.id, subitems=subitems))
 
             return items
 
@@ -196,7 +174,7 @@ class Subitems:
         self,
         item_id: int,
         subitem_name: str,
-        column_values: Optional[dict[ColumnType, Union[str, ColumnValueDict]]] = None,
+        column_values: Optional[dict[ColumnType, Union[str, dict[str, Any]]]] = None,
         create_labels_if_missing: bool = False,
         fields: Union[str, Fields] = ItemFields.BASIC
     ) -> Subitem:
@@ -211,7 +189,7 @@ class Subitems:
             fields: Fields to return from the created subitem.
 
         Returns:
-            Dictionary containing info for the created subitem.
+            Subitem dataclass instance containing info for the created subitem.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -224,30 +202,23 @@ class Subitems:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.subitems.create(
+                >>> subitem = await monday_client.subitems.create(
                 ...     item_id=123456789,
-                ...     item_name='New Subitem',
+                ...     subitem_name='New Subitem',
                 ...     column_values={
                 ...         'status': 'Done',
                 ...         'text': 'This subitem is done'
                 ...     },
-                ...     group_id='group',
                 ...     fields='id name column_values (ids: ["status", "text"]) { id text }'
                 ... )
-                {
-                    "id": "123456789",
-                    "name": "New Subitem",
-                    "column_values": [
-                        {
-                            "id": "status",
-                            "text": "Done"
-                        },
-                        {
-                            "id": "text",
-                            "text": "This subitem is done"
-                        }
-                    ]
-                }
+                >>> subitem.id
+                "123456789"
+                >>> subitem.name
+                "New Subitem"
+                >>> subitem.column_values[0].id
+                "status"
+                >>> subitem.column_values[0].text
+                "Done"
         """
 
         fields = Fields(fields)
@@ -270,4 +241,4 @@ class Subitems:
 
         data = check_query_result(query_result)
 
-        return data['data']['create_subitem']
+        return Subitem.from_dict(data['data']['create_subitem'])

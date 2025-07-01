@@ -50,6 +50,18 @@ Error Handlers
 .. automodule:: monday.services.utils.error_handlers
     :member-order: bysource
 
+Item Utils
+~~~~~~~~~~
+
+.. automodule:: monday.services.utils.item_utils
+    :member-order: bysource
+
+JSON Utils
+~~~~~~~~~~
+
+.. automodule:: monday.services.utils.json_utils
+    :member-order: bysource
+
 Pagination
 ~~~~~~~~~~
 

@@ -17,7 +17,7 @@
 
 """Monday API client"""
 
-__version__ = "0.1.70"
+__version__ = "0.1.71"
 __authors__ = [
     {"name": "Dan Hollis", "email": "dh@leetsys.com"}
 ]
@@ -29,3 +29,9 @@ from monday.fields.group_fields import GroupFields
 from monday.fields.item_fields import ItemFields
 from monday.fields.user_fields import UserFields
 from monday.services.utils.fields import Fields
+from monday.types import (Account, AccountProduct, ActivityLog, Asset, Board,
+                          BoardView, Column, ColumnFilter, ColumnValue, Group,
+                          GroupList, Item, ItemList, ItemsPage, OrderBy,
+                          OutOfOffice, PersonOrTeam, Plan, QueryParams,
+                          QueryRule, Subitem, SubitemList, Tag, Team, UndoData,
+                          Update, UpdateBoard, User, Workspace)

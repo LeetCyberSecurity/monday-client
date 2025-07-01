@@ -30,7 +30,7 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 from monday.fields.column_fields import ColumnFields
 from monday.fields.item_fields import ItemFields
@@ -39,7 +39,7 @@ from monday.services.utils.fields import Fields
 from monday.services.utils.query_builder import build_graphql_query
 from monday.types.column import ColumnType, ColumnValue
 from monday.types.item import Item
-from monday.types.query import ColumnValueDict
+from monday.types.query import ColumnFilter
 
 if TYPE_CHECKING:
     from monday.client import MondayClient
@@ -89,7 +89,7 @@ class Items:
             fields: Fields to return from the queried items.
 
         Returns:
-            A list of dictionaries containing info for the queried items.
+            A list of Item dataclass instances containing info for the queried items.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -102,32 +102,19 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.query(
+                >>> items = await monday_client.items.query(
                 ...     item_ids=[123456789, 012345678],
                 ...     fields='id name state updates { text_body }',
                 ...     limit=50
                 ... )
-                [
-                    {
-                        'id': '123456789',
-                        'name': 'Task 1',
-                        'state': 'active',
-                        'updates': [
-                            {
-                                'text_body': 'Started working on this'
-                            },
-                            {
-                                'text_body': 'Making progress'
-                            }
-                        ]
-                    },
-                    {
-                        'id': '012345678',
-                        'name': 'Task 2',
-                        'state': 'active',
-                        'updates': []
-                    }
-                ]
+                >>> items[0].id
+                "123456789"
+                >>> items[0].name
+                "Task 1"
+                >>> items[0].state
+                "active"
+                >>> items[0].updates[0].text_body
+                "Started working on this"
 
         Note:
             To return all items on a board, use :meth:`Items.page() <monday.services.Items.page>` or :meth:`Items.page_by_column_values() <monday.services.Items.page_by_column_values>` instead.
@@ -161,13 +148,14 @@ class Items:
             items_data.extend(data['data']['items'])
             args['page'] += 1
 
-        return items_data
+        # Convert raw dictionaries to Item dataclass instances
+        return [Item.from_dict(item) for item in items_data]
 
     async def create(
         self,
         board_id: int,
         item_name: str,
-        column_values: Optional[dict[ColumnType, Union[str, ColumnValueDict]]] = None,
+        column_values: Optional[dict[ColumnType, Union[str, dict[str, Any]]]] = None,
         group_id: Optional[str] = None,
         create_labels_if_missing: bool = False,
         position_relative_method: Optional[Literal['before_at', 'after_at']] = None,
@@ -188,7 +176,7 @@ class Items:
             fields: Fields to return from the created item.
 
         Returns:
-            Dictionary containing info for the created item.
+            Item dataclass instance containing info for the created item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -201,7 +189,7 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.create(
+                >>> item = await monday_client.items.create(
                 ...     board_id=987654321,
                 ...     item_name='New Item',
                 ...     column_values={
@@ -211,20 +199,14 @@ class Items:
                 ...     group_id='group',
                 ...     fields='id name column_values (ids: ["status", "text"]) { id text }'
                 ... )
-                {
-                    "id": "987654321",
-                    "name": "New Item",
-                    "column_values": [
-                        {
-                            "id": "status",
-                            "text": "Done"
-                        },
-                        {
-                            "id": "text",
-                            "text": "This item is done"
-                        }
-                    ]
-                }
+                >>> item.id
+                "987654321"
+                >>> item.name
+                "New Item"
+                >>> item.column_values[0].id
+                "status"
+                >>> item.column_values[0].text
+                "Done"
         """
 
         fields = Fields(fields)
@@ -250,7 +232,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['create_item']
+        return Item.from_dict(data['data']['create_item'])
 
     async def duplicate(
         self,
@@ -271,7 +253,7 @@ class Items:
             fields: Fields to return from the duplicated item.
 
         Returns:
-            Dictionary containing info for the duplicated item.
+            Item dataclass instance containing info for the duplicated item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -284,32 +266,26 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.duplicate(
+                >>> item = await monday_client.items.duplicate(
                 ...     item_id=123456789,
                 ...     board_id=987654321,
                 ...     fields='id name column_values { id text }'
                 ... )
-                {
-                    "id": "123456789",
-                    "name": "Item 1 (copy)",
-                    "column_values": [
-                        {
-                            "id": "status",
-                            "text": "Done"
-                        },
-                        {
-                            "id": "text",
-                            "text": "This item is done"
-                        }
-                    ]
-                }
+                >>> item.id
+                "123456789"
+                >>> item.name
+                "Item 1 (copy)"
+                >>> item.column_values[0].id
+                "status"
+                >>> item.column_values[0].text
+                "Done"
         """
 
         fields = Fields(fields)
 
         # Only query the ID first if the duplicated item name is being changed
         # Other potential fields are added back in during the change column values query
-        temp_fields, query_fields = (['id'], 'id') if new_item_name else ([], fields)
+        query_fields = 'id' if new_item_name else fields
 
         args = {
             'item_id': item_id,
@@ -329,15 +305,15 @@ class Items:
         data = check_query_result(query_result)
 
         if new_item_name:
-            query_result = await self.change_column_values(
+            await self.change_column_values(
                 int(data['data']['duplicate_item']['id']),
                 column_values={'name': new_item_name},
                 fields=fields
             )
-            data = check_query_result(query_result, errors_only=True)
-            return Fields.manage_temp_fields(data, fields, temp_fields)
+            # Query the complete item after changing the name
+            return (await self.query(int(data['data']['duplicate_item']['id']), fields=fields))[0]
         else:
-            return data['data']['duplicate_item']
+            return Item.from_dict(data['data']['duplicate_item'])
 
     async def move_to_group(
         self,
@@ -354,7 +330,7 @@ class Items:
             fields: Fields to return from the moved item.
 
         Returns:
-            Dictionary containing info for the moved item.
+            Item dataclass instance containing info for the moved item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -367,19 +343,19 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.move_to_group(
+                >>> item = await monday_client.items.move_to_group(
                 ...     item_id=123456789,
                 ...     group_id='group',
                 ...     fields='id name group { id title }'
                 ... )
-                {
-                    "id": "123456789",
-                    "name": "Item 1",
-                    "group": {
-                        "id": "group",
-                        "title": "Group 1"
-                    }
-                }
+                >>> item.id
+                "123456789"
+                >>> item.name
+                "Item 1"
+                >>> item.group.id
+                "group"
+                >>> item.group.title
+                "Group 1"
         """
 
         fields = Fields(fields)
@@ -400,7 +376,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['move_item_to_group']
+        return Item.from_dict(data['data']['move_item_to_group'])
 
     async def move_to_board(
         self,
@@ -423,7 +399,7 @@ class Items:
             fields: Fields to return from the moved item.
 
         Returns:
-            Dictionary containing info for the moved item.
+            Item dataclass instance containing info for the moved item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -436,7 +412,7 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.move_to_board(
+                >>> item = await monday_client.items.move_to_board(
                 ...     item_id=123456789,
                 ...     board_id=987654321,
                 ...     group_id='group',
@@ -446,25 +422,16 @@ class Items:
                 ...     },
                 ...     fields='id board { id } group { id } column_values { id text }'
                 ... )
-                {
-                    "id": "123456789",
-                    "board": {
-                        "id": "987654321"
-                    },
-                    "group": {
-                        "id": "group"
-                    },
-                    "column_values": [
-                        {
-                            "id": "target_status_id",
-                            "text": "Done"
-                        },
-                        {
-                            "id": "target_text_id",
-                            "text": "This item is done"
-                        }
-                    ]
-                }
+                >>> item.id
+                "123456789"
+                >>> item.board.id
+                "987654321"
+                >>> item.group.id
+                "group"
+                >>> item.column_values[0].id
+                "target_status_id"
+                >>> item.column_values[0].text
+                "Done"
 
         Note:
             Every column type can be mapped **except for formula columns.**
@@ -498,7 +465,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['move_item_to_board']
+        return Item.from_dict(data['data']['move_item_to_board'])
 
     async def archive(
         self,
@@ -513,7 +480,7 @@ class Items:
             fields: Fields to return from the archived item.
 
         Returns:
-            Dictionary containing info for the archived item.
+            Item dataclass instance containing info for the archived item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -526,14 +493,14 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.archive(
+                >>> item = await monday_client.items.archive(
                 ...     item_id=123456789,
                 ...     fields='id state'
                 ... )
-                {
-                    "id": "123456789",
-                    "state": "archived"
-                }
+                >>> item.id
+                "123456789"
+                >>> item.state
+                "archived"
         """
 
         fields = Fields(fields)
@@ -553,7 +520,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['archive_item']
+        return Item.from_dict(data['data']['archive_item'])
 
     async def delete(
         self,
@@ -568,7 +535,7 @@ class Items:
             fields: Fields to return from the deleted item.
 
         Returns:
-            Dictionary containing info for the deleted item.
+            Item dataclass instance containing info for the deleted item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -581,14 +548,14 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.delete(
+                >>> item = await monday_client.items.delete(
                 ...     item_id=123456789,
                 ...     fields='id state'
                 ... )
-                {
-                    "id": "123456789",
-                    "state": "deleted"
-                }
+                >>> item.id
+                "123456789"
+                >>> item.state
+                "deleted"
         """
 
         fields = Fields(fields)
@@ -608,7 +575,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['delete_item']
+        return Item.from_dict(data['data']['delete_item'])
 
     async def clear_updates(
         self,
@@ -623,7 +590,7 @@ class Items:
             fields: Fields to return from the cleared item.
 
         Returns:
-            Dictionary containing info for the cleared item.
+            Item dataclass instance containing info for the cleared item.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -636,14 +603,14 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.clear_updates(
+                >>> item = await monday_client.items.clear_updates(
                 ...     item_id=123456789,
                 ...     fields='id updates { text_body }'
                 ... )
-                {
-                    "id": "123456789",
-                    "updates": []
-                }
+                >>> item.id
+                "123456789"
+                >>> item.updates
+                []
         """
 
         fields = Fields(fields)
@@ -663,7 +630,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['clear_item_updates']
+        return Item.from_dict(data['data']['clear_item_updates'])
 
     async def get_column_values(
         self,
@@ -680,7 +647,7 @@ class Items:
             fields: Fields to return from the item column values.
 
         Returns:
-            A list of dictionaries containing the item column values.
+            A list of ColumnValue dataclass instances containing the item column values.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -693,21 +660,19 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.get_column_values(
+                >>> column_values = await monday_client.items.get_column_values(
                 ...     item_id=123456789,
                 ...     column_ids=['status', 'text'],
                 ...     fields='id text'   
                 ... )
-                [
-                    {
-                        "id": "status",
-                        "text": "Done"
-                    },
-                    {
-                        "id": "text",
-                        "text": "This item is done"
-                    }
-                ]
+                >>> column_values[0].id
+                "status"
+                >>> column_values[0].text
+                "Done"
+                >>> column_values[1].id
+                "text"
+                >>> column_values[1].text
+                "This item is done"
 
         Note:
             Use :meth:`Boards.get_column_values() <monday.services.Boards.get_column_values>` to retrieve column values for all items on a board.
@@ -741,12 +706,12 @@ class Items:
         except IndexError:
             return []
 
-        return items['column_values']
+        return [ColumnValue.from_dict(cv) for cv in items['column_values']]
 
     async def change_column_values(
         self,
         item_id: int,
-        column_values: dict[ColumnType, Union[str, ColumnValueDict]],
+        column_values: dict[ColumnType, Union[str, dict[str, Any]]],
         create_labels_if_missing: bool = False,
         fields: Union[str, Fields] = ColumnFields.BASIC,
     ) -> ColumnValue:
@@ -759,7 +724,7 @@ class Items:
             fields: Fields to return from the updated columns.
 
         Returns:
-            Dictionary containing info for the updated columns.
+            ColumnValue dataclass instance containing info for the updated columns.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -772,7 +737,7 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.items.change_column_values(
+                >>> result = await monday_client.items.change_column_values(
                 ...     item_id=123456789,
                 ...     column_values={
                 ...         'status': 'Working on it',
@@ -781,23 +746,12 @@ class Items:
                 ...     },
                 ...     fields='id column_values { id text }'
                 ... )
-                {
-                    "id": "123456789",
-                    "column_values": [
-                        {
-                            "id": "status",
-                            "text": "Working on it"
-                        },
-                        {
-                            "id": "status_2",
-                            "text": "Done"
-                        },
-                        {
-                            "id": "text",
-                            "text": "Working on this item"
-                        }
-                    ]
-                }
+                >>> result.id
+                "123456789"
+                >>> result.column_values[0].id
+                "status"
+                >>> result.column_values[0].text
+                "Working on it"
 
         Note:
             Each column has a certain type, and different column types expect a different set of parameters to update their values.
@@ -806,7 +760,7 @@ class Items:
         """
 
         board_id_query = await self.query(item_id, fields='board { id }')
-        board_id = int(board_id_query[0]['board']['id'])
+        board_id = int(board_id_query[0].board.id if board_id_query[0].board else 0)
 
         fields = Fields(fields)
 
@@ -828,7 +782,7 @@ class Items:
 
         data = check_query_result(query_result)
 
-        return data['data']['change_multiple_column_values']
+        return ColumnValue.from_dict(data['data']['change_multiple_column_values'])
 
     async def get_name(
         self,
@@ -869,9 +823,12 @@ class Items:
             args
         )
 
-        data = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(query_string)
 
-        return data['data']['items'][0]['name']
+        data = check_query_result(query_result)
+
+        items = [Item.from_dict(item) for item in data['data']['items']]
+        return items[0].name if items else ''
 
     async def get_id(
         self,
@@ -910,12 +867,12 @@ class Items:
         """
 
         columns = [
-            {
-                'column_id': 'name',
-                'column_values': item_name
-            }
+            ColumnFilter(
+                column_id='name',
+                column_values=item_name
+            )
         ]
 
         data = await self.boards.get_items_by_column_values(board_id, columns)
 
-        return [str(item['id']) for item in data]
+        return [str(item.id) for item in data]

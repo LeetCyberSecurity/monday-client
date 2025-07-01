@@ -28,6 +28,8 @@ from monday.exceptions import MondayAPIError
 from monday.services.boards import Boards
 from monday.services.items import Items
 from monday.services.subitems import Subitems
+from monday.types.item import Item
+from monday.types.subitem import Subitem, SubitemList
 
 
 @pytest.fixture(scope='module')
@@ -62,62 +64,53 @@ def subitems_instance(mock_client, mock_items, mock_boards):
 async def test_query_without_subitem_ids(subitems_instance):
     """Test querying subitems without specific subitem IDs."""
     mock_items = [
-        {
-            'id': '1',
-            'subitems': [
-                {'id': '11', 'name': 'Subitem 1'},
-                {'id': '12', 'name': 'Subitem 2'}
-            ]
-        }
+        Item(id='1', subitems=[
+            Subitem(id='11', name='Subitem 1'),
+            Subitem(id='12', name='Subitem 2')
+        ])
     ]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
     result = await subitems_instance.query(item_ids=1)
 
-    expected = [{'id': '1', 'subitems': [
-        {'id': '11', 'name': 'Subitem 1'},
-        {'id': '12', 'name': 'Subitem 2'}
-    ]}]
-
-    assert result == expected
+    assert isinstance(result[0], SubitemList)
+    assert result[0].item_id == '1'
+    assert result[0].subitems[0].id == '11'
+    assert result[0].subitems[0].name == 'Subitem 1'
+    assert result[0].subitems[1].id == '12'
+    assert result[0].subitems[1].name == 'Subitem 2'
     subitems_instance.items.query.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_query_with_subitem_ids(subitems_instance):
     """Test querying specific subitems by their IDs."""
-    mock_board_items = [
-        {
-            'id': '1',
-            'subitems': [
-                {'id': '11', 'board': {'id': '100'}},
-                {'id': '12', 'board': {'id': '100'}}
-            ]
-        }
+    mock_items = [
+        Item(id='1', subitems=[
+            Subitem(id='11', name='Subitem 1', board=None),
+            Subitem(id='12', name='Subitem 2', board=None)
+        ])
     ]
     mock_board_response = [
-        {
-            'items': [
-                {'id': '11', 'name': 'Subitem 1'},
-                {'id': '12', 'name': 'Subitem 2'}
-            ]
-        }
+        Item(id='11', name='Subitem 1'),
+        Item(id='12', name='Subitem 2')
     ]
 
-    subitems_instance.items.query = AsyncMock(return_value=mock_board_items)
-    subitems_instance.boards.get_items = AsyncMock(return_value=mock_board_response)
+    subitems_instance.items.query = AsyncMock(return_value=mock_items)
+    subitems_instance.boards.get_items = AsyncMock(return_value=[MagicMock(items=mock_board_response)])
 
     result = await subitems_instance.query(
         item_ids=1,
-        subitem_ids=[11, 12]
+        subitem_ids=['11', '12']
     )
 
-    expected = [{'id': '1', 'subitems': [
-        {'id': '11', 'name': 'Subitem 1'},
-        {'id': '12', 'name': 'Subitem 2'}
-    ]}]
-
-    assert result == expected
+    assert isinstance(result[0], SubitemList)
+    assert result[0].item_id == '1'
+    assert len(result[0].subitems) == 2
+    assert result[0].subitems[0].id == '11'
+    assert result[0].subitems[1].id == '12'
+    assert result[0].subitems[0].name == 'Subitem 1'
+    assert result[0].subitems[1].name == 'Subitem 2'
     assert subitems_instance.items.query.await_count == 1
     assert subitems_instance.boards.get_items.await_count == 1
 
@@ -126,29 +119,23 @@ async def test_query_with_subitem_ids(subitems_instance):
 async def test_query_multiple_items(subitems_instance):
     """Test querying subitems for multiple parent items."""
     mock_items = [
-        {
-            'id': '1',
-            'subitems': [
-                {'id': '11', 'name': 'Subitem 1'},
-                {'id': '12', 'name': 'Subitem 2'}
-            ]
-        },
-        {
-            'id': '2',
-            'subitems': [
-                {'id': '21', 'name': 'Subitem 3'}
-            ]
-        }
+        Item(id='1', subitems=[
+            Subitem(id='11', name='Subitem 1'),
+            Subitem(id='12', name='Subitem 2')
+        ]),
+        Item(id='2', subitems=[
+            Subitem(id='21', name='Subitem 3')
+        ])
     ]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
     result = await subitems_instance.query(item_ids=[1, 2])
 
     assert len(result) == 2
-    assert result[0]['id'] == '1'
-    assert result[1]['id'] == '2'
-    assert len(result[0]['subitems']) == 2
-    assert len(result[1]['subitems']) == 1
+    assert result[0].item_id == '1'
+    assert result[1].item_id == '2'
+    assert len(result[0].subitems) == 2
+    assert len(result[1].subitems) == 1
     subitems_instance.items.query.assert_awaited_once()
 
 
@@ -156,18 +143,9 @@ async def test_query_multiple_items(subitems_instance):
 async def test_query_with_custom_fields(subitems_instance):
     """Test querying subitems with custom fields."""
     mock_items = [
-        {
-            'id': '1',
-            'subitems': [
-                {
-                    'id': '11',
-                    'name': 'Subitem 1',
-                    'column_values': [
-                        {'id': 'status', 'text': 'Done'}
-                    ]
-                }
-            ]
-        }
+        Item(id='1', subitems=[
+            Subitem(id='11', name='Subitem 1')
+        ])
     ]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
@@ -176,8 +154,8 @@ async def test_query_with_custom_fields(subitems_instance):
         fields='id name column_values { id text }'
     )
 
-    assert result[0]['subitems'][0]['column_values'][0]['id'] == 'status'
-    assert result[0]['subitems'][0]['column_values'][0]['text'] == 'Done'
+    assert result[0].subitems[0].id == '11'
+    assert result[0].subitems[0].name == 'Subitem 1'
     subitems_instance.items.query.assert_awaited_once()
 
 
@@ -189,21 +167,16 @@ async def test_create_subitem(subitems_instance):
             'create_subitem': {
                 'id': '11',
                 'name': 'New Subitem',
-                'column_values': [
-                    {'id': 'status', 'text': 'Done'}
-                ]
             }
         }
     }
 
     subitems_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await subitems_instance.create(
-        item_id=1,
-        subitem_name='New Subitem',
-        column_values={'status': 'Done'}
-    )
+    result = await subitems_instance.create(item_id='1', subitem_name='New Subitem')
 
-    assert result == mock_response['data']['create_subitem']
+    assert isinstance(result, Subitem)
+    assert result.id == '11'
+    assert result.name == 'New Subitem'
     subitems_instance.client.post_request.assert_awaited_once()
 
 
@@ -215,22 +188,20 @@ async def test_create_subitem_with_labels(subitems_instance):
             'create_subitem': {
                 'id': '11',
                 'name': 'New Subitem',
-                'column_values': [
-                    {'id': 'status', 'text': 'New Status'}
-                ]
             }
         }
     }
 
     subitems_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await subitems_instance.create(
-        item_id=1,
+        item_id='1',
         subitem_name='New Subitem',
-        column_values={'status': 'New Status'},
         create_labels_if_missing=True
     )
 
-    assert result == mock_response['data']['create_subitem']
+    assert isinstance(result, Subitem)
+    assert result.id == '11'
+    assert result.name == 'New Subitem'
     subitems_instance.client.post_request.assert_awaited_once()
 
 
@@ -247,7 +218,7 @@ async def test_create_subitem_with_api_error(subitems_instance):
     subitems_instance.client.post_request = AsyncMock(return_value=error_response)
     with pytest.raises(MondayAPIError) as exc_info:
         await subitems_instance.create(
-            item_id=1,
+            item_id='1',
             subitem_name='New Subitem'
         )
     assert exc_info.value.json == error_response

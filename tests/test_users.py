@@ -27,6 +27,7 @@ from monday.client import MondayClient
 from monday.exceptions import MondayAPIError
 from monday.services.users import Users
 from monday.services.utils.fields import Fields
+from monday.types.user import User
 
 
 @pytest.fixture(scope='module')
@@ -45,14 +46,21 @@ def users_instance(mock_client):
 async def test_query(users_instance):
     """Test basic user query functionality."""
     mock_responses = [
-        {'data': {'users': [{'id': 1, 'name': 'User 1'}, {'id': 2, 'name': 'User 2'}]}},
+        {'data': {'users': [
+            {'id': '1', 'name': 'User 1'},
+            {'id': '2', 'name': 'User 2'}
+        ]}},
         {'data': {'users': []}}
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
     result = await users_instance.query(limit=2)
 
-    assert result == [{'id': 1, 'name': 'User 1'}, {'id': 2, 'name': 'User 2'}]
+    assert isinstance(result[0], User)
+    assert result[0].id == '1'
+    assert result[0].name == 'User 1'
+    assert result[1].id == '2'
+    assert result[1].name == 'User 2'
     assert users_instance.client.post_request.await_count == 2
 
 
@@ -76,11 +84,9 @@ async def test_query_with_api_error(users_instance):
 async def test_query_with_filters(users_instance):
     """Test query with email, id, name and kind filters."""
     mock_responses = [
-        {
-            'data': {
-                'users': [{'id': 1, 'email': 'test@example.com'}]
-            }
-        }
+        {'data': {'users': [
+            {'id': '1', 'email': 'test@example.com'}
+        ]}}
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -91,7 +97,9 @@ async def test_query_with_filters(users_instance):
         kind='non_guests'
     )
 
-    assert result == [{'id': 1, 'email': 'test@example.com'}]
+    assert isinstance(result[0], User)
+    assert result[0].id == '1'
+    assert result[0].email == 'test@example.com'
     assert users_instance.client.post_request.await_count == 1
 
 
@@ -108,7 +116,7 @@ async def test_query_pagination(users_instance):
     result = await users_instance.query(limit=2, paginate=True)
 
     assert len(result) == 4
-    assert [user['id'] for user in result] == ['1', '2', '3', '4']
+    assert [user.id for user in result] == ['1', '2', '3', '4']
     assert users_instance.client.post_request.await_count == 3
 
 
@@ -136,8 +144,9 @@ async def test_query_duplicate_handling(users_instance):
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
     result = await users_instance.query(limit=2)
 
-    assert len(result) == 3  # Should only have 3 unique users
-    assert sorted([user['id'] for user in result]) == ['1', '2', '3']
+    ids = [user.id for user in result]
+    assert len(set(ids)) == 3
+    assert sorted(ids) == ['1', '2', '3']
     assert users_instance.client.post_request.await_count == 3  # Verify all pages were requested
 
 
@@ -174,12 +183,11 @@ async def test_query_custom_fields(users_instance):
     )
 
     assert len(result) == 1
-    assert result[0] == {
-        'id': '1',
-        'name': 'Test User',
-        'email': 'test@example.com',
-        'title': 'Developer'
-    }
+    assert isinstance(result[0], User)
+    assert result[0].id == '1'
+    assert result[0].name == 'Test User'
+    assert result[0].email == 'test@example.com'
+    assert result[0].title == 'Developer'
 
 
 @pytest.mark.asyncio
@@ -195,7 +203,7 @@ async def test_query_pagination_with_full_pages(users_instance):
     result = await users_instance.query(limit=2, paginate=True)
 
     assert len(result) == 5
-    assert [user['id'] for user in result] == ['1', '2', '3', '4', '5']
+    assert [user.id for user in result] == ['1', '2', '3', '4', '5']
     assert users_instance.client.post_request.await_count == 3
 
 
@@ -214,8 +222,10 @@ async def test_temp_fields_management(users_instance):
     result = await users_instance.query(fields='name')  # Note: not requesting 'id'
 
     assert len(result) == 1
-    assert 'name' in result[0]
-    assert 'id' not in result[0]  # ID should be removed as it was temporary
+    assert hasattr(result[0], 'name')
+    assert getattr(result[0], 'name') == 'Test User'
+    # id should not be present unless requested
+    assert not getattr(result[0], 'id', None)
 
 
 @pytest.mark.asyncio
@@ -231,7 +241,7 @@ async def test_query_with_duplicate_users_across_pages(users_instance):
     result = await users_instance.query(limit=2)
 
     assert len(result) == 3  # Should only have 3 unique users
-    assert sorted([user['id'] for user in result]) == ['1', '2', '3']
+    assert sorted([user.id for user in result]) == ['1', '2', '3']
     assert users_instance.client.post_request.await_count == 3
 
 
@@ -249,7 +259,13 @@ async def test_query_with_fields_object_and_temp_fields(users_instance):
     result = await users_instance.query(fields=fields)
 
     assert len(result) == 1
-    assert set(result[0].keys()) == {'name', 'email'}  # Should only have requested fields
+    user = result[0]
+    assert hasattr(user, 'name')
+    assert hasattr(user, 'email')
+    assert getattr(user, 'name') == 'Test User'
+    assert getattr(user, 'email') == 'test@example.com'
+    # id should not be present unless requested
+    assert not getattr(user, 'id', None)
 
 
 @pytest.mark.asyncio
@@ -264,7 +280,7 @@ async def test_query_identical_responses_stops_pagination(users_instance):
     result = await users_instance.query(limit=2)
 
     assert len(result) == 2
-    assert [user['id'] for user in result] == ['1', '2']
+    assert [user.id for user in result] == ['1', '2']
     assert users_instance.client.post_request.await_count == 2
 
 

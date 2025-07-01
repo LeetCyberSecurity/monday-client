@@ -19,7 +19,7 @@
 
 """Comprehensive tests for Groups methods"""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -28,6 +28,8 @@ from monday.exceptions import MondayAPIError
 from monday.services.boards import Boards
 from monday.services.groups import Groups
 from monday.services.items import Items
+from monday.types.board import Board
+from monday.types.group import Group, GroupList
 
 
 @pytest.fixture(scope='module')
@@ -60,67 +62,81 @@ def groups_instance(mock_client, mock_boards):
 async def test_query(groups_instance, mock_boards):
     """Test basic group query functionality."""
     mock_boards.query.return_value = [
-        {
-            'id': 1,
-            'groups': [
-                {'id': 'group1', 'title': 'Group 1'},
-                {'id': 'group2', 'title': 'Group 2'}
+        Board(
+            id='1',
+            groups=[
+                Group(id='group1', title='Group 1'),
+                Group(id='group2', title='Group 2')
             ]
-        }
+        )
     ]
-
     result = await groups_instance.query(board_ids=1)
-    assert result == [{'id': 1, 'groups': [{'id': 'group1', 'title': 'Group 1'}, {'id': 'group2', 'title': 'Group 2'}]}]
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert result[0].groups[0].id == 'group1'
+    assert result[0].groups[0].title == 'Group 1'
+    assert result[0].groups[1].id == 'group2'
+    assert result[0].groups[1].title == 'Group 2'
 
 
 @pytest.mark.asyncio
 async def test_query_with_group_filter(groups_instance, mock_boards):
     """Test group query with group ID filter."""
     mock_boards.query.return_value = [
-        {
-            'id': 1,
-            'groups': [
-                {'id': 'group1', 'title': 'Group 1'},
+        Board(
+            id='1',
+            groups=[
+                Group(id='group1', title='Group 1'),
             ]
-        }
+        )
     ]
 
     result = await groups_instance.query(board_ids=1, group_ids='group1')
-    assert result == [{'id': 1, 'groups': [{'id': 'group1', 'title': 'Group 1'}]}]
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert result[0].groups[0].id == 'group1'
+    assert result[0].groups[0].title == 'Group 1'
 
 
 @pytest.mark.asyncio
 async def test_query_with_name_filter(groups_instance, mock_boards):
     """Test group query with name filter."""
     mock_boards.query.return_value = [
-        {
-            'id': 1,
-            'groups': [
-                {'id': 'group1', 'title': 'Group 1'},
-                {'id': 'group2', 'title': 'Group 2'}
+        Board(
+            id='1',
+            groups=[
+                Group(id='group1', title='Group 1'),
+                Group(id='group2', title='Group 2')
             ]
-        }
+        )
     ]
 
     result = await groups_instance.query(board_ids=1, group_name='Group 1', fields='id')
-    assert result == [{'id': 1, 'groups': [{'id': 'group1'}]}]
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert len(result[0].groups) == 1
+    assert result[0].groups[0].id == 'group1'
 
 
 @pytest.mark.asyncio
 async def test_query_with_name_filter_and_title(groups_instance, mock_boards):
     """Test group query with name filter and title field."""
     mock_boards.query.return_value = [
-        {
-            'id': 1,
-            'groups': [
-                {'id': 'group1', 'title': 'Group 1'},
-                {'id': 'group2', 'title': 'Group 2'}
+        Board(
+            id='1',
+            groups=[
+                Group(id='group1', title='Group 1'),
+                Group(id='group2', title='Group 2')
             ]
-        }
+        )
     ]
 
     result = await groups_instance.query(board_ids=1, group_name='Group 1', fields='id title')
-    assert result == [{'id': 1, 'groups': [{'id': 'group1', 'title': 'Group 1'}]}]
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert len(result[0].groups) == 1
+    assert result[0].groups[0].id == 'group1'
+    assert result[0].groups[0].title == 'Group 1'
 
 
 @pytest.mark.asyncio
@@ -160,11 +176,9 @@ async def test_create_group(groups_instance, mock_client):
         fields='id title color'
     )
 
-    assert result == {
-        'id': 'new_group',
-        'title': 'New Group',
-        'color': '#0086c0'
-    }
+    assert result.id == 'new_group'
+    assert result.title == 'New Group'
+    assert result.color == '#0086c0'
 
 
 @pytest.mark.asyncio
@@ -188,11 +202,9 @@ async def test_update_group(groups_instance, mock_client):
         fields='id title color'
     )
 
-    assert result == {
-        'id': 'group1',
-        'title': 'Updated Group',
-        'color': '#7F5347'
-    }
+    assert result.id == 'group1'
+    assert result.title == 'Updated Group'
+    assert result.color == '#7F5347'
 
 
 @pytest.mark.asyncio
@@ -213,10 +225,8 @@ async def test_duplicate_group(groups_instance, mock_client):
         fields='id title'
     )
 
-    assert result == {
-        'id': 'group2',
-        'title': 'Duplicate of Group 1'
-    }
+    assert result.id == 'group2'
+    assert result.title == 'Duplicate of Group 1'
 
 
 @pytest.mark.asyncio
@@ -238,11 +248,9 @@ async def test_archive_group(groups_instance, mock_client):
         fields='id title archived'
     )
 
-    assert result == {
-        'id': 'group1',
-        'title': 'Group 1',
-        'archived': True
-    }
+    assert result.id == 'group1'
+    assert result.title == 'Group 1'
+    assert result.archived is True
 
 
 @pytest.mark.asyncio
@@ -264,11 +272,9 @@ async def test_delete_group(groups_instance, mock_client):
         fields='id title deleted'
     )
 
-    assert result == {
-        'id': 'group1',
-        'title': 'Group 1',
-        'deleted': True
-    }
+    assert result.id == 'group1'
+    assert result.title == 'Group 1'
+    assert result.deleted is True
 
 
 @pytest.mark.asyncio
@@ -296,10 +302,11 @@ async def test_get_items_by_name(groups_instance, mock_client):
         item_fields='id name'
     )
 
-    assert result == [
-        {'id': '123', 'name': 'Test Item'},
-        {'id': '456', 'name': 'Test Item'}
-    ]
+    assert len(result) == 2
+    assert result[0].id == '123'
+    assert result[0].name == 'Test Item'
+    assert result[1].id == '456'
+    assert result[1].name == 'Test Item'
 
 
 @pytest.mark.asyncio
@@ -322,10 +329,8 @@ async def test_create_group_with_position(groups_instance, mock_client):
         fields='id title'
     )
 
-    assert result == {
-        'id': 'new_group',
-        'title': 'New Group'
-    }
+    assert result.id == 'new_group'
+    assert result.title == 'New Group'
 
 
 @pytest.mark.asyncio
@@ -348,10 +353,8 @@ async def test_update_group_relative_position(groups_instance, mock_client):
         fields='id title'
     )
 
-    assert result == {
-        'id': 'group1',
-        'title': 'Group 1'
-    }
+    assert result.id == 'group1'
+    assert result.title == 'Group 1'
 
 
 @pytest.mark.asyncio
@@ -374,7 +377,261 @@ async def test_duplicate_group_with_custom_title(groups_instance, mock_client):
         fields='id title'
     )
 
-    assert result == {
-        'id': 'group2',
-        'title': 'Custom Title'
-    }
+    assert result.id == 'group2'
+    assert result.title == 'Custom Title'
+
+
+class TestGroupsService:
+    def setup_method(self):
+        self.client = Mock()
+        self.boards = Mock()
+        self.groups_service = Groups(self.client, self.boards)
+
+    @pytest.mark.asyncio
+    async def test_query_groups(self):
+        # Mock response data
+        mock_group1 = Group(id='group1', title='Group 1', color='#ff0000', position='1', archived=False)
+        mock_group2 = Group(id='group2', title='Group 2', color='#00ff00', position='2', archived=True)
+        mock_board = Board(id='123', groups=[mock_group1, mock_group2])
+
+        # Mock the boards.query method
+        self.boards.query = AsyncMock(return_value=[mock_board])
+
+        # Call the method
+        result = await self.groups_service.query(123)
+
+        # Verify the boards.query was called correctly
+        self.boards.query.assert_called_once()
+
+        # Verify the result is a list of GroupList
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert isinstance(result[0], GroupList)
+        assert result[0].board_id == '123'
+        assert len(result[0].groups) == 2
+
+        # Verify first group
+        group1 = result[0].groups[0]
+        assert group1.id == 'group1'
+        assert group1.title == 'Group 1'
+        assert group1.color == '#ff0000'
+        assert group1.position == '1'
+        assert group1.archived is False
+
+        # Verify second group
+        group2 = result[0].groups[1]
+        assert group2.id == 'group2'
+        assert group2.title == 'Group 2'
+        assert group2.color == '#00ff00'
+        assert group2.position == '2'
+        assert group2.archived is True
+
+    @pytest.mark.asyncio
+    async def test_create_group(self):
+        # Mock response data
+        mock_response = {
+            'data': {
+                'create_group': {
+                    'id': 'new_group_id',
+                    'title': 'New Group',
+                    'color': '#ff0000',
+                    'position': '3',
+                    'archived': False
+                }
+            }
+        }
+
+        # Mock the client's post_request method
+        self.client.post_request = AsyncMock(return_value=mock_response)
+
+        # Call the method
+        result = await self.groups_service.create(123, 'New Group')
+
+        # Verify the client was called correctly
+        self.client.post_request.assert_called_once()
+
+        # Verify the result is a Group
+        assert isinstance(result, Group)
+        assert result.id == 'new_group_id'
+        assert result.title == 'New Group'
+        assert result.color == '#ff0000'
+        assert result.position == '3'
+        assert result.archived is False
+
+    @pytest.mark.asyncio
+    async def test_update_group(self):
+        # Mock response data
+        mock_response = {
+            'data': {
+                'update_group': {
+                    'id': 'group1',
+                    'title': 'Updated Group',
+                    'color': '#00ff00',
+                    'position': '2',
+                    'archived': True
+                }
+            }
+        }
+
+        # Mock the client's post_request method
+        self.client.post_request = AsyncMock(return_value=mock_response)
+
+        # Call the method
+        result = await self.groups_service.update(123, 'group1', 'title', 'Updated Group')
+
+        # Verify the client was called correctly
+        self.client.post_request.assert_called_once()
+
+        # Verify the result is a Group
+        assert isinstance(result, Group)
+        assert result.id == 'group1'
+        assert result.title == 'Updated Group'
+        assert result.color == '#00ff00'
+        assert result.position == '2'
+        assert result.archived is True
+
+    @pytest.mark.asyncio
+    async def test_delete_group(self):
+        # Mock response data
+        mock_response = {
+            'data': {
+                'delete_group': {
+                    'id': 'deleted_group_id',
+                    'title': 'Deleted Group',
+                    'deleted': True
+                }
+            }
+        }
+
+        # Mock the client's post_request method
+        self.client.post_request = AsyncMock(return_value=mock_response)
+
+        # Call the method
+        result = await self.groups_service.delete(123, 'group1')
+
+        # Verify the client was called correctly
+        self.client.post_request.assert_called_once()
+
+        # Verify the result
+        assert isinstance(result, Group)
+        assert result.id == 'deleted_group_id'
+        assert result.deleted is True
+
+    @pytest.mark.asyncio
+    async def test_duplicate_group(self):
+        # Mock response data
+        mock_response = {
+            'data': {
+                'duplicate_group': {
+                    'id': 'duplicated_group_id',
+                    'title': 'Group 1 (Copy)',
+                    'color': '#ff0000',
+                    'position': '4',
+                    'archived': False
+                }
+            }
+        }
+
+        # Mock the client's post_request method
+        self.client.post_request = AsyncMock(return_value=mock_response)
+
+        # Call the method
+        result = await self.groups_service.duplicate(123, 'group1', group_title='Group 1 (Copy)')
+
+        # Verify the client was called correctly
+        self.client.post_request.assert_called_once()
+
+        # Verify the result is a Group
+        assert isinstance(result, Group)
+        assert result.id == 'duplicated_group_id'
+        assert result.title == 'Group 1 (Copy)'
+        assert result.color == '#ff0000'
+        assert result.position == '4'
+        assert result.archived is False
+
+    @pytest.mark.asyncio
+    async def test_archive_group(self):
+        # Mock response data
+        mock_response = {
+            'data': {
+                'archive_group': {
+                    'id': 'group1',
+                    'title': 'Group 1',
+                    'color': '#ff0000',
+                    'position': '1',
+                    'archived': True
+                }
+            }
+        }
+
+        # Mock the client's post_request method
+        self.client.post_request = AsyncMock(return_value=mock_response)
+
+        # Call the method
+        result = await self.groups_service.archive(123, 'group1')
+
+        # Verify the client was called correctly
+        self.client.post_request.assert_called_once()
+
+        # Verify the result is a Group
+        assert isinstance(result, Group)
+        assert result.id == 'group1'
+        assert result.title == 'Group 1'
+        assert result.color == '#ff0000'
+        assert result.position == '1'
+        assert result.archived is True
+
+    @pytest.mark.asyncio
+    async def test_query_groups_empty_response(self):
+        # Mock empty response
+        mock_board = Board(id='123', groups=[])
+
+        # Mock the boards.query method
+        self.boards.query = AsyncMock(return_value=[mock_board])
+
+        result = await self.groups_service.query(123)
+
+        assert isinstance(result, list)
+        assert len(result) == 0  # Empty groups list means no GroupList is created
+
+    @pytest.mark.asyncio
+    async def test_query_groups_with_filter(self):
+        # Mock response data
+        mock_group1 = Group(id='group1', title='Group 1', color='#ff0000', position='1', archived=False)
+        mock_board = Board(id='123', groups=[mock_group1])
+
+        # Mock the boards.query method
+        self.boards.query = AsyncMock(return_value=[mock_board])
+
+        # Call the method with group name filter
+        result = await self.groups_service.query(123, group_name='Group 1')
+
+        # Verify the boards.query was called correctly
+        self.boards.query.assert_called_once()
+
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert len(result[0].groups) == 1
+        assert result[0].groups[0].title == 'Group 1'
+
+    @pytest.mark.asyncio
+    async def test_query_groups_with_group_ids_filter(self):
+        # Mock response data
+        mock_group1 = Group(id='group1', title='Group 1', color='#ff0000', position='1', archived=False)
+        mock_group2 = Group(id='group2', title='Group 2', color='#00ff00', position='2', archived=True)
+        mock_board = Board(id='123', groups=[mock_group1, mock_group2])
+
+        # Mock the boards.query method
+        self.boards.query = AsyncMock(return_value=[mock_board])
+
+        # Call the method with group IDs filter
+        result = await self.groups_service.query(123, group_ids=['group1'])
+
+        # Verify the boards.query was called correctly
+        self.boards.query.assert_called_once()
+
+        # Verify the result
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert len(result[0].groups) == 2  # Both groups are returned, filtering happens in the query

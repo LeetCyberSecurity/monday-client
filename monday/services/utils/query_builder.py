@@ -19,7 +19,7 @@
 
 import json
 import logging
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 from monday.exceptions import QueryFormatError
 from monday.types.query import QueryParams
@@ -53,6 +53,27 @@ def convert_numeric_args(args_dict: dict) -> dict:
                     converted[key].append(int(x))
                 except (ValueError, TypeError):
                     converted[key].append(x)
+        elif isinstance(value, str) and value.startswith('[') and value.endswith(']'):
+            # Handle string arrays - try to parse them as actual arrays
+            try:
+                import ast
+                parsed_array = ast.literal_eval(value)
+                if isinstance(parsed_array, list):
+                    # Convert numeric strings in the parsed array
+                    converted_array = []
+                    for x in parsed_array:
+                        if x is None:
+                            continue
+                        try:
+                            converted_array.append(int(x))
+                        except (ValueError, TypeError):
+                            converted_array.append(x)
+                    converted[key] = converted_array
+                else:
+                    converted[key] = value
+            except (ValueError, SyntaxError):
+                # If parsing fails, keep as string
+                converted[key] = value
         else:
             # Handle single values
             try:
@@ -65,7 +86,7 @@ def convert_numeric_args(args_dict: dict) -> dict:
 def build_graphql_query(
     operation: str,
     query_type: Literal['query', 'mutation'],
-    args: dict[str, Any]
+    args: dict[str, Any] | None = None
 ) -> str:
     """
     Builds a formatted GraphQL query string based on the provided parameters.
@@ -92,58 +113,94 @@ def build_graphql_query(
         'state'
     }
 
-    args = convert_numeric_args(args)
-    processed_args = {}
+    # Fields that should be treated as numeric IDs (unquoted when they are numeric strings)
+    numeric_id_fields = {
+        'board_id',
+        'board_ids',
+        'item_id',
+        'item_ids',
+        'subitem_id',
+        'subitem_ids',
+        'parent_item_id',
+        'workspace_id',
+        'workspace_ids',
+        'folder_id',
+        'template_id',
+        'group_id',
+        'group_ids',
+        'owner_ids',
+        'subscriber_ids',
+        'subscriber_teams_ids',
+        'relative_to',
+        'ids'
+    }
 
-    # Special handling for common field types
-    for key, value in args.items():
-        key = key.strip()
-        if value is None:
-            continue
-        elif isinstance(value, bool):
-            processed_args[key] = str(value).lower()
-        elif isinstance(value, dict):
-            if key == 'columns_mapping':
-                columns_mapping = []
-                for k, v in value.items():
-                    columns_mapping.append(f'{{source: "{k}", target: "{v}"}}')
-                processed_args[key] = '[' + ', '.join(columns_mapping) + ']'
-            else:
-                processed_args[key] = json.dumps(json.dumps(value))
-        elif isinstance(value, list):
-            if key == 'columns':
-                processed_columns = []
-                for column in value:
-                    # Remove extra quotes for column_values
-                    if 'column_values' in column:
-                        # Handle column_values as a list without additional quotes
-                        values = column['column_values']
-                        if isinstance(values, str) and values.startswith('[') and values.endswith(']'):
-                            # Already formatted as a string list
-                            formatted_pairs = [f'column_id: "{column["column_id"]}", column_values: {values}']
+    processed_args = {}
+    if args:
+        args = convert_numeric_args(args)
+
+        # Special handling for common field types
+        for key, value in args.items():
+            key = key.strip()
+            if value is None:
+                continue
+            elif isinstance(value, bool):
+                processed_args[key] = str(value).lower()
+            elif isinstance(value, dict):
+                if key == 'columns_mapping':
+                    columns_mapping = []
+                    for k, v in value.items():
+                        columns_mapping.append(f'{{source: "{k}", target: "{v}"}}')
+                    processed_args[key] = '[' + ', '.join(columns_mapping) + ']'
+                else:
+                    processed_args[key] = json.dumps(json.dumps(value))
+            elif isinstance(value, list):
+                if key == 'columns':
+                    processed_columns = []
+                    for column in value:
+                        # Handle ColumnFilter dataclass objects
+                        if hasattr(column, 'column_id') and hasattr(column, 'column_values'):
+                            # Convert ColumnFilter to dict format
+                            column_dict = {
+                                'column_id': column.column_id,
+                                'column_values': column.column_values
+                            }
                         else:
-                            # Format as a proper list
-                            formatted_pairs = [f'column_id: "{column["column_id"]}", column_values: {json.dumps(values)}']
-                    else:
-                        # Handle other column properties
-                        formatted_pairs = [f'{k}: "{v}"' for k, v in column.items()]
-                    processed_columns.append('{' + ', '.join(formatted_pairs) + '}')
-                processed_args[key] = '[' + ', '.join(processed_columns) + ']'
+                            # Handle dictionary format for backward compatibility
+                            column_dict = column
+
+                        # Remove extra quotes for column_values
+                        if 'column_values' in column_dict:
+                            # Handle column_values as a list without additional quotes
+                            values = column_dict['column_values']
+                            if isinstance(values, str) and values.startswith('[') and values.endswith(']'):
+                                # Already formatted as a string list
+                                formatted_pairs = [f'column_id: "{column_dict["column_id"]}", column_values: {values}']
+                            else:
+                                # Format as a proper list
+                                formatted_pairs = [f'column_id: "{column_dict["column_id"]}", column_values: {json.dumps(values)}']
+                        else:
+                            # Handle other column properties
+                            formatted_pairs = [f'{k}: "{v}"' for k, v in column_dict.items()]
+                        processed_columns.append('{' + ', '.join(formatted_pairs) + '}')
+                    processed_args[key] = '[' + ', '.join(processed_columns) + ']'
+                else:
+                    processed_values = []
+                    for item in value:
+                        if key == 'ids' or (key in numeric_id_fields and key.endswith('_ids')):
+                            processed_values.append(str(item))
+                        else:
+                            processed_values.append(f'"{item}"')
+                    processed_args[key] = '[' + ', '.join(processed_values) + ']'
+            elif isinstance(value, str):
+                if key in enum_fields:
+                    processed_args[key] = value.strip()  # No quotes for enum values
+                elif key in numeric_id_fields and value.isdigit():
+                    processed_args[key] = value  # No quotes for numeric ID strings
+                else:
+                    processed_args[key] = f'"{value}"'  # Quote regular strings
             else:
-                processed_values = []
-                for item in value:
-                    if key == 'ids':
-                        processed_values.append(str(item))
-                    else:
-                        processed_values.append(f'"{item}"')
-                processed_args[key] = '[' + ', '.join(processed_values) + ']'
-        elif isinstance(value, str):
-            if key in enum_fields:
-                processed_args[key] = value.strip()  # No quotes for enum values
-            else:
-                processed_args[key] = f'"{value}"'  # Quote regular strings
-        else:
-            processed_args[key] = value
+                processed_args[key] = value
 
     fields = processed_args.pop('fields', None)
     if fields:
@@ -167,13 +224,13 @@ def build_graphql_query(
 
 
 def build_query_params_string(
-    query_params: 'QueryParams'
+    query_params: Union['QueryParams', dict[str, Any]]
 ) -> str:
     """
     Builds a GraphQL-compatible query parameters string.
 
     Args:
-        query_params: Dictionary containing rules, operator and order_by parameters
+        query_params: QueryParams dataclass or dictionary containing rules, operator and order_by parameters
 
     Returns:
         Formatted query parameters string for GraphQL query
@@ -181,43 +238,61 @@ def build_query_params_string(
     if not query_params:
         return ""
 
+    # Convert dict to QueryParams if needed
+    if isinstance(query_params, dict):
+        query_params = QueryParams.from_dict(query_params)
+
     parts = []
 
     # Process rules
-    if rules := query_params.get('rules'):
+    if query_params.rules:
         rule_parts = []
-        for rule in rules:
+        for rule in query_params.rules:
             rule_items = []
-            for key, value in rule.items():
-                if key == 'operator':
-                    rule_items.append(f'{key}: {value}')
-                elif key == 'compare_value':
-                    compare_values = [
-                        str(int(v)) if str(v).isdigit() else f'"{v}"'
-                        for v in value
-                    ]
-                    rule_items.append(f'compare_value: [{", ".join(compare_values)}]')
-                elif key in ['compare_attribute', 'column_id']:
-                    rule_items.append(f'{key}: "{value}"')
+            rule_items.append(f'column_id: "{rule.column_id}"')
+            rule_items.append(f'operator: {rule.operator}')
+
+            compare_values = [
+                str(int(v)) if str(v).isdigit() else f'"{v}"'
+                for v in rule.compare_value
+            ]
+            rule_items.append(f'compare_value: [{", ".join(compare_values)}]')
+
+            if rule.compare_attribute:
+                rule_items.append(f'compare_attribute: "{rule.compare_attribute}"')
+
             rule_parts.append('{' + ', '.join(rule_items) + '}')
 
         if rule_parts:
             parts.append(f'rules: [{", ".join(rule_parts)}]')
 
     # Add operator if present
-    if operator := query_params.get('operator'):
-        parts.append(f'operator: {operator}')
+    if query_params.operator:
+        parts.append(f'operator: {query_params.operator}')
 
     # Add order_by if present
-    if order_by := query_params.get('order_by'):
+    if query_params.order_by:
         order_str = ('{' +
-                     f'column_id: "{order_by["column_id"]}", ' +
-                     f'direction: {order_by["direction"]}' +
+                     f'column_id: "{query_params.order_by.column_id}", ' +
+                     f'direction: {query_params.order_by.direction}' +
                      '}')
         parts.append(f'order_by: {order_str}')
 
-    if ids := query_params.get('ids'):
-        parts.append(f'ids: {ids}')
+    if query_params.ids:
+        # Handle case where ids might be a string that needs to be parsed
+        if isinstance(query_params.ids, str) and query_params.ids.startswith('[') and query_params.ids.endswith(']'):
+            try:
+                import ast
+                parsed_ids = ast.literal_eval(query_params.ids)
+                if isinstance(parsed_ids, list):
+                    ids_list = [str(id) for id in parsed_ids]
+                else:
+                    ids_list = [str(query_params.ids)]
+            except (ValueError, SyntaxError):
+                ids_list = [str(query_params.ids)]
+        else:
+            ids_list = [str(id) for id in query_params.ids]
+        parts.append(f'ids: [{", ".join(ids_list)}]')
 
     return '{' + ', '.join(parts) + '}' if parts else ''
 

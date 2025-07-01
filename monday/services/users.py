@@ -90,7 +90,7 @@ class Users:
             fields: Fields to return from the queried users.
 
         Returns:
-            List of dictionaries containing info for the queried users.
+            List of User dataclass instances containing info for the queried users.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -103,23 +103,21 @@ class Users:
 
                 >>> from monday import MondayClient
                 >>> monday_client = MondayClient('your_api_key')
-                >>> await monday_client.users.query(
+                >>> users = await monday_client.users.query(
                 ...     emails=[
                 ...         'user1@domain.com',
                 ...         'user2@domain.com'
                 ...     ],
                 ...     fields='id name'
                 ... )
-                [
-                    {
-                        "id": "12345678",
-                        "name": "User One"
-                    },
-                    {
-                        "id": "01234567",
-                        "name": "User Two"
-                    }
-                ]
+                >>> users[0].id
+                "12345678"
+                >>> users[0].name
+                "User One"
+                >>> users[1].id
+                "01234567"
+                >>> users[1].name
+                "User Two"
         """
 
         fields = Fields(fields)
@@ -178,4 +176,9 @@ class Users:
                 seen_ids.add(user['id'])
                 unique_users.append(user)
 
-        return Fields.manage_temp_fields(unique_users, fields, temp_fields)
+        # Remove temp fields from the result
+        result_data = Fields.manage_temp_fields(unique_users, fields, temp_fields)
+        if isinstance(result_data, list):
+            return [User.from_dict(user) for user in result_data]
+        else:
+            return [User.from_dict(result_data)]
