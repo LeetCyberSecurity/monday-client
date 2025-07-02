@@ -42,12 +42,6 @@ async def main():
 asyncio.run(main())
 ```
 
-## Common Imports
-
-```python
-from monday import MondayClient, Fields
-```
-
 ## Usage
 
 ### Asynchronous Operations

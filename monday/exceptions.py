@@ -35,7 +35,9 @@ class MondayAPIError(Exception):
         json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
+
         self.json = json
+        """JSON data returned by the API, if available."""
 
 
 class ComplexityLimitExceeded(Exception):
@@ -55,8 +57,12 @@ class ComplexityLimitExceeded(Exception):
         json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
+
         self.reset_in = reset_in
+        """Time in seconds until the complexity limit is reset."""
+
         self.json = json
+        """JSON data returned by the API, if available."""
 
 
 class MutationLimitExceeded(Exception):
@@ -76,8 +82,12 @@ class MutationLimitExceeded(Exception):
         json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
+
         self.reset_in = reset_in
+        """Time in seconds until the rate limit is reset."""
+
         self.json = json
+        """JSON data returned by the API, if available."""
 
 
 class PaginationError(Exception):
@@ -95,7 +105,9 @@ class PaginationError(Exception):
         json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
+
         self.json = json
+        """JSON data returned by the API, if available."""
 
 
 class QueryFormatError(Exception):
@@ -113,4 +125,6 @@ class QueryFormatError(Exception):
         json: Optional[dict[str, Any]] = None
     ):
         super().__init__(message)
+
         self.json = json
+        """JSON data returned by the API, if available."""

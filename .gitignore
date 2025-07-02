@@ -22,8 +22,6 @@ share/python-wheels/
 MANIFEST
 .pytest_cache/
 config.yml
-docs/make.bat
-docs/Makefile
 env-test/
 examples/
 fake_client.py

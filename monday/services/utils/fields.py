@@ -711,7 +711,6 @@ class Fields:
         if brace_count != 0:
             raise ValueError('Unmatched braces in field string')
 
-    # Private methods (in logical order)
     def _parse_fields(self, fields_str: str) -> list[str]:
         """
         Parse a GraphQL field string into individual field components.
