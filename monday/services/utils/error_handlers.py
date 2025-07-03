@@ -33,6 +33,7 @@ def check_query_result(
     Check if the query result contains an error and raise MondayAPIError if found.
 
     This function examines the query result dictionary for error indicators and handles them appropriately.
+    Supports both the new GraphQL-compliant error format (2025-01+) and legacy error formats.
 
     Args:
         query_result: The response dictionary from a monday.com API query.
@@ -44,6 +45,12 @@ def check_query_result(
     Raises:
         MondayAPIError: If an error is found in the query result or if the response structure is unexpected.
     """
+    # Check for new GraphQL-compliant error format (2025-01+)
+    if 'errors' in query_result and query_result['errors']:
+        error_messages = [e.get('message', 'Unknown error') for e in query_result['errors']]
+        raise MondayAPIError(f'API request failed: {"; ".join(error_messages)}', json=query_result)
+
+    # Legacy error format checks (pre-2025-01)
     error_conditions = [
         lambda x: isinstance(x, dict) and any('error' in k.lower() for k in x),
         lambda x: 'data' not in x and not errors_only,

@@ -22,6 +22,7 @@ share/python-wheels/
 MANIFEST
 .pytest_cache/
 config.yml
+custom_holidays.txt
 env-test/
 examples/
 fake_client.py

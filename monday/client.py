@@ -57,7 +57,7 @@ class MondayClient:
     Args:
         api_key: The API key for authenticating with the monday.com API.
         url: The endpoint URL for the monday.com API.
-        version: The monday.com API version to use.
+        version: The monday.com API version to use. If None, will automatically fetch the current version.
         headers: Additional HTTP headers used for API requests.
         max_retries: Maximum amount of retry attempts before raising an error.
 
@@ -93,7 +93,7 @@ class MondayClient:
         self,
         api_key: str,
         url: str = 'https://api.monday.com/v2',
-        version: str = '2024-10',
+        version: Optional[str] = None,
         headers: Optional[dict[str, Any]] = None,
         max_retries: int = 4
     ):
@@ -103,15 +103,16 @@ class MondayClient:
         Args:
             api_key: The API key for authenticating with the monday.com API.
             url: The endpoint URL for the monday.com API.
-            version: The monday.com API version to use.
+            version: The monday.com API version to use. If None, will automatically fetch the current version.
             headers: Additional HTTP headers used for API requests.
             max_retries: Maximum amount of retry attempts before raising an error.
         """
         self.url = url
+        self.api_key = api_key
+        self.version = version
         self.headers = {
             'Content-Type': 'application/json',
             'Authorization': api_key,
-            'API-Version': version,
             **(headers or {})
         }
         self.max_retries = int(max_retries)
@@ -195,10 +196,63 @@ class MondayClient:
             methods provided by the :ref:`service classes <services_section>` instead, as they handle query construction
             and provide a more user-friendly interface.
         """
-        for attempt in range(self.max_retries):
-            try:
-                response_data = await self._execute_request(query)
+        # Ensure version is set before making any requests
+        await self._ensure_version_set()
 
+        for attempt in range(self.max_retries):
+            response_data = None
+            response_headers = {}
+
+            try:
+                response_data, response_headers = await self._execute_request(query)
+
+                # Handle new GraphQL-compliant error format (2025-01+)
+                if 'errors' in response_data and response_data['errors']:
+                    response_data['query'] = ' '.join(query.split())
+
+                    # Check for complexity limit exceeded
+                    for error in response_data['errors']:
+                        extensions = error.get('extensions', {})
+                        if extensions.get('code') == 'ComplexityException':
+                            reset_in_search = re.search(r'(\d+(?:\.\d+)?) seconds', error['message'])
+                            if reset_in_search:
+                                reset_in = math.ceil(float(reset_in_search.group(1)))
+                            else:
+                                # Try to get retry time from Retry-After header
+                                reset_in = self._get_retry_after_seconds(response_headers, self._rate_limit_seconds)
+                                self.logger.warning('Could not parse reset time from error message, using Retry-After header or default')
+                            raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in, json=response_data)
+
+                        # Handle complexity budget exhausted format
+                        if extensions.get('code') == 'COMPLEXITY_BUDGET_EXHAUSTED':
+                            retry_in_seconds = extensions.get('retry_in_seconds', self._rate_limit_seconds)
+                            # Check if Retry-After header provides a different value
+                            retry_in_seconds = self._get_retry_after_seconds(response_headers, retry_in_seconds)
+                            self.logger.warning('Complexity budget exhausted, retrying after %d seconds...', retry_in_seconds)
+                            raise ComplexityLimitExceeded(f'Complexity budget exhausted, retrying after {retry_in_seconds} seconds...', retry_in_seconds, json=response_data)
+
+                        # Check for rate limiting
+                        if extensions.get('status_code') == 429:
+                            retry_seconds = self._get_retry_after_seconds(response_headers, self._rate_limit_seconds)
+                            raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {retry_seconds} seconds...', retry_seconds, json=response_data)
+
+                        # Check for parse errors
+                        if 'Parse error on' in error['message']:
+                            raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
+
+                        # Check for known query errors
+                        if extensions.get('code') in self._query_errors:
+                            raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
+
+                        # Check for specific error conditions
+                        if 'mapping is not in the expected format' in error['message'] and 'move_item_to_board' in query:
+                            raise QueryFormatError('Columns mapping is not in the expected format. Verify all of your columns are mapped and you do not have formula columns mapped.', json=response_data)
+
+                    # If we get here, it's an unhandled error
+                    error_messages = [e.get('message', 'Unknown error') for e in response_data['errors']]
+                    raise MondayAPIError(f'Unhandled monday.com API error: {"; ".join(error_messages)}', json=response_data)
+
+                # Handle legacy error format (pre-2025-01)
                 if any('error' in key.lower() for key in response_data.keys()):
                     response_data['query'] = ' '.join(query.split())
                     if 'error_code' in response_data and response_data['error_code'] == 'ComplexityException':
@@ -206,20 +260,23 @@ class MondayClient:
                         if reset_in_search:
                             reset_in = math.ceil(float(reset_in_search.group(1)))
                         else:
-                            self.logger.error('error getting reset_in_x_seconds: %s', response_data)
-                            raise MondayAPIError('Error getting reset_in_x_seconds', json=response_data)
+                            # Try to get retry time from Retry-After header
+                            reset_in = self._get_retry_after_seconds(response_headers, self._rate_limit_seconds)
+                            self.logger.warning('Could not parse reset time from error message, using Retry-After header or default')
                         raise ComplexityLimitExceeded(f'Complexity limit exceeded, retrying after {reset_in} seconds...', reset_in, json=response_data)
                     if 'status_code' in response_data:
                         if int(response_data['status_code']) == 429:
-                            raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {self._rate_limit_seconds} seconds...', self._rate_limit_seconds, json=response_data)
+                            retry_seconds = self._get_retry_after_seconds(response_headers, self._rate_limit_seconds)
+                            raise MutationLimitExceeded(f'Rate limit exceeded, retrying after {retry_seconds} seconds...', retry_seconds, json=response_data)
                         else:
                             if 'mapping is not in the expected format' in response_data['error_message'] and 'move_item_to_board' in query:
                                 raise QueryFormatError('Columns mapping is not in the expected format. Verify all of your columns are mapped and you do not have formula columns mapped.', json=response_data)
                             raise MondayAPIError(f'Received status code {response_data["status_code"]}: {response_data["error_message"]}', json=response_data)
-                    if any('Parse error on' in e['message'] for e in response_data['errors']):
-                        raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
-                    if any(c in self._query_errors for c in [e['extensions']['code'] for e in response_data['errors']]):
-                        raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
+                    if 'errors' in response_data:
+                        if any('Parse error on' in e['message'] for e in response_data['errors']):
+                            raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
+                        if any(c in self._query_errors for c in [e.get('extensions', {}).get('code') for e in response_data['errors']]):
+                            raise QueryFormatError('Invalid monday.com GraphQL query', json=response_data)
                     raise MondayAPIError('Unhandled monday.com API error', json=response_data)
 
                 return response_data
@@ -237,8 +294,10 @@ class MondayClient:
                 raise
             except aiohttp.ClientError as e:
                 if attempt < self.max_retries - 1:
-                    self.logger.warning('Attempt %d failed due to aiohttp.ClientError: %s. Retrying after %d seconds...', attempt + 1, str(e), self._rate_limit_seconds)
-                    await asyncio.sleep(self._rate_limit_seconds)
+                    # Check for Retry-After header even for client errors
+                    retry_seconds = self._get_retry_after_seconds(response_headers, self._rate_limit_seconds)
+                    self.logger.warning('Attempt %d failed due to aiohttp.ClientError: %s. Retrying after %d seconds...', attempt + 1, str(e), retry_seconds)
+                    await asyncio.sleep(retry_seconds)
                 else:
                     self.logger.error('Max retries reached. Last error (aiohttp.ClientError): %s', str(e), exc_info=True)
                     e.args = (f'Max retries ({self.max_retries}) reached',)
@@ -246,10 +305,86 @@ class MondayClient:
 
         return {'error': f'Max retries reached: {response_data}'}
 
+    def _get_retry_after_seconds(self, response_headers: dict[str, str], default_seconds: int) -> int:
+        """
+        Extract retry delay from Retry-After header or return default.
+
+        Args:
+            response_headers: HTTP response headers from the API.
+            default_seconds: Default retry delay in seconds if header is not present or invalid.
+
+        Returns:
+            Retry delay in seconds.
+        """
+        retry_after = response_headers.get('Retry-After')
+        if retry_after:
+            try:
+                retry_seconds = int(retry_after)
+                self.logger.warning('Using Retry-After header value: %d seconds', retry_seconds)
+                return retry_seconds
+            except ValueError:
+                self.logger.warning('Invalid Retry-After header value: %s, using default %d seconds', retry_after, default_seconds)
+
+        return default_seconds
+
+    async def _get_current_version(self) -> str:
+        """
+        Fetch the current monday.com API version.
+
+        Returns:
+            The current API version string.
+
+        Raises:
+            MondayAPIError: If unable to fetch the current version.
+        """
+        # Use a temporary session without version header to query versions
+        temp_headers = {
+            'Content-Type': 'application/json',
+            'Authorization': self.api_key,
+        }
+
+        query = '''
+        query {
+            versions {
+                kind
+                value
+                display_name
+            }
+        }
+        '''
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(self.url, json={'query': query}, headers=temp_headers) as response:
+                    data = await response.json()
+
+                    if 'errors' in data:
+                        raise MondayAPIError(f'Failed to fetch API versions: {data["errors"]}', json=data)
+
+                    versions = data.get('data', {}).get('versions', [])
+                    current_version = next((v['value'] for v in versions if v['kind'] == 'current'), None)
+
+                    if not current_version:
+                        raise MondayAPIError('No current version found in API response', json=data)
+
+                    self.logger.info('Using current monday.com API version: %s', current_version)
+                    return current_version
+
+        except aiohttp.ClientError as e:
+            raise MondayAPIError(f'Network error while fetching API version: {e}') from e
+
+    async def _ensure_version_set(self) -> None:
+        """
+        Ensure the API version is set, fetching the current version if needed.
+        """
+        if self.version is None:
+            self.version = await self._get_current_version()
+            self.headers['API-Version'] = self.version
+
     async def _execute_request(
         self,
         query: str
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], dict[str, str]]:
         """
         Executes a single API request.
 
@@ -257,14 +392,21 @@ class MondayClient:
             query: The GraphQL query to be executed.
 
         Returns:
-            The JSON response from the API.
+            A tuple containing (JSON response from the API, HTTP response headers).
 
         Raises:
             aiohttp.ClientError: If there's a client-side error during the request.
         """
         async with aiohttp.ClientSession() as session:
             async with session.post(self.url, json={'query': query}, headers=self.headers) as response:
-                return await response.json()
+                response_headers = dict(response.headers)
+                try:
+                    response_data = await response.json()
+                    return response_data, response_headers
+                except aiohttp.ContentTypeError:
+                    # Handle non-JSON responses
+                    text_response = await response.text()
+                    return {'error': f'Non-JSON response: {text_response[:200]}'}, response_headers
 
 
 logging.getLogger('monday_client').addHandler(logging.NullHandler())
