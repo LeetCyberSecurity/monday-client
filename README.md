@@ -42,6 +42,26 @@ async def main():
 asyncio.run(main())
 ```
 
+## Column Value Classes
+
+For better type safety when updating column values, use the provided input classes:
+
+```python
+from monday.types.column_inputs import DateInput, StatusInput, TextInput, NumberInput
+
+await client.items.change_column_values(
+    item_id=123456789,
+    column_values=[
+        DateInput('date_column_id', '2024-01-15', '14:30:00'),
+        StatusInput('status_column_id', 'Working on it'),
+        TextInput('text_column_id', 'Updated content'),
+        NumberInput('number_column_id', 42.5)
+    ]
+)
+```
+
+See the [documentation](https://monday-client.readthedocs.io) for all available column input types.
+
 ## Usage
 
 ### Asynchronous Operations
@@ -64,76 +84,102 @@ Custom exceptions are defined for handling specific error cases:
 
 ### Logging
 
-The client uses a logger named `monday_client` for all logging operations. By default, a `NullHandler` is added to suppress logging output. To enable logging, you can configure the logger in your application:
+The client uses a logger named `monday` for all logging operations. By default, logging is suppressed. To enable logging:
 
 ```python
 import logging
+from monday import MondayClient
 
-logger = logging.getLogger('monday_client')
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(handler)
+# Remove the default NullHandler and add a real handler
+monday_logger = logging.getLogger('monday')
+for handler in monday_logger.handlers[:]:
+    if isinstance(handler, logging.NullHandler):
+        monday_logger.removeHandler(handler)
+
+if not monday_logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    monday_logger.addHandler(handler)
+
+client = MondayClient('your_api_key')
 ```
 
-Or update an already existing logging config:
-```python
-import logging.config
-
-logging_config = config['logging']
-
-logging_config['loggers'].update({
-    'monday_client': {
-        'handlers': ['file', 'console'],  # Use the same handlers as your main logger
-        'level': 'INFO',  # Set appropriate level
-        'propagate': False
-    }
-})
-
-logging.config.dictConfig(logging_config)
-logger = logging.getLogger(__name__)
-```
+See the [documentation](https://monday-client.readthedocs.io) for advanced logging configuration.
 
 ## Testing
 
-This project uses `pytest` for all testing.
-
-- **Unit tests:**
-  Run all unit tests (default):
-  ```bash
-  python -m pytest
-  ```
-
-- **Integration tests:**
-  Require a valid API key and explicit marking:
-  ```bash
-  # Set up environment variables
-  export MONDAY_API_KEY=your_api_key
-  export MONDAY_TEST_BOARD_ID=123456789
-  
-  # Run integration tests (requires -m integration flag)
-  python -m pytest -m integration
-  
-  # Run specific integration test file
-  python -m pytest tests/test_integration.py -m integration -v
-  ```
-
-- **Mutation tests:**
-  Test data creation, updates, and deletion (requires write permissions):
-  ```bash
-  export MONDAY_API_KEY=your_api_key
-  python -m pytest -m mutation
-  ```
-  ⚠️ **Warning:** These tests will create and delete real data on your monday.com account.
-
-See [docs/TESTING.md](docs/TESTING.md) for more details on test types, configuration, and best practices.
-
-## Development Setup
-
-For development and testing, install with development dependencies:
+This project uses `pytest` for testing and `ruff` for code quality. For development and testing, install with development dependencies:
 
 ```bash
 pip install -e ".[dev]"
+```
+
+### Quick Test Commands
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run only unit tests
+pytest tests/ -m unit
+
+# Run integration tests (requires API key)
+pytest tests/ -m "integration and not mutation"
+
+# Run mutation tests (requires API key)
+pytest tests/ -m mutation
+
+# Run with logging
+pytest --logging=debug
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation, configuration, and best practices.
+
+## Development
+
+This project uses modern Python development tools:
+
+- **ruff**: Fast Python linter and formatter (replaces autopep8, isort, pylint)
+- **basedpyright**: Type checking
+- **pre-commit**: Git hooks for code quality
+
+### Quick Development Commands
+
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment (Linux/macOS)
+source .venv/bin/activate
+# Or on Windows
+# .venv\Scripts\activate
+
+# Install development dependencies
+pip install --upgrade pip setuptools wheel
+pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+
+# Format and lint code
+ruff format monday tests
+ruff check monday tests
+
+# Fix code automatically
+ruff check --fix monday tests
+ruff format monday tests
+
+# Run type checking
+basedpyright
+
+# Run all quality checks
+ruff format monday tests
+ruff check monday tests
+basedpyright
+
+# Run tests
+pytest tests/
 ```
 
 ## Contributing

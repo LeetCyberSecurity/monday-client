@@ -28,9 +28,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from monday.services.utils.pagination import ItemsPage
     from monday.types.column import Column
     from monday.types.group import Group
+    from monday.types.item import Item
     from monday.types.user import User
     from monday.types.workspace import Workspace
 
@@ -43,8 +43,9 @@ class Board:
     This dataclass maps to the Monday.com API board object structure, containing
     fields like name, description, columns, groups, and associated users.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/boards#fields
+
     """
 
     activity_logs: list[dict[str, Any]] | None = None
@@ -80,8 +81,11 @@ class Board:
     id: str = ''
     """The board's unique identifier"""
 
-    items_page: ItemsPage | None = None
+    items: list[Item] | None = None
     """The board's items"""
+
+    items_count: int = 0
+    """The number of items on the board"""
 
     name: str = ''
     """The board's name"""
@@ -121,94 +125,114 @@ class Board:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
-        result = {}
 
-        if self.activity_logs:
-            result['activity_logs'] = self.activity_logs
-        if self.board_folder_id:
-            result['board_folder_id'] = self.board_folder_id
-        if self.board_kind:
-            result['board_kind'] = self.board_kind
-        if self.columns:
-            result['columns'] = [column.to_dict() if hasattr(column, 'to_dict') else column for column in self.columns]
-        if self.communication:
-            result['communication'] = self.communication
-        if self.created_at:
-            result['created_at'] = self.created_at
-        if self.creator:
-            result['creator'] = self.creator.to_dict()
-        if self.creator_id:
-            result['creator_id'] = self.creator_id
-        if self.description:
-            result['description'] = self.description
-        if self.groups:
-            result['groups'] = [group.to_dict() if hasattr(group, 'to_dict') else group for group in self.groups]
-        if self.id:
-            result['id'] = self.id
-        if self.items_page:
-            result['items_page'] = self.items_page.to_dict()
-        if self.name:
-            result['name'] = self.name
-        if self.owners:
-            result['owners'] = [owner.to_dict() if hasattr(owner, 'to_dict') else owner for owner in self.owners]
-        if self.permissions:
-            result['permissions'] = self.permissions
-        if self.pos:
-            result['pos'] = self.pos
-        if self.state:
-            result['state'] = self.state
-        if self.subscribers:
-            result['subscribers'] = [subscriber.to_dict() if hasattr(subscriber, 'to_dict') else subscriber for subscriber in self.subscribers]
-        if self.tags:
-            result['tags'] = self.tags
-        if self.top_group:
-            result['top_group'] = self.top_group.to_dict()
-        if self.type:
-            result['type'] = self.type
-        if self.updated_at:
-            result['updated_at'] = self.updated_at
-        if self.workspace:
-            result['workspace'] = self.workspace.to_dict()
-        if self.workspace_id:
-            result['workspace_id'] = self.workspace_id
+        def _convert_list(items: list, converter_name: str = 'to_dict') -> list:
+            """Convert list items using their converter method if available."""
+            return [
+                getattr(item, converter_name)()
+                if hasattr(item, converter_name)
+                else item
+                for item in items
+            ]
 
-        return result
+        data = {
+            'activity_logs': self.activity_logs,
+            'board_folder_id': self.board_folder_id,
+            'board_kind': self.board_kind,
+            'columns': _convert_list(self.columns) if self.columns else None,
+            'communication': self.communication,
+            'created_at': self.created_at,
+            'creator': self.creator.to_dict() if self.creator else None,
+            'creator_id': self.creator_id,
+            'description': self.description,
+            'groups': _convert_list(self.groups) if self.groups else None,
+            'id': self.id,
+            'items': _convert_list(self.items) if self.items else None,
+            'items_count': self.items_count,
+            'name': self.name,
+            'owners': _convert_list(self.owners) if self.owners else None,
+            'permissions': self.permissions,
+            'pos': self.pos,
+            'state': self.state,
+            'subscribers': _convert_list(self.subscribers)
+            if self.subscribers
+            else None,
+            'tags': self.tags,
+            'top_group': self.top_group.to_dict() if self.top_group else None,
+            'type': self.type,
+            'updated_at': self.updated_at,
+            'workspace': self.workspace.to_dict() if self.workspace else None,
+            'workspace_id': self.workspace_id,
+        }
+
+        return {k: v for k, v in data.items() if v}
 
     @classmethod
-    # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Board:
         """Create from dictionary."""
-        from monday.services.utils.pagination import ItemsPage
-        from monday.types.column import Column
-        from monday.types.group import Group
-        from monday.types.user import User
-        from monday.types.workspace import Workspace
+        from monday.types.column import Column  # noqa: PLC0415
+        from monday.types.group import Group  # noqa: PLC0415
+        from monday.types.item import Item  # noqa: PLC0415
+        from monday.types.user import User  # noqa: PLC0415
+        from monday.types.workspace import Workspace  # noqa: PLC0415
+
+        items = None
+        if data.get('items'):
+            items = [
+                Item.from_dict(item) if isinstance(item, dict) else item
+                for item in data.get('items', [])
+            ]
 
         return cls(
             activity_logs=data.get('activity_logs'),
             board_folder_id=str(data.get('board_folder_id', '')),
             board_kind=str(data.get('board_kind', '')),
-            columns=[Column.from_dict(column) if hasattr(Column, 'from_dict') else column for column in data.get('columns', [])] if data.get('columns') else None,
+            columns=[
+                Column.from_dict(column) if hasattr(Column, 'from_dict') else column
+                for column in data.get('columns', [])
+            ]
+            if data.get('columns')
+            else None,
             communication=str(data.get('communication', '')),
             created_at=str(data.get('created_at', '')),
             creator=User.from_dict(data['creator']) if data.get('creator') else None,
             creator_id=str(data.get('creator_id', '')),
             description=str(data.get('description', '')),
-            groups=[Group.from_dict(group) if hasattr(Group, 'from_dict') else group for group in data.get('groups', [])] if data.get('groups') else None,
+            groups=[
+                Group.from_dict(group) if hasattr(Group, 'from_dict') else group
+                for group in data.get('groups', [])
+            ]
+            if data.get('groups')
+            else None,
             id=str(data.get('id', '')),
-            items_page=ItemsPage.from_dict(data['items_page']) if data.get('items_page') else None,
+            items=items,
+            items_count=int(data.get('items_count', 0)),
             name=str(data.get('name', '')),
-            owners=[User.from_dict(owner) if hasattr(User, 'from_dict') else owner for owner in data.get('owners', [])] if data.get('owners') else None,
+            owners=[
+                User.from_dict(owner) if hasattr(User, 'from_dict') else owner
+                for owner in data.get('owners', [])
+            ]
+            if data.get('owners')
+            else None,
             permissions=str(data.get('permissions', '')),
             pos=str(data.get('pos', '')),
             state=str(data.get('state', '')),
-            subscribers=[User.from_dict(subscriber) if hasattr(User, 'from_dict') else subscriber for subscriber in data.get('subscribers', [])] if data.get('subscribers') else None,
+            subscribers=[
+                User.from_dict(subscriber) if hasattr(User, 'from_dict') else subscriber
+                for subscriber in data.get('subscribers', [])
+            ]
+            if data.get('subscribers')
+            else None,
             tags=data.get('tags'),
-            top_group=Group.from_dict(data['top_group']) if data.get('top_group') else None,
+            top_group=Group.from_dict(data['top_group'])
+            if data.get('top_group')
+            else None,
             type=str(data.get('type', '')),
             updated_at=str(data.get('updated_at', '')),
-            workspace=Workspace.from_dict(data['workspace']) if data.get('workspace') else None,
-            workspace_id=str(data.get('workspace_id', ''))
+            workspace=Workspace.from_dict(data['workspace'])
+            if data.get('workspace')
+            else None,
+            workspace_id=str(data.get('workspace_id', '')),
         )
 
 
@@ -273,7 +297,7 @@ class ActivityLog:
             event=str(data.get('event', '')),
             id=str(data.get('id', '')),
             user_id=str(data.get('user_id', '')),
-            created_at=str(data.get('created_at', ''))
+            created_at=str(data.get('created_at', '')),
         )
 
 
@@ -326,7 +350,7 @@ class BoardView:
             name=str(data.get('name', '')),
             settings_str=str(data.get('settings_str', '')),
             type=str(data.get('type', '')),
-            view_specific_data_str=str(data.get('view_specific_data_str', ''))
+            view_specific_data_str=str(data.get('view_specific_data_str', '')),
         )
 
 
@@ -339,13 +363,15 @@ class UndoData:
         .. code-block:: python
 
             undo_data = {
-                "undo_record_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                "action_type": "modify_project",
-                "entity_type": "Board",
-                "entity_id": 987654321,
-                "count": 1
+                'undo_record_id': 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+                'action_type': 'modify_project',
+                'entity_type': 'Board',
+                'entity_id': 987654321,
+                'count': 1,
             }
+
     """
+
     undo_record_id: str = ''
     """Unique identifier for the undo record"""
 
@@ -386,7 +412,7 @@ class UndoData:
             action_type=str(data.get('action_type', '')),
             entity_type=str(data.get('entity_type', '')),
             entity_id=str(data.get('entity_id', '')),
-            count=int(data.get('count', 0))
+            count=int(data.get('count', 0)),
         )
 
 
@@ -399,16 +425,30 @@ class UpdateBoard:
         .. code-block:: python
 
             response = {
-                "success": True,
-                "undo_data": {
-                    "undo_record_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                    "action_type": "modify_project",
-                    "entity_type": "Board",
-                    "entity_id": 987654321,
-                    "count": 1
-                }
+                'success': True,
+                'undo_data': {
+                    'undo_record_id': 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+                    'action_type': 'modify_project',
+                    'entity_type': 'Board',
+                    'entity_id': 987654321,
+                    'count': 1,
+                },
             }
+
     """
+
+    id: str = ''
+    """The id of the updated board"""
+
+    name: str = ''
+    """The name of the updated board"""
+
+    updated_attribute: str = ''
+    """The value of the updated attribute"""
+
+    previous_attribute: str | None = None
+    """The value of the attribute before it was updated"""
+
     success: bool = False
     """Whether the update operation was successful"""
 
@@ -419,6 +459,14 @@ class UpdateBoard:
         """Convert to dictionary for API requests."""
         result = {}
 
+        if self.id:
+            result['id'] = self.id
+        if self.name:
+            result['name'] = self.name
+        if self.updated_attribute:
+            result['updated_attribute'] = self.updated_attribute
+        if self.previous_attribute:
+            result['previous_attribute'] = self.previous_attribute
         if self.success:
             result['success'] = self.success
         if self.undo_data:
@@ -430,6 +478,12 @@ class UpdateBoard:
     def from_dict(cls, data: dict[str, Any]) -> UpdateBoard:
         """Create from dictionary."""
         return cls(
+            id=data.get('id', ''),
+            name=data.get('name', ''),
+            updated_attribute=data.get('updated_attribute', ''),
+            previous_attribute=data.get('previous_attribute', ''),
             success=data.get('success', False),
-            undo_data=UndoData.from_dict(data['undo_data']) if data.get('undo_data') else None
+            undo_data=UndoData.from_dict(data['undo_data'])
+            if data.get('undo_data')
+            else None,
         )

@@ -47,15 +47,18 @@ class OutOfOffice:
     start_date: str = ''
     """Out of office start date. Returned as ``YYYY-MM-DDTHH:MM:SS``"""
 
-    type: Literal[
-        'family_time',
-        'focus_mode',
-        'on_break',
-        'out_of_office',
-        'out_sick',
-        'working_from_home',
-        'working_outside'
-    ] | None = None
+    type: (
+        Literal[
+            'family_time',
+            'focus_mode',
+            'on_break',
+            'out_of_office',
+            'out_sick',
+            'working_from_home',
+            'working_outside',
+        ]
+        | None
+    ) = None
     """Out of office type"""
 
     def to_dict(self) -> dict[str, Any]:
@@ -83,7 +86,7 @@ class OutOfOffice:
             disable_notifications=data.get('disable_notifications', False),
             end_date=str(data.get('end_date', '')),
             start_date=str(data.get('start_date', '')),
-            type=data.get('type')
+            type=data.get('type'),
         )
 
 
@@ -95,8 +98,9 @@ class User:
     This dataclass maps to the Monday.com API user object structure, containing
     fields like name, email, profile photos, teams, and account settings.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/users#fields
+
     """
 
     account: Account | None = None
@@ -191,70 +195,52 @@ class User:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
-        result = {}
 
-        if self.account:
-            result['account'] = self.account.to_dict()
-        if self.birthday:
-            result['birthday'] = self.birthday
-        if self.country_code:
-            result['country_code'] = self.country_code
-        if self.created_at:
-            result['created_at'] = self.created_at
-        if self.current_language:
-            result['current_language'] = self.current_language
-        if self.email:
-            result['email'] = self.email
-        if self.enabled:
-            result['enabled'] = self.enabled
-        if self.id:
-            result['id'] = self.id
-        if self.is_admin:
-            result['is_admin'] = self.is_admin
-        if self.is_guest:
-            result['is_guest'] = self.is_guest
-        if self.is_pending:
-            result['is_pending'] = self.is_pending
-        if self.is_view_only:
-            result['is_view_only'] = self.is_view_only
-        if self.is_verified:
-            result['is_verified'] = self.is_verified
-        if self.join_date:
-            result['join_date'] = self.join_date
-        if self.last_activity:
-            result['last_activity'] = self.last_activity
-        if self.location:
-            result['location'] = self.location
-        if self.mobile_phone:
-            result['mobile_phone'] = self.mobile_phone
-        if self.name:
-            result['name'] = self.name
-        if self.out_of_office:
-            result['out_of_office'] = self.out_of_office.to_dict()
-        if self.phone:
-            result['phone'] = self.phone
-        if self.photo_original:
-            result['photo_original'] = self.photo_original
-        if self.photo_small:
-            result['photo_small'] = self.photo_small
-        if self.photo_thumb:
-            result['photo_thumb'] = self.photo_thumb
-        if self.photo_tiny:
-            result['photo_tiny'] = self.photo_tiny
-        if self.sign_up_product_kind:
-            result['sign_up_product_kind'] = self.sign_up_product_kind
-        if self.teams:
-            result['teams'] = [team.to_dict() if hasattr(team, 'to_dict') else team for team in self.teams]
-        if self.time_zone_identifier:
-            result['time_zone_identifier'] = self.time_zone_identifier
-        if self.title:
-            result['title'] = self.title
-        if self.url:
-            result['url'] = self.url
-        if self.utc_hours_diff:
-            result['utc_hours_diff'] = self.utc_hours_diff
+        def _convert_list(items: list, converter_name: str = 'to_dict') -> list:
+            """Convert list items using their converter method if available."""
+            return [
+                getattr(item, converter_name)()
+                if hasattr(item, converter_name)
+                else item
+                for item in items
+            ]
 
-        return result
+        data = {
+            'account': self.account.to_dict() if self.account else None,
+            'birthday': self.birthday,
+            'country_code': self.country_code,
+            'created_at': self.created_at,
+            'current_language': self.current_language,
+            'email': self.email,
+            'enabled': self.enabled,
+            'id': self.id,
+            'is_admin': self.is_admin,
+            'is_guest': self.is_guest,
+            'is_pending': self.is_pending,
+            'is_view_only': self.is_view_only,
+            'is_verified': self.is_verified,
+            'join_date': self.join_date,
+            'last_activity': self.last_activity,
+            'location': self.location,
+            'mobile_phone': self.mobile_phone,
+            'name': self.name,
+            'out_of_office': self.out_of_office.to_dict()
+            if self.out_of_office
+            else None,
+            'phone': self.phone,
+            'photo_original': self.photo_original,
+            'photo_small': self.photo_small,
+            'photo_thumb': self.photo_thumb,
+            'photo_tiny': self.photo_tiny,
+            'sign_up_product_kind': self.sign_up_product_kind,
+            'teams': _convert_list(self.teams) if self.teams else None,
+            'time_zone_identifier': self.time_zone_identifier,
+            'title': self.title,
+            'url': self.url,
+            'utc_hours_diff': self.utc_hours_diff,
+        }
+
+        return {k: v for k, v in data.items() if v}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> User:
@@ -278,16 +264,23 @@ class User:
             location=str(data.get('location', '')),
             mobile_phone=str(data.get('mobile_phone', '')),
             name=str(data.get('name', '')),
-            out_of_office=OutOfOffice.from_dict(data['out_of_office']) if data.get('out_of_office') else None,
+            out_of_office=OutOfOffice.from_dict(data['out_of_office'])
+            if data.get('out_of_office')
+            else None,
             phone=str(data.get('phone', '')),
             photo_original=str(data.get('photo_original', '')),
             photo_small=str(data.get('photo_small', '')),
             photo_thumb=str(data.get('photo_thumb', '')),
             photo_tiny=str(data.get('photo_tiny', '')),
             sign_up_product_kind=str(data.get('sign_up_product_kind', '')),
-            teams=[Team.from_dict(team) if hasattr(Team, 'from_dict') else team for team in data.get('teams', [])] if data.get('teams') else None,
+            teams=[
+                Team.from_dict(team) if hasattr(Team, 'from_dict') else team
+                for team in data.get('teams', [])
+            ]
+            if data.get('teams')
+            else None,
             time_zone_identifier=str(data.get('time_zone_identifier', '')),
             title=str(data.get('title', '')),
             url=str(data.get('url', '')),
-            utc_hours_diff=int(data.get('utc_hours_diff', 0))
+            utc_hours_diff=int(data.get('utc_hours_diff', 0)),
         )

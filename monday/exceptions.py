@@ -17,7 +17,7 @@
 
 """Custom exceptions for the Monday module."""
 
-from typing import Any, Optional
+from typing import Any
 
 
 class MondayAPIError(Exception):
@@ -27,20 +27,17 @@ class MondayAPIError(Exception):
     Attributes:
         message: Explanation of the error.
         json: JSON data returned by the API, if available.
+
     """
 
-    def __init__(
-        self,
-        message: str,
-        json: Optional[dict[str, Any]] = None
-    ):
+    def __init__(self, message: str, json: dict[str, Any] | None = None):
         super().__init__(message)
 
         self.json = json
         """JSON data returned by the API, if available."""
 
 
-class ComplexityLimitExceeded(Exception):
+class ComplexityLimitExceeded(Exception):  # noqa: N818
     """
     Exception raised when the complexity limit is exceeded.
 
@@ -48,14 +45,10 @@ class ComplexityLimitExceeded(Exception):
         message: Explanation of the error.
         reset_in: Time in seconds until the complexity limit is reset.
         json: JSON data returned by the API, if available.
+
     """
 
-    def __init__(
-        self,
-        message: str,
-        reset_in: int,
-        json: Optional[dict[str, Any]] = None
-    ):
+    def __init__(self, message: str, reset_in: int, json: dict[str, Any] | None = None):
         super().__init__(message)
 
         self.reset_in = reset_in
@@ -65,7 +58,7 @@ class ComplexityLimitExceeded(Exception):
         """JSON data returned by the API, if available."""
 
 
-class MutationLimitExceeded(Exception):
+class MutationLimitExceeded(Exception):  # noqa: N818
     """
     Exception raised when the mutation per minute limit is exceeded.
 
@@ -73,14 +66,10 @@ class MutationLimitExceeded(Exception):
         message: Explanation of the error.
         reset_in: Time in seconds until the rate limit is reset.
         json: JSON data returned by the API, if available.
+
     """
 
-    def __init__(
-        self,
-        message: str,
-        reset_in: int,
-        json: Optional[dict[str, Any]] = None
-    ):
+    def __init__(self, message: str, reset_in: int, json: dict[str, Any] | None = None):
         super().__init__(message)
 
         self.reset_in = reset_in
@@ -97,13 +86,10 @@ class PaginationError(Exception):
     Attributes:
         message: Explanation of the error.
         json: JSON data returned by the API, if available.
+
     """
 
-    def __init__(
-        self,
-        message: str,
-        json: Optional[dict[str, Any]] = None
-    ):
+    def __init__(self, message: str, json: dict[str, Any] | None = None):
         super().__init__(message)
 
         self.json = json
@@ -117,13 +103,10 @@ class QueryFormatError(Exception):
     Attributes:
         message: Explanation of the error.
         json: JSON data returned by the API, if available.
+
     """
 
-    def __init__(
-        self,
-        message: str,
-        json: Optional[dict[str, Any]] = None
-    ):
+    def __init__(self, message: str, json: dict[str, Any] | None = None):
         super().__init__(message)
 
         self.json = json

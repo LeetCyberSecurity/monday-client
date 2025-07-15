@@ -22,7 +22,7 @@ This module provides a comprehensive set of functions and classes for interactin
 with monday.com users.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions to ensure proper 
+for making API requests. It also utilizes various utility functions to ensure proper
 data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
@@ -30,7 +30,7 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 from monday.fields.user_fields import UserFields
 from monday.services.utils.error_handlers import check_query_result
@@ -49,30 +49,29 @@ class Users:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(
-        self,
-        client: 'MondayClient'
-    ):
+    def __init__(self, client: 'MondayClient'):
         """
         Initialize a Users instance with specified parameters.
 
         Args:
             client: The MondayClient instance to use for API requests.
+
         """
         self.client = client
 
-    async def query(
+    async def query(  # noqa: PLR0913
         self,
-        emails: Optional[Union[str, list[str]]] = None,
-        ids: Optional[Union[int, list[int]]] = None,
-        name: Optional[str] = None,
+        emails: str | list[str] | None = None,
+        ids: int | str | list[int | str] | None = None,
+        name: str | None = None,
         kind: Literal['all', 'guests', 'non_guests', 'non_pending'] = 'all',
-        newest_first: bool = False,
-        non_active: bool = False,
         limit: int = 50,
         page: int = 1,
+        fields: str | Fields = UserFields.BASIC,
+        *,
         paginate: bool = True,
-        fields: Union[str, Fields] = UserFields.BASIC
+        newest_first: bool = False,
+        non_active: bool = False,
     ) -> list[User]:
         """
         Query users to return metadata about one or multiple users.
@@ -118,8 +117,8 @@ class Users:
                 "01234567"
                 >>> users[1].name
                 "User Two"
-        """
 
+        """
         fields = Fields(fields)
 
         temp_fields = ['id'] if 'id' not in fields else []
@@ -133,14 +132,10 @@ class Users:
             'non_active': non_active,
             'limit': limit,
             'page': page,
-            'fields': fields.add_temp_fields(temp_fields)
+            'fields': fields.add_temp_fields(temp_fields),
         }
 
-        query_string = build_graphql_query(
-            'users',
-            'query',
-            args
-        )
+        query_string = build_graphql_query('users', 'query', args)
 
         users_data = []
         last_response = None
@@ -180,5 +175,4 @@ class Users:
         result_data = Fields.manage_temp_fields(unique_users, fields, temp_fields)
         if isinstance(result_data, list):
             return [User.from_dict(user) for user in result_data]
-        else:
-            return [User.from_dict(result_data)]
+        return [User.from_dict(result_data)]

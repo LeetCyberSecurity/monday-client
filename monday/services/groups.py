@@ -30,14 +30,13 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 
 from monday.fields.group_fields import GroupFields
 from monday.fields.item_fields import ItemFields
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
-from monday.services.utils.query_builder import (build_graphql_query,
-                                                 map_hex_to_color)
+from monday.services.utils.query_builder import build_graphql_query, map_hex_to_color
 from monday.types.group import Group, GroupList
 from monday.types.item import Item
 
@@ -53,27 +52,24 @@ class Groups:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(
-        self,
-        client: 'MondayClient',
-        boards: 'Boards'
-    ):
+    def __init__(self, client: 'MondayClient', boards: 'Boards'):
         """
         Initialize a Groups instance with specified parameters.
 
         Args:
             client: The MondayClient instance to use for API requests.
             boards: The Boards instance to use for board-related operations.
+
         """
         self.client = client
         self.boards = boards
 
     async def query(
         self,
-        board_ids: Union[int | str, list[int | str]],
-        group_ids: Optional[Union[str, list[str]]] = None,
-        group_name: Optional[Union[str, list[str]]] = None,
-        fields: Union[str, Fields] = GroupFields.BASIC
+        board_ids: int | str | list[int | str],
+        group_ids: str | list[str] | None = None,
+        group_name: str | list[str] | None = None,
+        fields: str | Fields = GroupFields.BASIC,
     ) -> list[GroupList]:
         """
         Query groups from boards. Optionally specify the group names and/or IDs to filter by.
@@ -108,51 +104,53 @@ class Groups:
                 "group"
                 >>> result[0].groups[0].title
                 "Group Name"
-        """
 
+        """
         fields = Fields(fields)
 
         group_ids_list = [group_ids] if isinstance(group_ids, str) else group_ids
-        group_ids_quoted = [f'"{i}"' for i in group_ids_list] if group_ids_list else None
+        group_ids_quoted = (
+            [f'"{i}"' for i in group_ids_list] if group_ids_list else None
+        )
 
         temp_fields = ['title'] if group_name else []
 
         group_fields = Fields(f"""
-            id groups {f"(ids: [{', '.join(group_ids_quoted)}])" if group_ids_quoted else ''} {{
+            id groups {f'(ids: [{", ".join(group_ids_quoted)}])' if group_ids_quoted else ''} {{
                 {fields.add_temp_fields(temp_fields)}
             }}
         """)
 
-        boards_data = await self.boards.query(
-            board_ids=board_ids,
-            fields=group_fields
-        )
+        boards_data = await self.boards.query(board_ids=board_ids, fields=group_fields)
 
         groups: list[GroupList] = []
         for board in boards_data:
             board_groups = board.groups if board.groups else []
             if group_name:
                 board_groups = [
-                    group for group in board_groups
-                    if group.title in (group_name if isinstance(group_name, list) else [group_name])
+                    group
+                    for group in board_groups
+                    if group.title
+                    in (group_name if isinstance(group_name, list) else [group_name])
                 ]
             if board_groups:  # Only add board if it has matching groups
                 groups.append(GroupList(board_id=board.id, groups=board_groups))
 
-        result_data = Fields.manage_temp_fields([g.to_dict() for g in groups], fields, temp_fields)
+        result_data = Fields.manage_temp_fields(
+            [g.to_dict() for g in groups], fields, temp_fields
+        )
         if isinstance(result_data, list):
             return [GroupList.from_dict(g) for g in result_data]
-        else:
-            return [GroupList.from_dict(result_data)]
+        return [GroupList.from_dict(result_data)]
 
-    async def create(
+    async def create(  # noqa: PLR0913
         self,
         board_id: int | str,
         group_name: str,
-        group_color: Optional[str] = None,
-        relative_to: Optional[str] = None,
-        position_relative_method: Optional[Literal['before', 'after']] = None,
-        fields: Union[str, Fields] = GroupFields.BASIC
+        group_color: str | None = None,
+        relative_to: str | None = None,
+        position_relative_method: Literal['before', 'after'] | None = None,
+        fields: str | Fields = GroupFields.BASIC,
     ) -> Group:
         """
         Create a new group on a board.
@@ -194,8 +192,8 @@ class Groups:
 
         Note:
             See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`.
-        """
 
+        """
         fields = Fields(fields)
 
         args = {
@@ -203,15 +201,13 @@ class Groups:
             'group_name': group_name,
             'group_color': group_color,
             'relative_to': relative_to,
-            'position_relative_method': f'{position_relative_method}_at' if position_relative_method else None,
+            'position_relative_method': f'{position_relative_method}_at'
+            if position_relative_method
+            else None,
             'fields': fields,
         }
 
-        query_string = build_graphql_query(
-            'create_group',
-            'mutation',
-            args
-        )
+        query_string = build_graphql_query('create_group', 'mutation', args)
 
         query_result = await self.client.post_request(query_string)
 
@@ -223,9 +219,15 @@ class Groups:
         self,
         board_id: int | str,
         group_id: str,
-        attribute: Literal['color', 'position', 'relative_position_after', 'relative_position_before', 'title'],
+        attribute: Literal[
+            'color',
+            'position',
+            'relative_position_after',
+            'relative_position_before',
+            'title',
+        ],
         new_value: str,
-        fields: Union[str, Fields] = GroupFields.BASIC
+        fields: str | Fields = GroupFields.BASIC,
     ) -> Group:
         """
         Update a group.
@@ -269,8 +271,8 @@ class Groups:
             When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`.
 
             When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below.
-        """
 
+        """
         fields = Fields(fields)
 
         if attribute == 'color':
@@ -284,11 +286,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = build_graphql_query(
-            'update_group',
-            'mutation',
-            args
-        )
+        query_string = build_graphql_query('update_group', 'mutation', args)
 
         query_result = await self.client.post_request(query_string)
 
@@ -300,9 +298,10 @@ class Groups:
         self,
         board_id: int | str,
         group_id: str,
+        group_title: str | None = None,
+        fields: str | Fields = GroupFields.BASIC,
+        *,
         add_to_top: bool = False,
-        group_title: Optional[str] = None,
-        fields: Union[str, Fields] = GroupFields.BASIC
     ) -> Group:
         """
         Duplicate a group.
@@ -338,8 +337,8 @@ class Groups:
                 "group_2"
                 >>> group.title
                 "Duplicate of Group Name"
-        """
 
+        """
         fields = Fields(fields)
 
         args = {
@@ -350,11 +349,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = build_graphql_query(
-            'duplicate_group',
-            'mutation',
-            args
-        )
+        query_string = build_graphql_query('duplicate_group', 'mutation', args)
 
         query_result = await self.client.post_request(query_string)
 
@@ -366,7 +361,7 @@ class Groups:
         self,
         board_id: int | str,
         group_id: str,
-        fields: Union[str, Fields] = GroupFields.BASIC
+        fields: str | Fields = GroupFields.BASIC,
     ) -> Group:
         """
         Archive a group.
@@ -401,8 +396,8 @@ class Groups:
                 "Group Name"
                 >>> group.archived
                 True
-        """
 
+        """
         fields = Fields(fields)
 
         args = {
@@ -411,11 +406,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = build_graphql_query(
-            'archive_group',
-            'mutation',
-            args
-        )
+        query_string = build_graphql_query('archive_group', 'mutation', args)
 
         query_result = await self.client.post_request(query_string)
 
@@ -427,7 +418,7 @@ class Groups:
         self,
         board_id: int | str,
         group_id: str,
-        fields: Union[str, Fields] = GroupFields.BASIC
+        fields: str | Fields = GroupFields.BASIC,
     ) -> Group:
         """
         Delete a group.
@@ -462,8 +453,8 @@ class Groups:
                 "Group Name"
                 >>> group.deleted
                 True
-        """
 
+        """
         fields = Fields(fields)
 
         args = {
@@ -472,11 +463,7 @@ class Groups:
             'fields': fields,
         }
 
-        query_string = build_graphql_query(
-            'delete_group',
-            'mutation',
-            args
-        )
+        query_string = build_graphql_query('delete_group', 'mutation', args)
 
         query_result = await self.client.post_request(query_string)
 
@@ -489,7 +476,7 @@ class Groups:
         board_id: int | str,
         group_id: str,
         item_name: str,
-        item_fields: Union[str, Fields] = ItemFields.BASIC,
+        item_fields: str | Fields = ItemFields.BASIC,
     ) -> list[Item]:
         """
         Get all items from a group with names that match ``item_name``
@@ -528,9 +515,9 @@ class Groups:
                 "012345678"
                 >>> items[1].name
                 "Item Name"
-        """
 
-        fields = Fields(f'''
+        """
+        fields = Fields(f"""
             groups (ids: "{group_id}") {{
                 items_page (
                     query_params: {{
@@ -548,21 +535,17 @@ class Groups:
                     }}
                 }}
             }}
-        ''')
+        """)
 
-        args = {
-            'ids': board_id,
-            'fields': fields
-        }
+        args = {'ids': board_id, 'fields': fields}
 
-        query_string = build_graphql_query(
-            'boards',
-            'query',
-            args
-        )
+        query_string = build_graphql_query('boards', 'query', args)
 
         query_result = await self.client.post_request(query_string)
 
         data = check_query_result(query_result)
 
-        return [Item.from_dict(item) for item in data['data']['boards'][0]['groups'][0]['items_page']['items']]
+        return [
+            Item.from_dict(item)
+            for item in data['data']['boards'][0]['groups'][0]['items_page']['items']
+        ]

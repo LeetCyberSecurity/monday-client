@@ -23,21 +23,25 @@ querying monday.com columns, making it easier to maintain consistent field
 sets across column operations.
 """
 
+from monday.fields.base_fields import BaseFields
 from monday.services.utils.fields import Fields
 
 
-class ColumnFields:
+class ColumnFields(BaseFields):
     """
     Collection of predefined field sets for column operations.
 
-    See also:
+    See Also:
         `monday.com API Column fields <https://developer.monday.com/api-reference/reference/columns#fields>`_
+
     """
 
-    BASIC = Fields('id text value')
-    """Returns the following fields:
-    
+    BASIC = Fields('id text value column { title }')
+    """
+    Returns the following fields:
+
     - id: Column's ID
-    - text: Column's name
+    - text: Column's text
+    - title: Colun's title
     - value: Column's raw value
     """

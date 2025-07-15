@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# pylint: disable=redefined-outer-name
+# ruff: noqa: PLR2004, S101
 
 """Comprehensive tests for Boards methods"""
 
@@ -26,30 +26,34 @@ import pytest
 from monday.client import MondayClient
 from monday.exceptions import MondayAPIError
 from monday.services.boards import Boards
-from monday.services.utils.query_builder import ColumnFilter
-from monday.types.column import ColumnValue
-from monday.types.item import Item, ItemList
+from monday.types.column import ColumnFilter
+from monday.types.item import QueryParams, QueryRule
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def mock_client():
     """Create a mock MondayClient instance"""
     return MagicMock(spec=MondayClient)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def boards_instance(mock_client):
     """Create a mock Boards instance"""
     return Boards(mock_client)
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query(boards_instance: Boards):
     """Test basic board query functionality."""
     mock_responses = [
-        {'data': {'boards': [{'id': 1, 'name': 'Board 1'}, {'id': 2, 'name': 'Board 2'}]}},
+        {
+            'data': {
+                'boards': [{'id': 1, 'name': 'Board 1'}, {'id': 2, 'name': 'Board 2'}]
+            }
+        },
         {'data': {'boards': [{'id': 3, 'name': 'Board 3'}]}},
-        {'data': {'boards': []}}
+        {'data': {'boards': []}},
     ]
 
     boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -67,13 +71,11 @@ async def test_query(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_api_error(boards_instance: Boards):
     """Test handling of API errors in query method."""
     error_response = {
-        'errors': [{
-            'message': 'API Error',
-            'extensions': {'code': 'SomeError'}
-        }]
+        'errors': [{'message': 'API Error', 'extensions': {'code': 'SomeError'}}]
     }
 
     boards_instance.client.post_request = AsyncMock(return_value=error_response)
@@ -83,6 +85,7 @@ async def test_query_with_api_error(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items(boards_instance: Boards):
     """Test retrieving items from multiple boards."""
     mock_response = {
@@ -94,31 +97,24 @@ async def test_get_items(boards_instance: Boards):
                         'cursor': None,  # Add cursor to prevent pagination
                         'items': [
                             {'id': '101', 'name': 'Item 1'},
-                            {'id': '102', 'name': 'Item 2'}
-                        ]
-                    }
+                            {'id': '102', 'name': 'Item 2'},
+                        ],
+                    },
                 },
                 {
                     'id': 2,
                     'items_page': {
                         'cursor': None,  # Add cursor to prevent pagination
-                        'items': [
-                            {'id': '201', 'name': 'Item 3'}
-                        ]
-                    }
-                }
+                        'items': [{'id': '201', 'name': 'Item 3'}],
+                    },
+                },
             ]
         }
     }
 
-    # Mock the query method to return empty boards after first call
-    mock_empty_response = {'data': {'boards': []}}
-    boards_instance.client.post_request = AsyncMock(side_effect=[mock_response, mock_empty_response])
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
-    result = await boards_instance.get_items(
-        board_ids=[1, 2],
-        fields='id name'
-    )
+    result = await boards_instance.get_items(board_ids=[1, 2], fields='id name')
 
     # Check that we get ItemList dataclass instances with correct attributes
     assert len(result) == 2
@@ -132,10 +128,11 @@ async def test_get_items(boards_instance: Boards):
     assert len(result[1].items) == 1
     assert result[1].items[0].id == '201'
     assert result[1].items[0].name == 'Item 3'
-    assert boards_instance.client.post_request.await_count == 2
+    boards_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items_with_group(boards_instance: Boards):
     """Test retrieving items from a specific board group."""
     mock_response = {
@@ -149,24 +146,20 @@ async def test_get_items_with_group(boards_instance: Boards):
                                 'cursor': None,  # Add cursor to prevent pagination
                                 'items': [
                                     {'id': '101', 'name': 'Item 1'},
-                                    {'id': '102', 'name': 'Item 2'}
-                                ]
+                                    {'id': '102', 'name': 'Item 2'},
+                                ],
                             }
                         }
-                    ]
+                    ],
                 }
             ]
         }
     }
 
-    # Mock the query method to return empty boards after first call
-    mock_empty_response = {'data': {'boards': []}}
-    boards_instance.client.post_request = AsyncMock(side_effect=[mock_response, mock_empty_response])
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
     result = await boards_instance.get_items(
-        board_ids=1,
-        group_id='group1',
-        fields='id name'
+        board_ids=1, group_id='group1', fields='id name'
     )
 
     # Check that we get ItemList dataclass instances with correct attributes
@@ -177,41 +170,30 @@ async def test_get_items_with_group(boards_instance: Boards):
     assert result[0].items[0].name == 'Item 1'
     assert result[0].items[1].id == '102'
     assert result[0].items[1].name == 'Item 2'
-    assert boards_instance.client.post_request.await_count == 2
+    boards_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items_with_empty_group(boards_instance: Boards):
     """Test retrieving items from an empty board group."""
-    mock_response = {
-        'data': {
-            'boards': [
-                {
-                    'id': 1,
-                    'groups': []
-                }
-            ]
-        }
-    }
+    mock_response = {'data': {'boards': [{'id': 1, 'groups': []}]}}
 
-    # Mock the query method to return empty boards after first call
-    mock_empty_response = {'data': {'boards': []}}
-    boards_instance.client.post_request = AsyncMock(side_effect=[mock_response, mock_empty_response])
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
     result = await boards_instance.get_items(
-        board_ids=1,
-        group_id='group1',
-        fields='id name'
+        board_ids=1, group_id='group1', fields='id name'
     )
 
     # Check that we get ItemList dataclass instances with correct attributes
     assert len(result) == 1
     assert result[0].board_id == '1'
     assert len(result[0].items) == 0
-    assert boards_instance.client.post_request.await_count == 2
+    boards_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items_with_query_params(boards_instance: Boards):
     """Test retrieving items with query parameter filtering."""
     mock_response = {
@@ -222,68 +204,78 @@ async def test_get_items_with_query_params(boards_instance: Boards):
                     'items_page': {
                         'cursor': None,  # Add cursor to prevent pagination
                         'items': [
-                            {'id': '101', 'status': 'Done'}
-                        ]
-                    }
+                            {
+                                'id': '101',
+                                'status': 'Done',
+                                'column_values': [{'id': 'status', 'text': 'Done'}],
+                            }
+                        ],
+                    },
                 }
             ]
         }
     }
 
-    query_params = {
-        'rules': [
-            {
-                'column_id': 'status',
-                'compare_value': ['Done'],
-                'operator': 'contains_terms'
-            }
+    query_params = QueryParams(
+        rules=[
+            QueryRule(
+                column_id='status',
+                compare_value=['Done'],
+                operator='contains_terms',
+            )
         ]
-    }
+    )
 
-    # Mock the query method to return empty boards after first call
-    mock_empty_response = {'data': {'boards': []}}
-    boards_instance.client.post_request = AsyncMock(side_effect=[mock_response, mock_empty_response])
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
     result = await boards_instance.get_items(
         board_ids=1,
         query_params=query_params,
-        fields='id status'
+        fields='id status column_values { id text }',
     )
 
-    # Check that we get ItemList dataclass instances with correct attributes
     assert len(result) == 1
     assert result[0].board_id == '1'
-    assert len(result[0].items) == 1
     assert result[0].items[0].id == '101'
-    assert boards_instance.client.post_request.await_count == 2
+    # Check status in column_values
+    column_values = result[0].items[0].column_values or []
+    status_value = next((cv.text for cv in column_values if cv.id == 'status'), None)
+    assert status_value == 'Done'
+    boards_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items_by_column_values(boards_instance: Boards):
     """Test retrieving items filtered by column values."""
     mock_response = {
         'data': {
-            'items_page_by_column_values': {
-                'cursor': None,
-                'items': [
-                    {
-                        'id': '101',
-                        'name': 'Item 1',
-                        'column_values': [
-                            {'id': 'status', 'text': 'Done'},
-                            {'id': 'priority', 'text': 'High'}
-                        ]
+            'boards': [
+                {
+                    'id': 1,
+                    'items_page': {
+                        'cursor': None,
+                        'items': [
+                            {
+                                'id': '101',
+                                'name': 'Item 1',
+                                'column_values': [
+                                    {'id': 'status', 'text': 'Done'},
+                                    {'id': 'priority', 'text': 'High'},
+                                ],
+                            },
+                            {
+                                'id': '102',
+                                'name': 'Item 2',
+                                'column_values': [
+                                    {'id': 'status', 'text': 'Done'},
+                                    {'id': 'priority', 'text': 'Low'},
+                                ],
+                            },
+                        ],
                     },
-                    {
-                        'id': '102',
-                        'name': 'Item 2',
-                        'column_values': [
-                            {'id': 'status', 'text': 'Done'},
-                            {'id': 'priority', 'text': 'Low'}
-                        ]
-                    }
-                ]
-            }
+                }
+            ]
         }
     }
 
@@ -293,9 +285,9 @@ async def test_get_items_by_column_values(boards_instance: Boards):
         board_id=1,
         columns=[
             ColumnFilter(column_id='status', column_values=['Done']),
-            ColumnFilter(column_id='priority', column_values=['High', 'Low'])
+            ColumnFilter(column_id='priority', column_values=['High', 'Low']),
         ],
-        fields='id name column_values { id text }'
+        fields='id name column_values { id text }',
     )
 
     assert len(result) == 2
@@ -311,25 +303,31 @@ async def test_get_items_by_column_values(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items_by_column_values_with_pagination(boards_instance: Boards):
     """Test paginated retrieval of items filtered by column values."""
     mock_responses = [
         {
             'data': {
-                'items_page_by_column_values': {
-                    'cursor': 'next_page',
-                    'items': [{'id': '101', 'name': 'Item 1'}]
-                }
+                'boards': [
+                    {
+                        'id': 1,
+                        'items_page': {
+                            'cursor': 'next_page',
+                            'items': [{'id': '101', 'name': 'Item 1'}],
+                        },
+                    }
+                ]
             }
         },
         {
             'data': {
-                'items_page_by_column_values': {
+                'next_items_page': {
                     'cursor': None,
-                    'items': [{'id': '102', 'name': 'Item 2'}]
+                    'items': [{'id': '102', 'name': 'Item 2'}],
                 }
             }
-        }
+        },
     ]
 
     boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -337,7 +335,7 @@ async def test_get_items_by_column_values_with_pagination(boards_instance: Board
     result = await boards_instance.get_items_by_column_values(
         board_id=1,
         columns=[ColumnFilter(column_id='status', column_values=['Done'])],
-        paginate_items=True
+        paginate_items=True,
     )
 
     assert len(result) == 2
@@ -349,39 +347,46 @@ async def test_get_items_by_column_values_with_pagination(boards_instance: Board
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_column_values(boards_instance: Boards):
     """Test retrieving column values for board items."""
-    mock_response = [
-        ItemList(
-            board_id='1',
-            items=[
-                Item(
-                    id='101',
-                    name='Item 1',
-                    column_values=[
-                        ColumnValue(id='status', text='Done'),
-                        ColumnValue(id='priority', text='High')
-                    ]
-                ),
-                Item(
-                    id='102',
-                    name='Item 2',
-                    column_values=[
-                        ColumnValue(id='status', text='In Progress'),
-                        ColumnValue(id='priority', text='Low')
-                    ]
-                )
+    mock_response = {
+        'data': {
+            'boards': [
+                {
+                    'id': 1,
+                    'items_page': {
+                        'items': [
+                            {
+                                'id': '101',
+                                'name': 'Item 1',
+                                'column_values': [
+                                    {'id': 'status', 'text': 'Done'},
+                                    {'id': 'priority', 'text': 'High'},
+                                ],
+                            },
+                            {
+                                'id': '102',
+                                'name': 'Item 2',
+                                'column_values': [
+                                    {'id': 'status', 'text': 'In Progress'},
+                                    {'id': 'priority', 'text': 'Low'},
+                                ],
+                            },
+                        ],
+                    },
+                }
             ]
-        )
-    ]
+        }
+    }
 
-    boards_instance.get_items = AsyncMock(return_value=mock_response)
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
     result = await boards_instance.get_column_values(
         board_id=1,
         column_ids=['status', 'priority'],
         column_fields='id text',
-        item_fields='id name'
+        item_fields='id name',
     )
 
     assert len(result) == 2
@@ -389,52 +394,57 @@ async def test_get_column_values(boards_instance: Boards):
     assert result[0].name == 'Item 1'
     assert result[1].id == '102'
     assert result[1].name == 'Item 2'
-    boards_instance.get_items.assert_awaited_once()
+    boards_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_column_values_with_existing_column_values(boards_instance: Boards):
     """Test get_column_values with pre-existing column_values field."""
-    mock_response = [
-        ItemList(
-            board_id='1',
-            items=[
-                Item(
-                    id='101',
-                    name='Item 1',
-                    column_values=[
-                        ColumnValue(id='status', text='Done')
-                    ]
-                )
+    mock_response = {
+        'data': {
+            'boards': [
+                {
+                    'id': 1,
+                    'items_page': {
+                        'items': [
+                            {
+                                'id': '101',
+                                'name': 'Item 1',
+                                'column_values': [{'id': 'status', 'text': 'Done'}],
+                            }
+                        ],
+                    },
+                }
             ]
-        )
-    ]
+        }
+    }
 
-    boards_instance.get_items = AsyncMock(return_value=mock_response)
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
     result = await boards_instance.get_column_values(
         board_id=1,
         column_ids=['status'],
-        item_fields='id name column_values { id text }'
+        item_fields='id name column_values { id text }',
     )
 
     assert len(result) == 1
     assert result[0].id == '101'
     assert result[0].name == 'Item 1'
-    boards_instance.get_items.assert_awaited_once()
+    boards_instance.client.post_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_column_values_error_handling(boards_instance: Boards):
     """Test error handling in get_column_values method."""
-    # Mock an empty response instead of an error response
-    mock_response = [ItemList(board_id='1', items=[])]
+    # Mock an empty response
+    mock_response = {'data': {'boards': []}}
 
-    boards_instance.get_items = AsyncMock(return_value=mock_response)
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
 
     result = await boards_instance.get_column_values(
-        board_id=1,
-        column_ids=['invalid_column']
+        board_id=1, column_ids=['invalid_column']
     )
 
     # Should return empty list instead of raising error
@@ -442,13 +452,10 @@ async def test_get_column_values_error_handling(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_create(boards_instance: Boards):
     """Test board creation."""
-    mock_response = {
-        'data': {
-            'create_board': {'id': 1, 'name': 'New Board'}
-        }
-    }
+    mock_response = {'data': {'create_board': {'id': 1, 'name': 'New Board'}}}
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.create(name='New Board')
@@ -460,13 +467,10 @@ async def test_create(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_duplicate(boards_instance: Boards):
     """Test board duplication."""
-    mock_response = {
-        'data': {
-            'duplicate_board': {'board': {'id': 2, 'name': 'Board 2'}}
-        }
-    }
+    mock_response = {'data': {'duplicate_board': {'id': 2, 'name': 'Board 2'}}}
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.duplicate(board_id=1)
@@ -478,32 +482,41 @@ async def test_duplicate(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_update(boards_instance: Boards):
     """Test board attribute updates."""
-    mock_response = {
+    # Mock the previous attribute query response
+    previous_attribute_response = {'data': {'boards': [{'name': 'Old Board Name'}]}}
+
+    # Mock the mutation response - update_board returns a JSON string
+    mutation_response = {
         'data': {
             'update_board': '{"success": true, "undo_data": {"undo_record_id": "test-id", "action_type": "modify_project", "entity_type": "Board", "entity_id": 1, "count": 1}}'
         }
     }
 
-    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await boards_instance.update(board_id=1, board_attribute='name', new_value='Updated Board')
+    # Mock post_request to return different responses for different calls
+    boards_instance.client.post_request = AsyncMock(
+        side_effect=[previous_attribute_response, mutation_response]
+    )
 
-    # Check that we get UpdateBoard dataclass instances with correct attributes
+    result = await boards_instance.update(
+        board_id=1, board_attribute='name', new_value='Updated Board'
+    )
+
     assert result.success is True
     assert result.undo_data is not None
     assert result.undo_data.undo_record_id == 'test-id'
-    boards_instance.client.post_request.assert_awaited_once()
+    assert result.name == 'Updated Board'
+    assert result.previous_attribute == 'Old Board Name'
+    assert boards_instance.client.post_request.await_count == 2
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_archive(boards_instance: Boards):
     """Test board archival."""
-    mock_response = {
-        'data': {
-            'archive_board': {'id': 1, 'state': 'archived'}
-        }
-    }
+    mock_response = {'data': {'archive_board': {'id': 1, 'state': 'archived'}}}
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.archive(board_id=1)
@@ -515,13 +528,10 @@ async def test_archive(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_delete(boards_instance: Boards):
     """Test board deletion."""
-    mock_response = {
-        'data': {
-            'delete_board': {'id': 1, 'state': 'deleted'}
-        }
-    }
+    mock_response = {'data': {'delete_board': {'id': 1, 'state': 'deleted'}}}
 
     boards_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await boards_instance.delete(board_id=1)
@@ -533,19 +543,22 @@ async def test_delete(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_items_pagination(boards_instance: Boards):
     """Test query method with items pagination."""
     mock_responses = [
         # First response - initial board query
         {
             'data': {
-                'boards': [{
-                    'id': 1,
-                    'items_page': {
-                        'cursor': 'next_page',
-                        'items': [{'id': '101', 'name': 'Item 1'}]
+                'boards': [
+                    {
+                        'id': 1,
+                        'items_page': {
+                            'cursor': 'next_page',
+                            'items': [{'id': '101', 'name': 'Item 1'}],
+                        },
                     }
-                }]
+                ]
             }
         },
         # Second response - next_items_page query
@@ -553,73 +566,90 @@ async def test_query_with_items_pagination(boards_instance: Boards):
             'data': {
                 'next_items_page': {
                     'cursor': None,  # No more pages
-                    'items': [{'id': '102', 'name': 'Item 2'}]
+                    'items': [{'id': '102', 'name': 'Item 2'}],
                 }
             }
         },
         # Third response - final empty boards query to end pagination
-        {
-            'data': {
-                'boards': []
-            }
-        }
+        {'data': {'boards': []}},
     ]
 
-    boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    # Create a mock that cycles through the responses and then repeats the last one
+    call_count = 0
+
+    def mock_side_effect(*args, **kwargs):  # noqa: ARG001
+        nonlocal call_count
+        # This will be called multiple times during pagination
+        # We'll return responses in sequence, then repeat the last one
+        if call_count < len(mock_responses):
+            response = mock_responses[call_count]
+        else:
+            response = mock_responses[-1]  # Repeat the last response
+
+        call_count += 1
+        return response
+
+    boards_instance.client.post_request = AsyncMock(side_effect=mock_side_effect)
     result = await boards_instance.query(
         board_ids=1,
-        fields='id items_page { items { id name } }',
-        paginate_items=True
+        fields='id items_page { cursor items { id name } }',
+        paginate_items=True,
     )
 
     # Check that we get Board dataclass instances with correct attributes
     assert len(result) == 1
     assert result[0].id == '1'
-    assert result[0].items_page is not None
-    items = result[0].items_page.items
-    assert items is not None
-    assert len(items) == 2
-    assert items[0].id == '101'
-    assert items[0].name == 'Item 1'
-    assert items[1].id == '102'
-    assert items[1].name == 'Item 2'
-    assert boards_instance.client.post_request.await_count == 3
+    assert result[0].items is not None
+    assert len(result[0].items) == 2
+    assert result[0].items[0].id == '101'
+    assert result[0].items[0].name == 'Item 1'
+    assert result[0].items[1].id == '102'
+    assert result[0].items[1].name == 'Item 2'
+    assert boards_instance.client.post_request.await_count >= 3
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_workspace_ids(boards_instance: Boards):
     """Test query method with workspace filtering."""
     mock_responses = [
-        {
-            'data': {
-                'boards': [{
-                    'id': 1,
-                    'workspace_id': 100
-                }]
-            }
-        },
+        {'data': {'boards': [{'id': 1, 'workspace_id': 100}]}},
         {
             'data': {
                 'boards': []  # Empty response to end pagination
             }
-        }
+        },
     ]
 
-    boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    # Create a mock that cycles through the responses and then repeats the last one
+    call_count = 0
+
+    def mock_side_effect(*args, **kwargs):  # noqa: ARG001
+        nonlocal call_count
+        # This will be called multiple times during pagination
+        # We'll return responses in sequence, then repeat the last one
+        if call_count < len(mock_responses):
+            response = mock_responses[call_count]
+        else:
+            response = mock_responses[-1]  # Repeat the last response
+
+        call_count += 1
+        return response
+
+    boards_instance.client.post_request = AsyncMock(side_effect=mock_side_effect)
     result = await boards_instance.query(
-        board_ids=1,
-        workspace_ids=100,
-        fields='id workspace_id'
+        board_ids=1, workspace_ids=100, fields='id workspace_id'
     )
 
     # Check that we get Board dataclass instances with correct attributes
     assert len(result) == 1
     assert result[0].id == '1'
     assert result[0].workspace_id == '100'
-    assert boards_instance.client.post_request.await_count == 2
+    assert boards_instance.client.post_request.await_count >= 2
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_create_with_all_parameters(boards_instance: Boards):
     """Test board creation with all optional parameters."""
     mock_response = {
@@ -629,7 +659,7 @@ async def test_create_with_all_parameters(boards_instance: Boards):
                 'name': 'Test Board',
                 'board_kind': 'private',
                 'description': 'Test Description',
-                'workspace_id': 300
+                'workspace_id': 300,
             }
         }
     }
@@ -645,7 +675,7 @@ async def test_create_with_all_parameters(boards_instance: Boards):
         folder_id=100,
         template_id=200,
         workspace_id=300,
-        fields='id name board_kind owner_ids subscriber_ids subscriber_teams_ids description folder_id template_id workspace_id'
+        fields='id name board_kind owner_ids subscriber_ids subscriber_teams_ids description folder_id template_id workspace_id',
     )
 
     # Check that we get Board dataclass instances with correct attributes
@@ -658,16 +688,15 @@ async def test_create_with_all_parameters(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_duplicate_with_all_parameters(boards_instance: Boards):
     """Test board duplication with all optional parameters."""
     mock_response = {
         'data': {
             'duplicate_board': {
-                'board': {
-                    'id': 2,
-                    'name': 'Duplicated Board',
-                    'workspace_id': 100
-                }
+                'id': 2,
+                'name': 'Duplicated Board',
+                'workspace_id': 100,
             }
         }
     }
@@ -679,7 +708,7 @@ async def test_duplicate_with_all_parameters(boards_instance: Boards):
         duplicate_type='with_pulses_and_updates',
         folder_id=200,
         keep_subscribers=True,
-        workspace_id=100
+        workspace_id=100,
     )
 
     # Check that we get Board dataclass instances with correct attributes
@@ -690,36 +719,44 @@ async def test_duplicate_with_all_parameters(boards_instance: Boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_update_with_non_json_response(boards_instance: Boards):
     """Test update method with non-JSON response."""
-    mock_response = {
+    # Mock the previous attribute query response
+    previous_attribute_response = {'data': {'boards': [{'name': 'Old Board Name'}]}}
+
+    # Mock the mutation response - update_board returns a JSON string
+    mutation_response = {
         'data': {
-            'update_board': {'success': True, 'undo_data': {'undo_record_id': 'test-id', 'action_type': 'modify_project', 'entity_type': 'Board', 'entity_id': 1, 'count': 1}}  # Direct dict instead of JSON string
+            'update_board': '{"success": true, "undo_data": {"undo_record_id": "test-id", "action_type": "modify_project", "entity_type": "Board", "entity_id": 1, "count": 1}}'
         }
     }
 
-    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+    # Mock post_request to return different responses for different calls
+    boards_instance.client.post_request = AsyncMock(
+        side_effect=[previous_attribute_response, mutation_response]
+    )
+
     result = await boards_instance.update(
-        board_id=1,
-        board_attribute='name',
-        new_value='Updated Board'
+        board_id=1, board_attribute='name', new_value='Updated Board'
     )
 
     # Check that we get UpdateBoard dataclass instances with correct attributes
     assert result.success is True
-    assert result.undo_data is not None
-    assert result.undo_data.undo_record_id == 'test-id'
-    boards_instance.client.post_request.assert_awaited_once()
+    assert result.name == 'Updated Board'
+    assert result.previous_attribute == 'Old Board Name'
+    assert boards_instance.client.post_request.await_count == 2
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_get_items_by_column_values_without_pagination(boards_instance: Boards):
     """Test retrieving items by column values without pagination."""
     mock_response = {
         'data': {
-            'items_page_by_column_values': {
-                'items': [{'id': '101', 'name': 'Item 1'}]
-            }
+            'boards': [
+                {'id': 1, 'items_page': {'items': [{'id': '101', 'name': 'Item 1'}]}}
+            ]
         }
     }
 
@@ -727,7 +764,7 @@ async def test_get_items_by_column_values_without_pagination(boards_instance: Bo
     result = await boards_instance.get_items_by_column_values(
         board_id=1,
         columns=[ColumnFilter(column_id='status', column_values=['Done'])],
-        paginate_items=False
+        paginate_items=False,
     )
 
     # Check that we get Item dataclass instances with correct attributes

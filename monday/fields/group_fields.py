@@ -23,20 +23,23 @@ querying monday.com groups, making it easier to maintain consistent field
 sets across group operations.
 """
 
+from monday.fields.base_fields import BaseFields
 from monday.services.utils.fields import Fields
 
 
-class GroupFields:
+class GroupFields(BaseFields):
     """
     Collection of predefined field sets for group operations.
 
-    See also:
+    See Also:
         `monday.com API Group fields <https://developer.monday.com/api-reference/reference/groups#fields>`_
+
     """
 
     BASIC = Fields('id title')
-    """Returns the following fields:
-    
+    """
+    Returns the following fields:
+
     - id: Group's ID
     - title: Group's title
     """

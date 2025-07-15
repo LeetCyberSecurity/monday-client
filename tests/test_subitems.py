@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# pylint: disable=redefined-outer-name
+# ruff: noqa: PLR2004, S101
 
 """Comprehensive tests for Subitems methods"""
 
@@ -61,13 +61,17 @@ def subitems_instance(mock_client, mock_items, mock_boards):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_without_subitem_ids(subitems_instance):
     """Test querying subitems without specific subitem IDs."""
     mock_items = [
-        Item(id='1', subitems=[
-            Subitem(id='11', name='Subitem 1'),
-            Subitem(id='12', name='Subitem 2')
-        ])
+        Item(
+            id='1',
+            subitems=[
+                Subitem(id='11', name='Subitem 1'),
+                Subitem(id='12', name='Subitem 2'),
+            ],
+        )
     ]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
@@ -83,26 +87,29 @@ async def test_query_without_subitem_ids(subitems_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_subitem_ids(subitems_instance):
     """Test querying specific subitems by their IDs."""
     mock_items = [
-        Item(id='1', subitems=[
-            Subitem(id='11', name='Subitem 1', board=None),
-            Subitem(id='12', name='Subitem 2', board=None)
-        ])
+        Item(
+            id='1',
+            subitems=[
+                Subitem(id='11', name='Subitem 1', board=None),
+                Subitem(id='12', name='Subitem 2', board=None),
+            ],
+        )
     ]
     mock_board_response = [
         Item(id='11', name='Subitem 1'),
-        Item(id='12', name='Subitem 2')
+        Item(id='12', name='Subitem 2'),
     ]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
-    subitems_instance.boards.get_items = AsyncMock(return_value=[MagicMock(items=mock_board_response)])
-
-    result = await subitems_instance.query(
-        item_ids=1,
-        subitem_ids=['11', '12']
+    subitems_instance.boards.get_items = AsyncMock(
+        return_value=[MagicMock(items=mock_board_response)]
     )
+
+    result = await subitems_instance.query(item_ids=1, subitem_ids=['11', '12'])
 
     assert isinstance(result[0], SubitemList)
     assert result[0].item_id == '1'
@@ -116,16 +123,18 @@ async def test_query_with_subitem_ids(subitems_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_multiple_items(subitems_instance):
     """Test querying subitems for multiple parent items."""
     mock_items = [
-        Item(id='1', subitems=[
-            Subitem(id='11', name='Subitem 1'),
-            Subitem(id='12', name='Subitem 2')
-        ]),
-        Item(id='2', subitems=[
-            Subitem(id='21', name='Subitem 3')
-        ])
+        Item(
+            id='1',
+            subitems=[
+                Subitem(id='11', name='Subitem 1'),
+                Subitem(id='12', name='Subitem 2'),
+            ],
+        ),
+        Item(id='2', subitems=[Subitem(id='21', name='Subitem 3')]),
     ]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
@@ -140,18 +149,14 @@ async def test_query_multiple_items(subitems_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_custom_fields(subitems_instance):
     """Test querying subitems with custom fields."""
-    mock_items = [
-        Item(id='1', subitems=[
-            Subitem(id='11', name='Subitem 1')
-        ])
-    ]
+    mock_items = [Item(id='1', subitems=[Subitem(id='11', name='Subitem 1')])]
 
     subitems_instance.items.query = AsyncMock(return_value=mock_items)
     result = await subitems_instance.query(
-        item_ids=1,
-        fields='id name column_values { id text }'
+        item_ids=1, fields='id name column_values { id text }'
     )
 
     assert result[0].subitems[0].id == '11'
@@ -160,6 +165,7 @@ async def test_query_with_custom_fields(subitems_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_create_subitem(subitems_instance):
     """Test creating a new subitem."""
     mock_response = {
@@ -181,6 +187,7 @@ async def test_create_subitem(subitems_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_create_subitem_with_labels(subitems_instance):
     """Test creating a subitem with create_labels_if_missing enabled."""
     mock_response = {
@@ -194,9 +201,7 @@ async def test_create_subitem_with_labels(subitems_instance):
 
     subitems_instance.client.post_request = AsyncMock(return_value=mock_response)
     result = await subitems_instance.create(
-        item_id='1',
-        subitem_name='New Subitem',
-        create_labels_if_missing=True
+        item_id='1', subitem_name='New Subitem', create_labels_if_missing=True
     )
 
     assert isinstance(result, Subitem)
@@ -206,19 +211,14 @@ async def test_create_subitem_with_labels(subitems_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_create_subitem_with_api_error(subitems_instance):
     """Test handling of API errors in create method."""
     error_response = {
-        'errors': [{
-            'message': 'Invalid input',
-            'extensions': {'code': 'InvalidInput'}
-        }]
+        'errors': [{'message': 'Invalid input', 'extensions': {'code': 'InvalidInput'}}]
     }
 
     subitems_instance.client.post_request = AsyncMock(return_value=error_response)
     with pytest.raises(MondayAPIError) as exc_info:
-        await subitems_instance.create(
-            item_id='1',
-            subitem_name='New Subitem'
-        )
+        await subitems_instance.create(item_id='1', subitem_name='New Subitem')
     assert exc_info.value.json == error_response

@@ -1,18 +1,18 @@
-.. 
+..
    This file is part of monday-client.
-   
+
    Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
-   
+
    monday-client is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
-   
+
    monday-client is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
@@ -39,16 +39,17 @@ For example:
 
 You can access the attributes directly:
 
+.. rstcheck: ignore-next-code-block
 .. code-block:: python
 
    # Get item data from API
    items = await monday_client.items.query(item_ids=[123456789])
-   
+
    for item in items:
        print(f"Item: {item.name}")
        print(f"Last updated: {item.updated_at}")
        print(f"State: {item.state}")
-       
+
        if item.subitems:
            print(f"Has {len(item.subitems)} subitems")
            for subitem in item.subitems:
@@ -110,6 +111,10 @@ Column Types
    :members:
    :show-inheritance:
 
+.. autoclass:: monday.types.ColumnFilter
+   :members:
+   :show-inheritance:
+
 Group Types
 """""""""""
 
@@ -129,6 +134,22 @@ Item Types
    :show-inheritance:
 
 .. autoclass:: monday.types.ItemList
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.ItemsPage
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.OrderBy
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.QueryRule
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.QueryParams
    :members:
    :show-inheritance:
 
@@ -182,6 +203,126 @@ Workspace Types
    :members:
    :show-inheritance:
 
+Column Input Types
+""""""""""""""""""
+
+These dataclasses provide type-safe ways to set column values when updating items via the Monday.com API.
+
+For example:
+
+.. rstcheck: ignore-next-code-block
+.. code-block:: python
+
+    from monday.types.column_inputs import DateInput, StatusInput, TextInput, NumberInput
+
+    # Update multiple column values at once
+    await client.items.change_column_values(
+        item_id=123456789,
+        column_values=[
+            DateInput('date_column_id', '2024-01-15', '14:30:00'),
+            StatusInput('status_column_id', 'Working on it'),
+            TextInput('text_column_id', 'Updated content'),
+            NumberInput('number_column_id', 42.5)
+        ]
+    )
+
+.. autoclass:: monday.types.CheckboxInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.CountryInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.DateInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.DropdownInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.EmailInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.HourInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.LinkInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.LocationInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.LongTextInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.NumberInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.PeopleInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.PhoneInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.RatingInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.StatusInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.TagInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.TextInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.TimelineInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.WeekInput
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.WorldClockInput
+   :members:
+   :show-inheritance:
+
+Column Default Types
+""""""""""""""""""""
+
+These dataclasses are used to define default values when creating columns.
+
+.. autoclass:: monday.types.StatusDefaults
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.StatusLabel
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.DropdownDefaults
+   :members:
+   :show-inheritance:
+
+.. autoclass:: monday.types.DropdownLabel
+   :members:
+   :show-inheritance:
+
 Query Types
 ^^^^^^^^^^^
 
@@ -189,6 +330,7 @@ These dataclasses are used to build complex queries and filter data from the Mon
 
 For example:
 
+.. rstcheck: ignore-next-code-block
 .. code-block:: python
 
     from monday.services.utils.query_builder import QueryParams, QueryRule, OrderBy
@@ -208,4 +350,4 @@ For example:
         )
     )
     # Use the query parameters
-    items = await monday_client.items.query(query_params=query_params) 
+    items = await monday_client.items.query(query_params=query_params)

@@ -22,7 +22,7 @@ This module provides a comprehensive set of operations for managing subitems in
 monday.com boards.
 
 This module is part of the monday-client package and relies on the MondayClient
-for making API requests. It also utilizes various utility functions to ensure proper 
+for making API requests. It also utilizes various utility functions to ensure proper
 data handling and error checking.
 
 Usage of this module requires proper authentication and initialization of the
@@ -30,7 +30,7 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from monday.fields.item_fields import ItemFields
 from monday.services.utils.error_handlers import check_query_result
@@ -52,12 +52,7 @@ class Subitems:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(
-        self,
-        client: 'MondayClient',
-        items: 'Items',
-        boards: 'Boards'
-    ):
+    def __init__(self, client: 'MondayClient', items: 'Items', boards: 'Boards'):
         """
         Initialize a Subitems instance with specified parameters.
 
@@ -65,6 +60,7 @@ class Subitems:
             client: The MondayClient instance to use for API requests.
             items: The Items instance to use for item-related operations.
             boards: The Boards instance to use for board-related operations.
+
         """
         self.client = client
         self.items = items
@@ -72,10 +68,10 @@ class Subitems:
 
     async def query(
         self,
-        item_ids: Union[int, list[int]],
-        subitem_ids: Optional[Union[int, list[int]]] = None,
-        fields: Union[str, Fields] = ItemFields.BASIC,
-        **kwargs: Any
+        item_ids: int | str | list[int | str],
+        subitem_ids: int | str | list[int | str] | None = None,
+        fields: str | Fields = ItemFields.BASIC,
+        **kwargs: Any,
     ) -> list[SubitemList]:
         """
         Query items to return metadata about one or multiple subitems.
@@ -113,78 +109,98 @@ class Subitems:
                 "subitem"
                 >>> result[0].subitems[0].state
                 "active"
-        """
 
+        """
         fields = Fields(fields)
 
         if not subitem_ids:
-            fields = Fields(f'''
-                id subitems 
+            fields = Fields(f"""
+                id subitems
                 {{
-                    {str(fields)}   
+                    {fields!s}
                 }}
-            ''')
+            """)
 
             query_result = await self.items.query(
-                item_ids=item_ids,
-                fields=fields,
-                **kwargs
+                item_ids=item_ids, fields=fields, **kwargs
             )
 
-            return [SubitemList(item_id=item.id, subitems=item.subitems if item.subitems else []) for item in query_result]
-
-        else:
-            subitem_board_query_result = await self.items.query(
-                item_ids=item_ids,
-                fields='id subitems { id board { id } }',
-                **kwargs
-            )
-
-            subitem_ids = subitem_ids if isinstance(subitem_ids, list) else [subitem_ids]
-            items = []
-            for parent_item in subitem_board_query_result:
-                if not parent_item.subitems:
-                    continue
-
-                parent_subitem_ids = [s for s in subitem_ids if any(int(subitem.id) == int(s) for subitem in parent_item.subitems)]
-                if not parent_subitem_ids:
-                    continue
-
-                subitem_board_id = int(parent_item.subitems[0].board.id) if parent_item.subitems[0].board else 0
-                query_result = await self.boards.get_items(
-                    board_ids=subitem_board_id,
-                    query_params={'ids': parent_subitem_ids},
-                    fields=fields
+            return [
+                SubitemList(
+                    item_id=item.id, subitems=item.subitems if item.subitems else []
                 )
-                # Convert Item instances to Subitem instances
-                subitems = []
-                if query_result and query_result[0].items:
-                    for item in query_result[0].items:
-                        if isinstance(item, Subitem):
-                            subitems.append(item)
-                        else:
-                            # Convert Item to Subitem if needed
-                            subitems.append(Subitem.from_dict(item.to_dict() if hasattr(item, 'to_dict') else item))
+                for item in query_result
+            ]
 
-                items.append(SubitemList(item_id=parent_item.id, subitems=subitems))
+        subitem_board_query_result = await self.items.query(
+            item_ids=item_ids, fields='id subitems { id board { id } }', **kwargs
+        )
 
-            return items
+        # Convert to list and handle None case
+        subitem_ids_list = (
+            subitem_ids
+            if isinstance(subitem_ids, list)
+            else [subitem_ids]
+            if subitem_ids is not None
+            else []
+        )
+        items = []
+        for parent_item in subitem_board_query_result:
+            if not parent_item.subitems:
+                continue
+
+            parent_subitem_ids = [
+                s
+                for s in subitem_ids_list
+                if any(int(subitem.id) == int(s) for subitem in parent_item.subitems)
+            ]
+            if not parent_subitem_ids:
+                continue
+
+            subitem_board_id = (
+                int(parent_item.subitems[0].board.id)
+                if parent_item.subitems[0].board
+                else 0
+            )
+            query_result = await self.boards.get_items(
+                board_ids=subitem_board_id,
+                query_params={'ids': parent_subitem_ids},
+                fields=fields,
+            )
+            # Convert Item instances to Subitem instances
+            subitems = []
+            if query_result and query_result[0].items:
+                for item in query_result[0].items:
+                    if isinstance(item, Subitem):
+                        subitems.append(item)
+                    else:
+                        # Convert Item to Subitem if needed
+                        subitems.append(
+                            Subitem.from_dict(
+                                item.to_dict() if hasattr(item, 'to_dict') else item
+                            )
+                        )
+
+            items.append(SubitemList(item_id=parent_item.id, subitems=subitems))
+
+        return items
 
     async def create(
         self,
-        item_id: int,
+        item_id: int | str,
         subitem_name: str,
-        column_values: Optional[dict[ColumnType, Union[str, dict[str, Any]]]] = None,
+        column_values: dict[ColumnType, str | dict[str, Any]] | None = None,
+        fields: str | Fields = ItemFields.BASIC,
+        *,
         create_labels_if_missing: bool = False,
-        fields: Union[str, Fields] = ItemFields.BASIC
     ) -> Subitem:
         """
         Create a new subitem on an item.
 
         Args:
             item_id: The ID of the item where the subitem will be created.
-            item_name: The name of the subitem.
-            column_values: Column values for the subitem.
+            subitem_name: The name of the subitem.
+            column_values: Column values for the subitem. Can be a dictionary with column IDs as keys and values as either strings or dictionaries. For better type safety, you can also use ColumnInput objects from :mod:`monday.types.column_inputs`.
             create_labels_if_missing: Creates status/dropdown labels if they are missing.
             fields: Fields to return from the created subitem.
 
@@ -201,12 +217,26 @@ class Subitems:
             .. code-block:: python
 
                 >>> from monday import MondayClient
+                >>> from monday.types.column_inputs import StatusInput, TextInput
                 >>> monday_client = MondayClient('your_api_key')
+
+                # Using ColumnInput objects (recommended for type safety)
                 >>> subitem = await monday_client.subitems.create(
                 ...     item_id=123456789,
                 ...     subitem_name='New Subitem',
                 ...     column_values={
-                ...         'status': 'Done',
+                ...         'status': StatusInput('status', 'Done'),
+                ...         'text': TextInput('text', 'This subitem is done')
+                ...     },
+                ...     fields='id name column_values (ids: ["status", "text"]) { id text }'
+                ... )
+
+                # Using dictionary format (equivalent functionality)
+                >>> subitem = await monday_client.subitems.create(
+                ...     item_id=123456789,
+                ...     subitem_name='New Subitem',
+                ...     column_values={
+                ...         'status': {'label': 'Done'},
                 ...         'text': 'This subitem is done'
                 ...     },
                 ...     fields='id name column_values (ids: ["status", "text"]) { id text }'
@@ -219,8 +249,8 @@ class Subitems:
                 "status"
                 >>> subitem.column_values[0].text
                 "Done"
-        """
 
+        """
         fields = Fields(fields)
 
         args = {
@@ -228,14 +258,10 @@ class Subitems:
             'item_name': subitem_name,
             'column_values': column_values,
             'create_labels_if_missing': create_labels_if_missing,
-            'fields': fields
+            'fields': fields,
         }
 
-        query_string = build_graphql_query(
-            'create_subitem',
-            'mutation',
-            args
-        )
+        query_string = build_graphql_query('create_subitem', 'mutation', args)
 
         query_result = await self.client.post_request(query_string)
 

@@ -23,20 +23,23 @@ querying monday.com users, making it easier to maintain consistent field
 sets across user operations.
 """
 
+from monday.fields.base_fields import BaseFields
 from monday.services.utils.fields import Fields
 
 
-class UserFields:
+class UserFields(BaseFields):
     """
     Collection of predefined field sets for user operations.
 
-    See also:
+    See Also:
         `monday.com API User fields <https://developer.monday.com/api-reference/reference/users#fields>`_
+
     """
 
     BASIC = Fields('id email')
-    """Returns the following fields:
-    
+    """
+    Returns the following fields:
+
     - id: User's ID
     - email: User's email
     """

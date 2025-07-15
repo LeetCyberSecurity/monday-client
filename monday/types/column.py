@@ -24,7 +24,8 @@ including columns, column values, and column types.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 ColumnType = Literal[
@@ -66,7 +67,7 @@ ColumnType = Literal[
     'vote',
     'week',
     'world_clock',
-    'unsupported'
+    'unsupported',
 ]
 """ColumnType accepts enum values to specify which column type to filter, read, or update in your query or mutation."""
 
@@ -79,8 +80,9 @@ class Column:
     This dataclass maps to the Monday.com API column object structure, containing
     fields like title, type, settings, and metadata.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/columns#fields
+
     """
 
     archived: bool = False
@@ -135,7 +137,7 @@ class Column:
             settings_str=str(data.get('settings_str', '')),
             title=str(data.get('title', '')),
             type=str(data.get('type', '')),
-            width=int(data.get('width', 0))
+            width=int(data.get('width', 0)),
         )
 
 
@@ -147,8 +149,9 @@ class ColumnValue:
     This dataclass maps to the Monday.com API column value object structure, containing
     fields like text, value, type, and associated column metadata.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/column-values#fields
+
     """
 
     additional_info: str = ''
@@ -166,15 +169,20 @@ class ColumnValue:
     type: str = ''
     """The column value's type"""
 
-    value: str = ''
+    value: dict = field(default_factory=dict)
     """The column value's value"""
 
-    # Additional fields for complex column value structures
     column: Column | None = None
     """The column metadata associated with this value"""
 
     display_value: str = ''
     """Display value for fragment queries like ... on MirrorValue, ... on BoardRelationValue"""
+
+    label: str = ''
+    """Label value for fragment queries like ... on ButtonValue"""
+
+    color: str = ''
+    """Color value for fragment queries like ... on ButtonValue"""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
@@ -196,6 +204,10 @@ class ColumnValue:
             result['column'] = self.column.to_dict()
         if self.display_value:
             result['display_value'] = self.display_value
+        if self.label:
+            result['label'] = self.label
+        if self.color:
+            result['color'] = self.color
 
         return result
 
@@ -206,25 +218,60 @@ class ColumnValue:
         column_data = data.get('column')
         column = Column.from_dict(column_data) if column_data else None
 
+        # Parse value field - it can be a JSON string or already a dict
+        value_data = data.get('value', {})
+        if isinstance(value_data, str):
+            try:
+                value = json.loads(value_data)
+            except (json.JSONDecodeError, TypeError):
+                value = {}
+        else:
+            value = value_data if isinstance(value_data, dict) else {}
+
         return cls(
             additional_info=str(data.get('additional_info', '')),
             id=str(data.get('id', '')),
             text=str(data.get('text', '')),
             title=str(data.get('title', '')),
             type=str(data.get('type', '')),
-            value=str(data.get('value', '')),
+            value=value,
             column=column,
-            display_value=str(data.get('display_value', ''))
+            display_value=str(data.get('display_value', '')),
+            label=str(data.get('label', '')),
+            color=str(data.get('color', '')),
         )
 
-    def get_column_title(self) -> str:
-        """Get the column title, either from column metadata or fallback to title field."""
-        if self.column and self.column.title:
-            return self.column.title
-        return self.title
 
-    def get_display_value(self) -> str:
-        """Get the display value, with fallback to text."""
-        if self.display_value:
-            return self.display_value
-        return self.text
+@dataclass
+class ColumnFilter:
+    """
+    Structure for filtering items by column values.
+
+    Example:
+        .. code-block:: python
+
+            column_filter = ColumnFilter(
+                column_id='status', column_values=['Done', 'In Progress']
+            )
+
+            # Or with a single value
+            column_filter = ColumnFilter(column_id='text', column_values='Search term')
+
+    """
+
+    column_id: str
+    """The ID of the column to filter by"""
+
+    column_values: str | list[str]
+    """The value(s) to filter for. Can be a single string or list of strings"""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API requests."""
+        return {'column_id': self.column_id, 'column_values': self.column_values}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ColumnFilter:
+        """Create from dictionary."""
+        return cls(
+            column_id=str(data['column_id']), column_values=data['column_values']
+        )

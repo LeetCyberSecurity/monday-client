@@ -23,20 +23,23 @@ querying monday.com items, making it easier to maintain consistent field
 sets across item operations.
 """
 
+from monday.fields.base_fields import BaseFields
 from monday.services.utils.fields import Fields
 
 
-class ItemFields:
+class ItemFields(BaseFields):
     """
     Collection of predefined field sets for item operations.
 
-    See also:
+    See Also:
         `monday.com API Item fields <https://developer.monday.com/api-reference/reference/items#fields>`_
+
     """
 
     BASIC = Fields('id name')
-    """Returns the following fields:
-    
+    """
+    Returns the following fields:
+
     - id: Item's ID
     - name: Item's name
     """

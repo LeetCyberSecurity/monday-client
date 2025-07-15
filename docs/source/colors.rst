@@ -1,4 +1,4 @@
-.. 
+..
     This file is part of monday-client.
 
     Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
@@ -17,7 +17,7 @@
     along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
 .. title:: Color Palette
-    
+
 .. _color-reference:
 
 Color Palette
@@ -86,7 +86,7 @@ Click any color below to copy its HEX code to your clipboard.
             { hex: '#ff642e', usages: ['groups'] }, // dark-orange
             { hex: '#fdab3d', usages: ['groups'] }, // orange
             { hex: '#ffcb00', usages: ['groups'] }, // yellow
-            { hex: '#cab641', usages: ['groups'] }, 
+            { hex: '#cab641', usages: ['groups'] },
             { hex: '#9cd326', usages: ['groups'] }, // lime-green
             { hex: '#00c875', usages: ['groups'] }, // green
             { hex: '#037f4c', usages: ['groups'] }, // dark-green
@@ -101,12 +101,12 @@ Click any color below to copy its HEX code to your clipboard.
         ];
 
         const colorGrid = document.querySelector('.color-grid');
-        
+
         colors.forEach(({hex, usages}) => {
             const colorItem = document.createElement('div');
             colorItem.className = 'color-item';
             colorItem.onclick = () => copyColor(hex);
-            
+
             const usageText = usages.join(', ');
             colorItem.innerHTML = `
                 <div class="color-swatch" style="background-color: ${hex}"></div>
@@ -115,7 +115,7 @@ Click any color below to copy its HEX code to your clipboard.
                     <div class="color-usage">Used for: ${usageText}</div>
                 </div>
             `;
-            
+
             colorGrid.appendChild(colorItem);
         });
 

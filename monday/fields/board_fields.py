@@ -23,35 +23,41 @@ querying monday.com boards, making it easier to maintain consistent field
 sets across board operations.
 """
 
+from monday.fields.base_fields import BaseFields
 from monday.services.utils.fields import Fields
 
 
-class BoardFields:
+class BoardFields(BaseFields):
     """
     Collection of predefined field sets for board operations.
 
-    See also:
+    See Also:
         `monday.com API Board fields <https://developer.monday.com/api-reference/reference/boards#fields>`_
+
     """
 
     BASIC: Fields = Fields('id name')
-    """Returns the following fields:
+    """
+    Returns the following fields:
 
     - id: Board's ID
     - name: Board's name
     """
 
-    DETAILED: Fields = Fields('id name board_kind description')
-    """Returns the following fields:
+    DETAILED: Fields = Fields('id name state board_kind description')
+    """
+    Returns the following fields:
 
     - id: Board's ID
     - name: Board's name
+    - state: Board's state
     - board_kind: The type of board
     - description: Board's description
     """
 
     GROUPS: Fields = Fields('id name top_group { id title } groups { id title }')
-    """Returns the following fields:
+    """
+    Returns the following fields:
 
     - id: Board's ID
     - name: Board's name
@@ -65,8 +71,11 @@ class BoardFields:
         - title: Group's title
     """
 
-    ITEMS: Fields = Fields('id name items_count items_page { cursor items { id name } }')
-    """Returns the following fields:
+    ITEMS: Fields = Fields(
+        'id name items_count items_page { cursor items { id name } }'
+    )
+    """
+    Returns the following fields:
 
     - id: Board's ID
     - name: Board's name
@@ -77,8 +86,11 @@ class BoardFields:
         - name: Item's name
     """
 
-    USERS: Fields = Fields('id name creator { id email name } owners { id email name } subscribers { id email name }')
-    """Returns the following fields:
+    USERS: Fields = Fields(
+        'id name creator { id email name } owners { id email name } subscribers { id email name }'
+    )
+    """
+    Returns the following fields:
 
     - id: Board's ID
     - name: Board's name

@@ -1,4 +1,4 @@
-.. 
+..
     This file is part of monday-client.
 
     Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>

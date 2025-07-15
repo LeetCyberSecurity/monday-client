@@ -1,4 +1,4 @@
-.. 
+..
     This file is part of monday-client.
 
     Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
@@ -21,42 +21,42 @@ Usage
 =====
 
 .. contents:: Table of Contents
-	:depth: 2
-	:local:
+    :depth: 2
+    :local:
 
 Installation
 ------------
 
 .. code-block:: bash
 
-	pip install monday-client
+    pip install monday-client
 
 Quick Start
 -----------
 
 .. code-block:: python
 
-	import asyncio
+    import asyncio
 
-	from monday import MondayClient
+    from monday import MondayClient
 
-	async def main():
-		monday_client = MondayClient(api_key='your_api_key_here')
-		boards = await monday_client.boards.query(board_ids=[987654321, 876543210])
-		items_page = await monday_client.items.query(item_ids=[123456789, 123456780])
+    async def main():
+        monday_client = MondayClient(api_key='your_api_key_here')
+        boards = await monday_client.boards.query(board_ids=[987654321, 876543210])
+        items_page = await monday_client.items.query(item_ids=[123456789, 123456780])
 
-	asyncio.run(main())
+    asyncio.run(main())
 
 Error Handling
 --------------
 
 Custom exceptions are defined for handling specific error cases:
 
-	* :exc:`~monday.exceptions.MondayAPIError`: Raised when an error occurs during API communication with Monday.com.
-	* :exc:`~monday.exceptions.PaginationError`: Raised when item pagination fails during a request.
-	* :exc:`~monday.exceptions.QueryFormatError`: Raised when there is a query formatting error.
-	* :exc:`~monday.exceptions.ComplexityLimitExceeded`: Raised when the complexity limit is exceeded.
-	* :exc:`~monday.exceptions.MutationLimitExceeded`: Raised when the mutation limit is exceeded.
+    * :exc:`~monday.exceptions.MondayAPIError`: Raised when an error occurs during API communication with Monday.com.
+    * :exc:`~monday.exceptions.PaginationError`: Raised when item pagination fails during a request.
+    * :exc:`~monday.exceptions.QueryFormatError`: Raised when there is a query formatting error.
+    * :exc:`~monday.exceptions.ComplexityLimitExceeded`: Raised when the complexity limit is exceeded.
+    * :exc:`~monday.exceptions.MutationLimitExceeded`: Raised when the mutation limit is exceeded.
 
 Logging
 -------
@@ -65,10 +65,10 @@ The client uses a logger named ``monday_client`` for all logging operations. By 
 
 .. code-block:: python
 
-	import logging
+    import logging
 
-	logger = logging.getLogger('monday_client')
-	logger.setLevel(logging.INFO)
-	handler = logging.StreamHandler()
-	handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-	logger.addHandler(handler)
+    logger = logging.getLogger('monday_client')
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)

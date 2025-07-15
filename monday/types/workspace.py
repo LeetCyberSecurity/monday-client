@@ -40,8 +40,9 @@ class Workspace:
     This dataclass maps to the Monday.com API workspace object structure, containing
     fields like name, description, boards, owners, and subscribers.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/workspaces#fields
+
     """
 
     boards: list[Board] | None = None
@@ -85,56 +86,74 @@ class Workspace:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
-        result = {}
 
-        if self.boards:
-            result['boards'] = [board.to_dict() if hasattr(board, 'to_dict') else board for board in self.boards]
-        if self.created_at:
-            result['created_at'] = self.created_at
-        if self.description:
-            result['description'] = self.description
-        if self.id:
-            result['id'] = self.id
-        if self.kind:
-            result['kind'] = self.kind
-        if self.name:
-            result['name'] = self.name
-        if self.owners:
-            result['owners'] = [owner.to_dict() if hasattr(owner, 'to_dict') else owner for owner in self.owners]
-        if self.picture_url:
-            result['picture_url'] = self.picture_url
-        if self.settings_str:
-            result['settings_str'] = self.settings_str
-        if self.state:
-            result['state'] = self.state
-        if self.subscribers:
-            result['subscribers'] = [subscriber.to_dict() if hasattr(subscriber, 'to_dict') else subscriber for subscriber in self.subscribers]
-        if self.teams:
-            result['teams'] = [team.to_dict() if hasattr(team, 'to_dict') else team for team in self.teams]
-        if self.updated_at:
-            result['updated_at'] = self.updated_at
+        def _convert_list(items: list, converter_name: str = 'to_dict') -> list:
+            """Convert list items using their converter method if available."""
+            return [
+                getattr(item, converter_name)()
+                if hasattr(item, converter_name)
+                else item
+                for item in items
+            ]
 
-        return result
+        data = {
+            'boards': _convert_list(self.boards) if self.boards else None,
+            'created_at': self.created_at,
+            'description': self.description,
+            'id': self.id,
+            'kind': self.kind,
+            'name': self.name,
+            'owners': _convert_list(self.owners) if self.owners else None,
+            'picture_url': self.picture_url,
+            'settings_str': self.settings_str,
+            'state': self.state,
+            'subscribers': _convert_list(self.subscribers)
+            if self.subscribers
+            else None,
+            'teams': _convert_list(self.teams) if self.teams else None,
+            'updated_at': self.updated_at,
+        }
+
+        return {k: v for k, v in data.items() if v}
 
     @classmethod
-    # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Workspace:
         """Create from dictionary."""
-        from monday.types.board import Board
-        from monday.types.user import User
+        from monday.types.board import Board  # noqa: PLC0415
+        from monday.types.user import User  # noqa: PLC0415
 
         return cls(
-            boards=[Board.from_dict(board) if hasattr(Board, 'from_dict') else board for board in data.get('boards', [])] if data.get('boards') else None,
+            boards=[
+                Board.from_dict(board) if hasattr(Board, 'from_dict') else board
+                for board in data.get('boards', [])
+            ]
+            if data.get('boards')
+            else None,
             created_at=str(data.get('created_at', '')),
             description=str(data.get('description', '')),
             id=str(data.get('id', '')),
             kind=str(data.get('kind', '')),
             name=str(data.get('name', '')),
-            owners=[User.from_dict(owner) if hasattr(User, 'from_dict') else owner for owner in data.get('owners', [])] if data.get('owners') else None,
+            owners=[
+                User.from_dict(owner) if hasattr(User, 'from_dict') else owner
+                for owner in data.get('owners', [])
+            ]
+            if data.get('owners')
+            else None,
             picture_url=str(data.get('picture_url', '')),
             settings_str=str(data.get('settings_str', '')),
             state=str(data.get('state', '')),
-            subscribers=[User.from_dict(subscriber) if hasattr(User, 'from_dict') else subscriber for subscriber in data.get('subscribers', [])] if data.get('subscribers') else None,
-            teams=[User.from_dict(team) if hasattr(User, 'from_dict') else team for team in data.get('teams', [])] if data.get('teams') else None,
-            updated_at=str(data.get('updated_at', ''))
+            subscribers=[
+                User.from_dict(subscriber) if hasattr(User, 'from_dict') else subscriber
+                for subscriber in data.get('subscribers', [])
+            ]
+            if data.get('subscribers')
+            else None,
+            teams=[
+                User.from_dict(team) if hasattr(User, 'from_dict') else team
+                for team in data.get('teams', [])
+            ]
+            if data.get('teams')
+            else None,
+            updated_at=str(data.get('updated_at', '')),
         )

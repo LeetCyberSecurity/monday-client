@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from monday.services.utils.pagination import ItemsPage
+    from monday.types.item import Item
 
 
 @dataclass
@@ -50,7 +50,10 @@ class GroupList:
         """Convert to dictionary for API requests."""
         return {
             'id': self.board_id,
-            'groups': [group.to_dict() if hasattr(group, 'to_dict') else group for group in self.groups]
+            'groups': [
+                group.to_dict() if hasattr(group, 'to_dict') else group
+                for group in self.groups
+            ],
         }
 
     @classmethod
@@ -58,7 +61,10 @@ class GroupList:
         """Create from dictionary."""
         return cls(
             board_id=str(data.get('id', '')),
-            groups=[Group.from_dict(group) if isinstance(group, dict) else group for group in data.get('groups', [])]
+            groups=[
+                Group.from_dict(group) if isinstance(group, dict) else group
+                for group in data.get('groups', [])
+            ],
         )
 
 
@@ -70,8 +76,9 @@ class Group:
     This dataclass maps to the Monday.com API group object structure, containing
     fields like title, color, position, and associated items.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/groups#fields
+
     """
 
     archived: bool = False
@@ -86,7 +93,7 @@ class Group:
     id: str = ''
     """The group's unique identifier"""
 
-    items_page: ItemsPage | None = None
+    items: list[Item] | None = None
     """The group's items"""
 
     position: str = ''
@@ -107,8 +114,11 @@ class Group:
             result['deleted'] = self.deleted
         if self.id:
             result['id'] = self.id
-        if self.items_page:
-            result['items_page'] = self.items_page.to_dict()
+        if self.items:
+            result['items'] = [
+                item.to_dict() if hasattr(item, 'to_dict') else item
+                for item in self.items
+            ]
         if self.position:
             result['position'] = self.position
         if self.title:
@@ -117,17 +127,22 @@ class Group:
         return result
 
     @classmethod
-    # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Group:
         """Create from dictionary."""
-        from monday.services.utils.pagination import ItemsPage
+        from monday.types.item import Item  # noqa: PLC0415
 
+        items = None
+        if data.get('items'):
+            items = [
+                Item.from_dict(item) if isinstance(item, dict) else item
+                for item in data.get('items', [])
+            ]
         return cls(
             archived=data.get('archived', False),
             color=str(data.get('color', '')),
             deleted=data.get('deleted', False),
             id=str(data.get('id', '')),
-            items_page=ItemsPage.from_dict(data['items_page']) if data.get('items_page') else None,
+            items=items,
             position=str(data.get('position', '')),
-            title=str(data.get('title', ''))
+            title=str(data.get('title', '')),
         )

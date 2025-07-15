@@ -36,8 +36,9 @@ class Plan:
     This dataclass maps to the Monday.com API plan object structure, containing
     fields like max users, period, tier, and version.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/plan#fields
+
     """
 
     max_users: int = 0
@@ -72,7 +73,7 @@ class Plan:
             max_users=int(data.get('max_users', 0)),
             period=str(data.get('period', '')),
             tier=str(data.get('tier', '')),
-            version=int(data.get('version', 0))
+            version=int(data.get('version', 0)),
         )
 
 
@@ -84,8 +85,9 @@ class AccountProduct:
     This dataclass maps to the Monday.com API account product object structure, containing
     fields like kind, default workspace, and unique identifier.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/other-types#account-product
+
     """
 
     id: str = ''
@@ -94,17 +96,20 @@ class AccountProduct:
     default_workspace_id: str = ''
     """The account product's default workspace ID"""
 
-    kind: Literal[
-        'core',
-        'crm',
-        'forms',
-        'marketing',
-        'projectManagement',
-        'project_management',
-        'service',
-        'software',
-        'whiteboard'
-    ] | None = None
+    kind: (
+        Literal[
+            'core',
+            'crm',
+            'forms',
+            'marketing',
+            'projectManagement',
+            'project_management',
+            'service',
+            'software',
+            'whiteboard',
+        ]
+        | None
+    ) = None
     """The account product"""
 
     def to_dict(self) -> dict[str, Any]:
@@ -124,7 +129,7 @@ class AccountProduct:
         return cls(
             id=data.get('id', ''),
             default_workspace_id=str(data.get('default_workspace_id', '')),
-            kind=data.get('kind')
+            kind=data.get('kind'),
         )
 
 
@@ -136,8 +141,9 @@ class Account:
     This dataclass maps to the Monday.com API account object structure, containing
     fields like name, plan, products, and account settings.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/account#fields
+
     """
 
     active_members_count: int = 0
@@ -218,9 +224,11 @@ class Account:
             logo=str(data.get('logo', '')),
             name=str(data.get('name', '')),
             plan=Plan.from_dict(data['plan']) if data.get('plan') else None,
-            products=AccountProduct.from_dict(data['products']) if data.get('products') else None,
+            products=AccountProduct.from_dict(data['products'])
+            if data.get('products')
+            else None,
             show_timeline_weekends=data.get('show_timeline_weekends'),
             sign_up_product_kind=data.get('sign_up_product_kind', ''),
             slug=data.get('slug', ''),
-            tier=data.get('tier', '')
+            tier=data.get('tier', ''),
         )

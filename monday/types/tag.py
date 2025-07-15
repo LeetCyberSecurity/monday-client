@@ -36,8 +36,9 @@ class Tag:
     This dataclass maps to the Monday.com API tag object structure, containing
     fields like name, color, and unique identifier.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/tags#fields
+
     """
 
     color: str = ''
@@ -68,5 +69,5 @@ class Tag:
         return cls(
             color=str(data.get('color', '')),
             id=str(data.get('id', '')),
-            name=str(data.get('name', ''))
+            name=str(data.get('name', '')),
         )

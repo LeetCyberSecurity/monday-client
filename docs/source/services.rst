@@ -1,4 +1,4 @@
-.. 
+..
     This file is part of monday-client.
 
     Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
@@ -48,6 +48,7 @@ Boards
 .. automethod:: monday.services.Boards.update
 .. automethod:: monday.services.Boards.archive
 .. automethod:: monday.services.Boards.delete
+.. automethod:: monday.services.Boards.create_column
 
 .. _services_section_groups:
 

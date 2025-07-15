@@ -40,8 +40,9 @@ class Update:
     This dataclass maps to the Monday.com API update object structure, containing
     fields like body, creator, replies, and associated assets.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/updates#fields
+
     """
 
     assets: list[Asset] | None = None
@@ -68,7 +69,7 @@ class Update:
     parent_id: str = ''
     """The update's parent unique identifier"""
 
-    replies: list['Update'] | None = None
+    replies: list[Update] | None = None
     """The update's replies"""
 
     text_body: str = ''
@@ -82,7 +83,10 @@ class Update:
         result = {}
 
         if self.assets:
-            result['assets'] = [asset.to_dict() if hasattr(asset, 'to_dict') else asset for asset in self.assets]
+            result['assets'] = [
+                asset.to_dict() if hasattr(asset, 'to_dict') else asset
+                for asset in self.assets
+            ]
         if self.body:
             result['body'] = self.body
         if self.created_at:
@@ -98,7 +102,10 @@ class Update:
         if self.parent_id:
             result['parent_id'] = self.parent_id
         if self.replies:
-            result['replies'] = [reply.to_dict() if hasattr(reply, 'to_dict') else reply for reply in self.replies]
+            result['replies'] = [
+                reply.to_dict() if hasattr(reply, 'to_dict') else reply
+                for reply in self.replies
+            ]
         if self.text_body:
             result['text_body'] = self.text_body
         if self.updated_at:
@@ -107,14 +114,18 @@ class Update:
         return result
 
     @classmethod
-    # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Update:
         """Create from dictionary."""
-        from monday.types.asset import Asset
-        from monday.types.user import User
+        from monday.types.asset import Asset  # noqa: PLC0415
+        from monday.types.user import User  # noqa: PLC0415
 
         return cls(
-            assets=[Asset.from_dict(asset) if hasattr(Asset, 'from_dict') else asset for asset in data.get('assets', [])] if data.get('assets') else None,
+            assets=[
+                Asset.from_dict(asset) if hasattr(Asset, 'from_dict') else asset
+                for asset in data.get('assets', [])
+            ]
+            if data.get('assets')
+            else None,
             body=str(data.get('body', '')),
             created_at=str(data.get('created_at', '')),
             creator=User.from_dict(data['creator']) if data.get('creator') else None,
@@ -122,7 +133,12 @@ class Update:
             id=str(data.get('id', '')),
             item_id=str(data.get('item_id', '')),
             parent_id=str(data.get('parent_id', '')),
-            replies=[Update.from_dict(reply) if hasattr(Update, 'from_dict') else reply for reply in data.get('replies', [])] if data.get('replies') else None,
+            replies=[
+                Update.from_dict(reply) if hasattr(Update, 'from_dict') else reply
+                for reply in data.get('replies', [])
+            ]
+            if data.get('replies')
+            else None,
             text_body=str(data.get('text_body', '')),
-            updated_at=str(data.get('updated_at', ''))
+            updated_at=str(data.get('updated_at', '')),
         )

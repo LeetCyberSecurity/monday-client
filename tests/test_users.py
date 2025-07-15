@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# pylint: disable=redefined-outer-name
+# ruff: noqa: PLR2004, S101
 
 """Comprehensive tests for Users methods"""
 
@@ -43,14 +43,16 @@ def users_instance(mock_client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query(users_instance):
     """Test basic user query functionality."""
     mock_responses = [
-        {'data': {'users': [
-            {'id': '1', 'name': 'User 1'},
-            {'id': '2', 'name': 'User 2'}
-        ]}},
-        {'data': {'users': []}}
+        {
+            'data': {
+                'users': [{'id': '1', 'name': 'User 1'}, {'id': '2', 'name': 'User 2'}]
+            }
+        },
+        {'data': {'users': []}},
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -65,13 +67,11 @@ async def test_query(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_api_error(users_instance):
     """Test handling of API errors in query method."""
     error_response = {
-        'errors': [{
-            'message': 'API Error',
-            'extensions': {'code': 'SomeError'}
-        }]
+        'errors': [{'message': 'API Error', 'extensions': {'code': 'SomeError'}}]
     }
 
     users_instance.client.post_request = AsyncMock(return_value=error_response)
@@ -81,20 +81,14 @@ async def test_query_with_api_error(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_filters(users_instance):
     """Test query with email, id, name and kind filters."""
-    mock_responses = [
-        {'data': {'users': [
-            {'id': '1', 'email': 'test@example.com'}
-        ]}}
-    ]
+    mock_responses = [{'data': {'users': [{'id': '1', 'email': 'test@example.com'}]}}]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
     result = await users_instance.query(
-        emails='test@example.com',
-        ids=1,
-        name='Test User',
-        kind='non_guests'
+        emails='test@example.com', ids=1, name='Test User', kind='non_guests'
     )
 
     assert isinstance(result[0], User)
@@ -104,12 +98,13 @@ async def test_query_with_filters(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_pagination(users_instance):
     """Test pagination behavior of query method."""
     mock_responses = [
         {'data': {'users': [{'id': '1'}, {'id': '2'}]}},  # First page
         {'data': {'users': [{'id': '3'}, {'id': '4'}]}},  # Second page
-        {'data': {'users': []}}  # Empty last page
+        {'data': {'users': []}},  # Empty last page
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -121,6 +116,7 @@ async def test_query_pagination(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_no_pagination(users_instance):
     """Test query behavior when pagination is disabled."""
     mock_response = {'data': {'users': [{'id': '1'}, {'id': '2'}]}}
@@ -133,12 +129,13 @@ async def test_query_no_pagination(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_duplicate_handling(users_instance):
     """Test handling of duplicate users in response."""
     mock_responses = [
         {'data': {'users': [{'id': '1'}, {'id': '2'}]}},
         {'data': {'users': [{'id': '2'}, {'id': '3'}]}},  # Note duplicate id '2'
-        {'data': {'users': []}}  # Empty response to stop pagination
+        {'data': {'users': []}},  # Empty response to stop pagination
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -147,10 +144,13 @@ async def test_query_duplicate_handling(users_instance):
     ids = [user.id for user in result]
     assert len(set(ids)) == 3
     assert sorted(ids) == ['1', '2', '3']
-    assert users_instance.client.post_request.await_count == 3  # Verify all pages were requested
+    assert (
+        users_instance.client.post_request.await_count == 3
+    )  # Verify all pages were requested
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_empty_response(users_instance):
     """Test handling of empty response."""
     mock_response = {'data': {'users': []}}
@@ -163,24 +163,24 @@ async def test_query_empty_response(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_custom_fields(users_instance):
     """Test querying with custom fields."""
     mock_response = {
         'data': {
-            'users': [{
-                'id': '1',
-                'name': 'Test User',
-                'email': 'test@example.com',
-                'title': 'Developer'
-            }]
+            'users': [
+                {
+                    'id': '1',
+                    'name': 'Test User',
+                    'email': 'test@example.com',
+                    'title': 'Developer',
+                }
+            ]
         }
     }
 
     users_instance.client.post_request = AsyncMock(return_value=mock_response)
-    result = await users_instance.query(
-        fields='id name email title',
-        limit=1
-    )
+    result = await users_instance.query(fields='id name email title', limit=1)
 
     assert len(result) == 1
     assert isinstance(result[0], User)
@@ -191,12 +191,13 @@ async def test_query_custom_fields(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_pagination_with_full_pages(users_instance):
     """Test pagination when all pages are full."""
     mock_responses = [
         {'data': {'users': [{'id': '1'}, {'id': '2'}]}},  # Full page
         {'data': {'users': [{'id': '3'}, {'id': '4'}]}},  # Full page
-        {'data': {'users': [{'id': '5'}]}}  # Partial page to end pagination
+        {'data': {'users': [{'id': '5'}]}},  # Partial page to end pagination
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -208,14 +209,11 @@ async def test_query_pagination_with_full_pages(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_temp_fields_management(users_instance):
     """Test temporary fields are properly added and removed."""
     mock_response = {
-        'data': {
-            'users': [
-                {'id': '1', 'name': 'Test User', 'temp_field': 'value'}
-            ]
-        }
+        'data': {'users': [{'id': '1', 'name': 'Test User', 'temp_field': 'value'}]}
     }
 
     users_instance.client.post_request = AsyncMock(return_value=mock_response)
@@ -223,18 +221,27 @@ async def test_temp_fields_management(users_instance):
 
     assert len(result) == 1
     assert hasattr(result[0], 'name')
-    assert getattr(result[0], 'name') == 'Test User'
+    assert result[0].name == 'Test User'
     # id should not be present unless requested
     assert not getattr(result[0], 'id', None)
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_duplicate_users_across_pages(users_instance):
     """Test deduplication of users when duplicates appear across different pages."""
     mock_responses = [
-        {'data': {'users': [{'id': '1', 'name': 'User 1'}, {'id': '2', 'name': 'User 2'}]}},
-        {'data': {'users': [{'id': '2', 'name': 'User 2'}, {'id': '3', 'name': 'User 3'}]}},
-        {'data': {'users': []}}
+        {
+            'data': {
+                'users': [{'id': '1', 'name': 'User 1'}, {'id': '2', 'name': 'User 2'}]
+            }
+        },
+        {
+            'data': {
+                'users': [{'id': '2', 'name': 'User 2'}, {'id': '3', 'name': 'User 3'}]
+            }
+        },
+        {'data': {'users': []}},
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -246,6 +253,7 @@ async def test_query_with_duplicate_users_across_pages(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_with_fields_object_and_temp_fields(users_instance):
     """Test query using Fields object with temporary fields."""
     mock_response = {
@@ -262,18 +270,19 @@ async def test_query_with_fields_object_and_temp_fields(users_instance):
     user = result[0]
     assert hasattr(user, 'name')
     assert hasattr(user, 'email')
-    assert getattr(user, 'name') == 'Test User'
-    assert getattr(user, 'email') == 'test@example.com'
+    assert user.name == 'Test User'
+    assert user.email == 'test@example.com'
     # id should not be present unless requested
     assert not getattr(user, 'id', None)
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_identical_responses_stops_pagination(users_instance):
     """Test that pagination stops when receiving identical responses."""
     mock_responses = [
         {'data': {'users': [{'id': '1'}, {'id': '2'}]}},
-        {'data': {'users': [{'id': '1'}, {'id': '2'}]}}  # Identical response
+        {'data': {'users': [{'id': '1'}, {'id': '2'}]}},  # Identical response
     ]
 
     users_instance.client.post_request = AsyncMock(side_effect=mock_responses)
@@ -285,6 +294,7 @@ async def test_query_identical_responses_stops_pagination(users_instance):
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_query_empty_response_handling(users_instance):
     """Test handling of empty response from the API."""
     mock_response = {'data': {'users': []}}

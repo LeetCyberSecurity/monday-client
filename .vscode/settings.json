@@ -1,0 +1,14 @@
+{
+    "python.testing.pytestArgs": [
+        "tests",
+        "-v"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "restructuredtext.linter.disabledLinters": ["rst-lint"],
+    "restructuredtext.linter.run": "onSave",
+    "restructuredtext.linter.doc8.extraArgs": [
+        "--config",
+        "${workspaceFolder}/docs/doc8.ini"
+    ]
+}

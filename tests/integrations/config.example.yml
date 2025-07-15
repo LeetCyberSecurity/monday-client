@@ -1,0 +1,14 @@
+# Example monday.com API config file
+# Fill in your real values before running the examples
+
+monday:
+  api_key: 'your_monday_api_key_here'  # Your monday.com API key
+  board_id: 1234567890                 # Example board ID
+  item_id: 987654321                   # Example item ID
+  subitem_id: 1122334455               # Example subitem ID
+  user_email: 'user@example.com'       # Example user email
+  user_id: 12345678                    # Example user ID
+  group_id: 'topics'                   # Example group ID
+  workspace_id: 1234                   # Example workspace ID
+  column_id: 'status'                  # Example column ID
+  column_values: ['column_value1']      # example columns values

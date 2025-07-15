@@ -1,53 +1,153 @@
 # Contributing to monday-client
 
-Thank you for your interest in contributing to monday-client! Your help is greatly appreciated. This guide will help you get started.
+Thank you for your interest in contributing to monday-client! This document provides guidelines and setup instructions for contributors.
 
-## Introduction
+## Development Setup
 
-monday-client is an open source Python library for interacting with the monday.com API. We welcome contributions of all kinds, including bug reports, feature requests, code improvements, and documentation updates.
+### Installation
 
-## How to Contribute
+For development and testing, install with development dependencies:
 
-- **Reporting Issues:**
-  - Please use [GitHub Issues](https://github.com/LeetCyberSecurity/monday-client/issues) to report bugs or request features.
-  - Include as much detail as possible (steps to reproduce, environment, etc.).
+```bash
+# Create virtual environment
+python -m venv .venv
 
-- **Submitting Pull Requests:**
-  - Fork the repository and create your branch from `main`.
-  - Write clear, concise commit messages.
-  - Ensure your code passes all tests and follows the coding standards.
-  - Open a pull request with a clear description of your changes.
+# Activate virtual environment (Linux/macOS)
+source .venv/bin/activate
+# Or on Windows
+# .venv\Scripts\activate
 
-## Coding Standards
+# Install development dependencies
+pip install --upgrade pip setuptools wheel
+pip install -e ".[dev]"
 
-- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) for Python code style.
-- Use type hints where appropriate.
-- Write clear and concise docstrings for all public classes, methods, and functions.
-- Keep code readable and well-organized.
+# Install pre-commit hooks (recommended)
+pre-commit install
+```
 
-## Testing
+### IDE Extensions (Recommended)
 
-- All code should be covered by unit tests using `pytest`.
-- Run tests with:
-  ```bash
-  python -m pytest
-  ```
-- For integration/mutation tests, see the [README](README.md) for details.
+For the best development experience, we recommend installing these VS Code extensions:
 
-## Documentation
+- [**Esbonio**](https://docs.esbon.io/en/latest/): Provides  reStructuredText language server support
+- [**reStructuredText**](https://docs.lextudio.com/restructuredtext/): Syntax highlighting and basic support for `.rst` files  
+- [**reStructuredText Syntax Highlighting**](https://marketplace.visualstudio.com/itemsitemName=trond-snekvik.simple-rst): Enhanced syntax highlighting for RST files
+- [**Ruff**](https://docs.astral.sh/ruff/): Fast Python linter and formatter integration
+- [**BasedPyright**](https://docs.basedpyright.com/latest/): Type checking and IntelliSense for Python
 
-- Update or add docstrings as needed.
-- If you change the public API, update the documentation in the `docs/` directory.
-- Build the docs locally with:
-  ```bash
-  cd docs
-  make html
-  ```
+These extensions are particularly helpful when working with the project's Sphinx documentation in the `docs/` directory and provide real-time feedback for code quality. The project's VS Code settings (`.vscode/settings.json`) are already configured to work optimally with these extensions.
 
-## Code of Conduct
+**Note**: The required dependencies for these extensions (`esbonio`, `sphinx`, `rstcheck`, `ruff`, `basedpyright`) are already included in the development dependencies when you install with `pip install -e ".[dev]"`.
 
-Please be respectful and considerate in all interactions. For more details, see the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+### Code Quality Tools
 
-## Contact
+This project uses several tools to maintain code quality. All configurations are in `pyproject.toml`:
 
-For questions, open an issue or contact the maintainers via [GitHub Issues](https://github.com/LeetCyberSecurity/monday-client/issues). 
+- **ruff**: Code formatting, linting, and import sorting
+- **basedpyright**: Type checking
+
+### Quick Commands
+
+```bash
+# Format code
+ruff format monday tests
+
+# Run linting
+ruff check monday tests
+
+# Fix code automatically
+ruff check --fix monday tests
+ruff format monday tests
+
+# Run type checking
+basedpyright
+
+# Run all quality checks
+ruff format monday tests
+ruff check monday tests
+basedpyright
+
+# Clean up cache files
+find . -type f -name "*.pyc" -delete
+find . -type d -name "__pycache__" -delete
+find . -type d -name "*.egg-info" -exec rm -rf {} +
+```
+
+### Testing
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run only unit tests
+pytest tests/ -m unit
+
+# Run integration tests (requires API key)
+pytest tests/ -m "integration and not mutation"
+
+# Run mutation tests (requires API key)
+pytest tests/ -m mutation
+
+# Run integration and mutation tests
+pytest tests/ -m integration
+
+# Run with custom config
+pytest --config /path/to/config.yml
+
+# Run with logging
+pytest --logging=debug
+
+# Run with verbose output
+pytest -v
+```
+
+### Pre-commit Hooks
+
+The project includes pre-commit hooks that automatically run code quality checks before each commit. Install them with:
+
+```bash
+pre-commit install
+```
+
+This will ensure your code is properly formatted and passes all quality checks before committing.
+
+## Code Style
+
+- Follow PEP 8 guidelines
+- Use type hints where appropriate
+- Write docstrings for public functions and classes
+- Keep functions focused and reasonably sized
+
+## Testing Guidelines
+
+- Write unit tests for new functionality
+- Integration tests require a valid monday.com API key
+- Use the `@pytest.mark.integration` decorator for integration tests
+- Use the `@pytest.mark.mutation` decorator for tests that modify data
+
+For detailed testing information, including setup instructions, examples, and troubleshooting, see [docs/TESTING.md](docs/TESTING.md).
+
+## Pull Request Process
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the quality checks: `ruff format monday tests && ruff check monday tests && basedpyright`
+5. Run tests: `pytest tests/`
+6. Commit your changes (pre-commit hooks will run automatically)
+7. Push to your fork
+8. Create a pull request
+
+## Issues
+
+When reporting issues, please include:
+
+- Python version
+- Operating system
+- Error messages and stack traces
+- Steps to reproduce the issue
+- Expected vs actual behavior
+
+## Questions?
+
+If you have questions about contributing, feel free to open an issue on GitHub.

@@ -38,8 +38,9 @@ class Asset:
     This dataclass maps to the Monday.com API asset object structure, containing
     fields like name, file size, URLs, and upload information.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/assets#fields
+
     """
 
     created_at: str = ''
@@ -91,7 +92,11 @@ class Asset:
         if self.public_url:
             result['public_url'] = self.public_url
         if self.uploaded_by:
-            result['uploaded_by'] = self.uploaded_by.to_dict() if hasattr(self.uploaded_by, 'to_dict') else self.uploaded_by
+            result['uploaded_by'] = (
+                self.uploaded_by.to_dict()
+                if hasattr(self.uploaded_by, 'to_dict')
+                else self.uploaded_by
+            )
         if self.url:
             result['url'] = self.url
         if self.url_thumbnail:
@@ -110,7 +115,9 @@ class Asset:
             name=str(data.get('name', '')),
             original_geometry=str(data.get('original_geometry', '')),
             public_url=str(data.get('public_url', '')),
-            uploaded_by=User.from_dict(data['uploaded_by']) if data.get('uploaded_by') else None,
+            uploaded_by=User.from_dict(data['uploaded_by'])
+            if data.get('uploaded_by')
+            else None,
             url=str(data.get('url', '')),
-            url_thumbnail=str(data.get('url_thumbnail', ''))
+            url_thumbnail=str(data.get('url_thumbnail', '')),
         )

@@ -1,5 +1,3 @@
-# pylint: skip-file
-
 # This file is part of monday-client.
 #
 # Copyright (C) 2024 Leet Cyber Security <https://leetcybersecurity.com/>
@@ -17,16 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-import os
+# ruff: noqa: D100, INP001
+
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, str(Path('../..').resolve()))
 
-from monday import __authors__, __version__  # noqa: E402
+from monday import __authors__, __version__
 
 project = 'monday-client'
-copyright = '2024, Leet Cyber Security'
-author = ', '.join(f"{author['name']} <{author['email']}>" for author in __authors__)
+copyright = '2024, Leet Cyber Security'  # noqa: A001
+author = ', '.join(f'{author["name"]} <{author["email"]}>' for author in __authors__)
 release = __version__
 
 extensions = [
@@ -40,7 +40,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx_autodoc_typehints',
-    'myst_parser'
+    'myst_parser',
 ]
 
 source_suffix = {
@@ -60,7 +60,7 @@ html_theme_options = {
     'collapse_navigation': False,
     'sticky_navigation': True,
     'includehidden': True,
-    'titles_only': False
+    'titles_only': False,
 }
 
 autodoc_member_order = 'alphabetical'
@@ -70,7 +70,7 @@ autodoc_default_options = {
     'undoc-members': False,
     'show-inheritance': True,
     'member-order': 'alphabetical',
-    'exclude-members': '__weakref__'
+    'exclude-members': '__weakref__',
 }
 add_module_names = False
 
@@ -91,7 +91,7 @@ napoleon_attr_annotations = True
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'aiohttp': ('https://docs.aiohttp.org/en/stable/', None)
+    'aiohttp': ('https://docs.aiohttp.org/en/stable/', None),
 }
 
 todo_include_todos = True

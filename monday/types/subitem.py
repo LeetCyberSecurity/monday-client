@@ -51,7 +51,10 @@ class SubitemList:
         """Convert to dictionary for API requests."""
         return {
             'id': self.item_id,
-            'subitems': [subitem.to_dict() if hasattr(subitem, 'to_dict') else subitem for subitem in self.subitems]
+            'subitems': [
+                subitem.to_dict() if hasattr(subitem, 'to_dict') else subitem
+                for subitem in self.subitems
+            ],
         }
 
     @classmethod
@@ -59,7 +62,10 @@ class SubitemList:
         """Create from dictionary."""
         return cls(
             item_id=str(data.get('id', '')),
-            subitems=[Subitem.from_dict(subitem) if isinstance(subitem, dict) else subitem for subitem in data.get('subitems', [])]
+            subitems=[
+                Subitem.from_dict(subitem) if isinstance(subitem, dict) else subitem
+                for subitem in data.get('subitems', [])
+            ],
         )
 
 
@@ -71,8 +77,9 @@ class Subitem:
     This dataclass maps to the Monday.com API subitem object structure, containing
     fields like name, state, and associated board/group information.
 
-    See also:
+    See Also:
         https://developer.monday.com/api-reference/reference/subitems#fields
+
     """
 
     board: Board | None = None
@@ -128,11 +135,10 @@ class Subitem:
         return result
 
     @classmethod
-    # pylint: disable=import-outside-toplevel
     def from_dict(cls, data: dict[str, Any]) -> Subitem:
         """Create from dictionary."""
-        from monday.types.board import Board
-        from monday.types.group import Group
+        from monday.types.board import Board  # noqa: PLC0415
+        from monday.types.group import Group  # noqa: PLC0415
 
         return cls(
             board=Board.from_dict(data['board']) if data.get('board') else None,
@@ -143,5 +149,5 @@ class Subitem:
             item_id=str(data.get('item_id', '')),
             name=str(data.get('name', '')),
             state=str(data.get('state', '')),
-            updated_at=str(data.get('updated_at', ''))
+            updated_at=str(data.get('updated_at', '')),
         )
