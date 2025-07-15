@@ -28,49 +28,9 @@ For example, if you request ``BoardFields.ITEMS``, it's equivalent to requesting
 This page documents all premade field options available across different services.
 
 .. seealso::
-    :class:`Fields <monday.Fields>` class documentation for information on implementing custom fields.
+    :class:`Fields <monday.services.utils.fields.Fields>` class documentation for information on implementing custom fields.
 
 .. _fields_section_boards:
 
-Board Fields
-~~~~~~~~~~~~
-
-.. autoclass:: monday.BoardFields
-    :members:
-    :show-inheritance:
-
-.. _fields_section_columns:
-
-Column Fields
-~~~~~~~~~~~~~
-
-.. autoclass:: monday.ColumnFields
-    :members:
-    :show-inheritance:
-
-.. _fields_section_groups:
-
-Group Fields
-~~~~~~~~~~~~
-
-.. autoclass:: monday.GroupFields
-    :members:
-    :show-inheritance:
-
-.. _fields_section_items:
-
-Item Fields
-~~~~~~~~~~~
-
-.. autoclass:: monday.ItemFields
-    :members:
-    :show-inheritance:
-
-.. _fields_section_users:
-
-User Fields
-~~~~~~~~~~~
-
-.. autoclass:: monday.UserFields
-    :members:
-    :show-inheritance:
+.. automodule:: monday.fields
+    :member-order: bysource

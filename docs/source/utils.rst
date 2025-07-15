@@ -19,13 +19,7 @@
 Utils
 -----
 
-.. automodule:: monday.services.utils
-    :member-order: bysource
-
-Fields
-~~~~~~
-
-.. automodule:: monday.services.utils.fields
+.. autoclass:: monday.services.utils.fields.Fields
     :members:
     :undoc-members:
 

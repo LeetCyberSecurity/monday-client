@@ -32,10 +32,10 @@ For example:
 
    @dataclass
    class Item:
-       name: str = ''
-       updated_at: str = ''
-       state: str = ''
-       subitems: list[Subitem] | None = None
+      name: str = ''
+      updated_at: str = ''
+      state: str = ''
+      subitems: list[Subitem] | None = None
 
 You can access the attributes directly:
 
@@ -46,162 +46,170 @@ You can access the attributes directly:
    items = await monday_client.items.query(item_ids=[123456789])
 
    for item in items:
-       print(f"Item: {item.name}")
-       print(f"Last updated: {item.updated_at}")
-       print(f"State: {item.state}")
+      print(f"Item: {item.name}")
+      print(f"Last updated: {item.updated_at}")
+      print(f"State: {item.state}")
 
-       if item.subitems:
-           print(f"Has {len(item.subitems)} subitems")
-           for subitem in item.subitems:
-               print(f"  - {subitem.name}")
+      if item.subitems:
+         print(f"Has {len(item.subitems)} subitems")
+         for subitem in item.subitems:
+            print(f"  - {subitem.name}")
 
 Account Types
 """""""""""""
 
-.. autoclass:: monday.types.Account
+.. autoclass:: monday.types.account.Account
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.AccountProduct
+.. autoclass:: monday.types.account.AccountProduct
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.Plan
+.. autoclass:: monday.types.account.Plan
    :members:
    :show-inheritance:
 
 Asset Types
 """""""""""
 
-.. autoclass:: monday.types.Asset
+.. autoclass:: monday.types.asset.Asset
    :members:
    :show-inheritance:
 
 Board Types
 """""""""""
 
-.. autoclass:: monday.types.Board
+.. autoclass:: monday.types.board.Board
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.ActivityLog
+.. autoclass:: monday.types.board.ActivityLog
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.BoardView
+.. autoclass:: monday.types.board.BoardView
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.UndoData
+.. autoclass:: monday.types.board.UndoData
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.UpdateBoard
+.. autoclass:: monday.types.board.UpdateBoard
    :members:
    :show-inheritance:
 
 Column Types
 """"""""""""
 
-.. autoclass:: monday.types.Column
+.. autoclass:: monday.types.column.Column
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.ColumnValue
+.. autoclass:: monday.types.column.ColumnValue
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.ColumnFilter
+.. autoclass:: monday.types.column.ColumnFilter
    :members:
    :show-inheritance:
 
 Group Types
 """""""""""
 
-.. autoclass:: monday.types.Group
+.. autoclass:: monday.types.group.Group
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.GroupList
+.. autoclass:: monday.types.group.GroupList
    :members:
    :show-inheritance:
 
 Item Types
 """"""""""
 
-.. autoclass:: monday.types.Item
+.. note::
+   Items can be filtered and queried using :class:`QueryParams` and :class:`QueryRule`. See :ref:`Query Types <query_types>` for details.
+
+.. autoclass:: monday.types.item.Item
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.ItemList
+.. autoclass:: monday.types.item.ItemList
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.ItemsPage
+.. autoclass:: monday.types.item.ItemsPage
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.OrderBy
+.. autoclass:: monday.types.item.OrderBy
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.QueryRule
+.. autoclass:: monday.types.item.QueryRule
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.QueryParams
+.. autoclass:: monday.types.item.QueryParams
    :members:
    :show-inheritance:
+
+   .. note::
+      For examples of how to use QueryParams to filter items, see :ref:`Filtering and Querying Items <usage_filtering_and_querying_items>` in the Usage documentation.
 
 Subitem Types
 """""""""""""
 
-.. autoclass:: monday.types.Subitem
+.. autoclass:: monday.types.subitem.Subitem
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.SubitemList
+.. autoclass:: monday.types.subitem.SubitemList
    :members:
    :show-inheritance:
 
 Tag Types
 """""""""
 
-.. autoclass:: monday.types.Tag
+.. autoclass:: monday.types.tag.Tag
    :members:
    :show-inheritance:
 
 Team Types
 """"""""""
 
-.. autoclass:: monday.types.Team
+.. autoclass:: monday.types.team.Team
    :members:
    :show-inheritance:
 
 Update Types
 """"""""""""
 
-.. autoclass:: monday.types.Update
+.. autoclass:: monday.types.update.Update
    :members:
    :show-inheritance:
 
 User Types
 """"""""""
 
-.. autoclass:: monday.types.User
+.. autoclass:: monday.types.user.User
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.OutOfOffice
+.. autoclass:: monday.types.user.OutOfOffice
    :members:
    :show-inheritance:
 
 Workspace Types
 """""""""""""""
 
-.. autoclass:: monday.types.Workspace
+.. autoclass:: monday.types.workspace.Workspace
    :members:
    :show-inheritance:
+
+.. _column_input_types:
 
 Column Input Types
 """"""""""""""""""
@@ -213,92 +221,92 @@ For example:
 .. rstcheck: ignore-next-code-block
 .. code-block:: python
 
-    from monday.types.column_inputs import DateInput, StatusInput, TextInput, NumberInput
+   from monday.types.column_inputs import DateInput, StatusInput, TextInput, NumberInput
 
-    # Update multiple column values at once
-    await client.items.change_column_values(
-        item_id=123456789,
-        column_values=[
-            DateInput('date_column_id', '2024-01-15', '14:30:00'),
-            StatusInput('status_column_id', 'Working on it'),
-            TextInput('text_column_id', 'Updated content'),
-            NumberInput('number_column_id', 42.5)
-        ]
-    )
+   # Update multiple column values at once
+   await client.items.change_column_values(
+      item_id=123456789,
+      column_values=[
+         DateInput('date_column_id', '2024-01-15', '14:30:00'),
+         StatusInput('status_column_id', 'Working on it'),
+         TextInput('text_column_id', 'Updated content'),
+         NumberInput('number_column_id', 42.5)
+      ]
+   )
 
-.. autoclass:: monday.types.CheckboxInput
+.. autoclass:: monday.types.column_inputs.CheckboxInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.CountryInput
+.. autoclass:: monday.types.column_inputs.CountryInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.DateInput
+.. autoclass:: monday.types.column_inputs.DateInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.DropdownInput
+.. autoclass:: monday.types.column_inputs.DropdownInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.EmailInput
+.. autoclass:: monday.types.column_inputs.EmailInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.HourInput
+.. autoclass:: monday.types.column_inputs.HourInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.LinkInput
+.. autoclass:: monday.types.column_inputs.LinkInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.LocationInput
+.. autoclass:: monday.types.column_inputs.LocationInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.LongTextInput
+.. autoclass:: monday.types.column_inputs.LongTextInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.NumberInput
+.. autoclass:: monday.types.column_inputs.NumberInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.PeopleInput
+.. autoclass:: monday.types.column_inputs.PeopleInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.PhoneInput
+.. autoclass:: monday.types.column_inputs.PhoneInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.RatingInput
+.. autoclass:: monday.types.column_inputs.RatingInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.StatusInput
+.. autoclass:: monday.types.column_inputs.StatusInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.TagInput
+.. autoclass:: monday.types.column_inputs.TagInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.TextInput
+.. autoclass:: monday.types.column_inputs.TextInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.TimelineInput
+.. autoclass:: monday.types.column_inputs.TimelineInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.WeekInput
+.. autoclass:: monday.types.column_inputs.WeekInput
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.WorldClockInput
+.. autoclass:: monday.types.column_inputs.WorldClockInput
    :members:
    :show-inheritance:
 
@@ -307,47 +315,51 @@ Column Default Types
 
 These dataclasses are used to define default values when creating columns.
 
-.. autoclass:: monday.types.StatusDefaults
+.. autoclass:: monday.types.column_defaults.StatusDefaults
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.StatusLabel
+.. autoclass:: monday.types.column_defaults.StatusLabel
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.DropdownDefaults
+.. autoclass:: monday.types.column_defaults.DropdownDefaults
    :members:
    :show-inheritance:
 
-.. autoclass:: monday.types.DropdownLabel
+.. autoclass:: monday.types.column_defaults.DropdownLabel
    :members:
    :show-inheritance:
+
+.. _query_types:
 
 Query Types
 ^^^^^^^^^^^
 
-These dataclasses are used to build complex queries and filter data from the Monday.com API.
+These dataclasses are used to build complex queries and filter data from the Monday.com API. They are primarily used with the :meth:`boards.get_items() <monday.services.boards.Boards.get_items>` method to filter items based on column values, dates, text content, and other criteria.
+
+For basic usage examples, see :ref:`Filtering and Querying Items <usage_filtering_and_querying_items>` in the Usage documentation.
 
 For example:
 
 .. rstcheck: ignore-next-code-block
 .. code-block:: python
 
-    from monday.services.utils.query_builder import QueryParams, QueryRule, OrderBy
-    # Create a query to find items with status "Done" or "In Progress"
-    query_params = QueryParams(
-        rules=[
-            QueryRule(
-                column_id='status',
-                compare_value=['Done', 'In Progress'],
-                operator='any_of'
-            )
-        ],
-        operator='and',
-        order_by=OrderBy(
-            column_id='date',
-            direction='desc'
-        )
-    )
-    # Use the query parameters
-    items = await monday_client.items.query(query_params=query_params)
+   from monday.types.item import QueryParams, QueryRule, OrderBy
+   # Create a query to find items with status "Done" or "In Progress"
+   query_params = QueryParams(
+      rules=[
+         QueryRule(
+            column_id='status',
+            compare_value=['Done', 'In Progress'],
+            operator='any_of'
+         )
+      ],
+      operator='and',
+      order_by=OrderBy(
+         column_id='date',
+         direction='desc'
+      )
+   )
+   # Use the query parameters
+   items = await monday_client.items.query(query_params=query_params)

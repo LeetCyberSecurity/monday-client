@@ -104,7 +104,7 @@ class Boards:
             page: The page number to start from.
             state: The state of the boards to include.
             workspace_ids: The ID or list of IDs of the workspaces to filter by.
-            fields: Fields to return from the queried board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the queried board. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             List of Board dataclass instances containing queried board data.
@@ -204,13 +204,16 @@ class Boards:
         """
         Retrieves a paginated list of items from specified boards.
 
+        Note:
+            This method supports filtering using :class:`~monday.types.item.QueryParams`. For examples and detailed information about building complex queries, see :ref:`Query Types <query_types>` in the Types documentation.
+
         Args:
             board_ids: The ID or list of IDs of the boards from which to retrieve items.
             query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query. Use this to customize the results based on specific criteria. Can be a QueryParams object or a dictionary.
             limit: The maximum number of items to retrieve per page.
             group_id: Only retrieve items from the specified group ID.
             paginate_items: Whether to paginate items. If False, only returns the first page.
-            fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A list of ItemList dataclass instances containing the board IDs and their combined items retrieved.
@@ -317,7 +320,7 @@ class Boards:
             columns: A list of ColumnFilter objects specifying the column values to filter by.
             limit: The maximum number of items to retrieve per page.
             paginate_items: Whether to paginate items. If False, only returns the first page.
-            fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A list of Item dataclass instances containing the filtered items.
@@ -413,8 +416,8 @@ class Boards:
         Args:
             board_id: The ID of the board from which to retrieve column values.
             column_ids: The ID or list of IDs of the columns to retrieve values for.
-            column_fields: Fields to return from the columns. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
-            item_fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            column_fields: Fields to return from the columns. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
+            item_fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A list of Item dataclass instances containing the column values.
@@ -515,7 +518,7 @@ class Boards:
             folder_id: The ID of the folder to place the board in.
             template_id: The ID of the template to use for the board.
             workspace_id: The ID of the workspace to place the board in.
-            fields: Fields to return from the created board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the created board. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A Board dataclass instance containing the created board data.
@@ -596,7 +599,7 @@ class Boards:
             duplicate_type: The type of duplication to perform.
             folder_id: The ID of the folder to place the duplicated board in.
             workspace_id: The ID of the workspace to place the duplicated board in.
-            fields: Fields to return from the duplicated board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the duplicated board. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
             keep_subscribers: Whether to keep the original board's subscribers on the duplicated board.
 
         Returns:
@@ -769,7 +772,7 @@ class Boards:
 
         Args:
             board_id: The ID of the board to archive.
-            fields: Fields to return from the archived board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the archived board. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A Board dataclass instance containing the archived board data.
@@ -814,7 +817,7 @@ class Boards:
 
         Args:
             board_id: The ID of the board to delete.
-            fields: Fields to return from the deleted board. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the deleted board. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A Board dataclass instance containing the deleted board data.
@@ -871,7 +874,7 @@ class Boards:
             title: The title of the new column.
             defaults: Default values for the column. Can be a dictionary or ColumnDefaults object. The format depends on the column type.
             after_column_id: The ID of the column to place the new column after.
-            fields: Fields to return from the created column. Can be a string of space-separated field names or a :meth:`Fields() <monday.Fields>` instance.
+            fields: Fields to return from the created column. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
             A Column dataclass instance containing the created column data.

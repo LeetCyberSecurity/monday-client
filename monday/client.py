@@ -48,7 +48,7 @@ class MondayClient:
     Client for interacting with the monday.com API.
     This client handles API requests, rate limiting, and pagination for monday.com's GraphQL API.
 
-    It uses a class-level logger named ``monday_client`` for all logging operations.
+    It uses a class-level logger named ``monday`` for all logging operations.
 
     Usage:
         .. code-block:: python
@@ -68,7 +68,7 @@ class MondayClient:
 
     logger: logging.Logger = logging.getLogger(__name__)
     """
-    Class-level logger named ``monday_client`` for all logging operations.
+    Class-level logger named ``monday`` for all logging operations.
 
     Note:
         Logging can be controlled by configuring this logger.
@@ -94,7 +94,7 @@ class MondayClient:
                 if isinstance(handler, logging.NullHandler):
                     monday_logger.removeHandler(handler)
 
-            # Add a real handler to monday_client logger if it doesn't have one
+            # Add a real handler to monday logger if it doesn't have one
             if not monday_logger.handlers:
                 handler = logging.StreamHandler()
                 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

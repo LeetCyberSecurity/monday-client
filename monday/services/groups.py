@@ -191,7 +191,7 @@ class Groups:
                 "#0086c0"
 
         Note:
-            See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color-reference>`.
+            See a full list of accepted HEX code values for ``group_color`` and their corresponding colors :ref:`here <color_reference>`.
 
         """
         fields = Fields(fields)
@@ -268,7 +268,7 @@ class Groups:
                 "#7F5347"
 
         Note:
-            When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color-reference>`.
+            When using ``attribute='color'``, see a full list of accepted HEX color codes and their corresponding colors :ref:`here <color_reference>`.
 
             When updating a group's position using ``relative_position_after`` or ``relative_position_before``, the ``new_value`` should be the ID of the group you intend to place the updated group above or below.
 

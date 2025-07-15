@@ -18,7 +18,7 @@
 
 .. title:: Color Palette
 
-.. _color-reference:
+.. _color_reference:
 
 Color Palette
 =============

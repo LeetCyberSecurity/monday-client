@@ -115,7 +115,7 @@ class Items:
                 "Started working on this"
 
         Note:
-            To return all items on a board, use :meth:`Boards.get_items() <monday.services.Boards.get_items>` instead.
+            To return all items on a board, use :meth:`Boards.get_items() <monday.services.boards.Boards.get_items>` instead.
 
         """
         fields = Fields(fields)
@@ -644,7 +644,7 @@ class Items:
                 "This item is done"
 
         Note:
-            Use :meth:`Boards.get_column_values() <monday.services.Boards.get_column_values>` to retrieve column values for all items on a board.
+            Use :meth:`Boards.get_column_values() <monday.services.boards.Boards.get_column_values>` to retrieve column values for all items on a board.
 
         """
         column_ids = [f'"{i}"' for i in column_ids] if column_ids else None
@@ -735,15 +735,15 @@ class Items:
         Note:
             Each column has a certain type, and different column types expect a different set of parameters to update their values.
 
-            For better type safety and documentation, you can use the value classes from :mod:`monday.types.column_inputs`:
+            For better type safety and documentation, you can use the value classes from :ref:`Column Input Types <column_input_types>`:
 
-            - :class:`DateInput` for date columns
-            - :class:`StatusInput` for status columns
-            - :class:`TextInput` for text columns
-            - :class:`NumberInput` for number columns
-            - :class:`CheckboxInput` for checkbox columns
-            - :class:`DropdownInput` for dropdown columns
-            - :class:`PeopleInput` for people columns
+            - :class:`~monday.types.column_inputs.DateInput` for date columns
+            - :class:`~monday.types.column_inputs.StatusInput` for status columns
+            - :class:`~monday.types.column_inputs.TextInput` for text columns
+            - :class:`~monday.types.column_inputs.NumberInput` for number columns
+            - :class:`~monday.types.column_inputs.CheckboxInput` for checkbox columns
+            - :class:`~monday.types.column_inputs.DropdownInput` for dropdown columns
+            - :class:`~monday.types.column_inputs.PeopleInput` for people columns
             - etc...
 
             These classes handle the proper formatting required by the Monday.com API and provide validation.

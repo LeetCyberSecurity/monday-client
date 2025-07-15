@@ -269,10 +269,21 @@ class Fields:
             return self.fields == other.fields
         return False
 
-    def __hash__(self) -> None:  # pyright: ignore [reportIncompatibleMethodOverride]
-        """Make Fields objects unhashable since they are mutable."""
-        error_msg = "unhashable type: 'Fields'"
-        raise TypeError(error_msg)
+    def __hash__(self) -> int:
+        """
+        Return hash value for the Fields instance.
+
+        Returns:
+            Hash value based on the fields list.
+
+        Example:
+            >>> fields1 = Fields('id name')
+            >>> fields2 = Fields('id name')
+            >>> hash(fields1) == hash(fields2)
+            True
+
+        """
+        return hash(tuple(self.fields))
 
     def add_temp_fields(self, temp_fields: list[str]) -> 'Fields':
         """

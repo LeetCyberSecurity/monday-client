@@ -80,7 +80,7 @@ class Subitems:
             item_ids: The ID or list of IDs of the specific items containing the subitems to return.
             subitem_ids: The ID or list of IDs of the specific subitems to return.
             fields: Fields to return from the queried subitems.
-            **kwargs: Additional keyword arguments for the underlying :meth:`Items.query() <monday.services.Items.query>` call.
+            **kwargs: Additional keyword arguments for the underlying :meth:`Items.query() <monday.services.items.Items.query>` call.
 
         Returns:
             A list of SubitemList dataclass instances containing item IDs and their associated subitems.
