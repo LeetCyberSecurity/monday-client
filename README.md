@@ -1,7 +1,7 @@
 # monday.com API Client
 
 [![Documentation Status](https://readthedocs.org/projects/monday-client/badge/?version=latest)](https://monday-client.readthedocs.io/en/latest/?badge=latest)
-[![PyPI version](https://badge.fury.io/py/monday-client.svg)](https://badge.fury.io/py/monday-client)
+[![PyPI version](https://badge.fury.io/py/monday-client.svg)](https://pypi.org/project/monday-client/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/monday-client.svg)](https://pypi.org/project/monday-client/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub issues](https://img.shields.io/github/issues/LeetCyberSecurity/monday-client.svg)](https://github.com/LeetCyberSecurity/monday-client/issues)
@@ -15,11 +15,12 @@ For detailed documentation, visit the [official documentation site](https://mond
 
 ## Key Features
 
-- **Asynchronous API calls** using `asyncio` and `aiohttp` for efficient I/O operations.
-- **Automatic handling of API rate limits and query limits** following monday.com's rate limit policies.
-- **Built-in retry logic** for handling rate limit exceptions, ensuring smooth operation without manual intervention.
-- **Easy-to-use methods** for common monday.com operations.
-- **Fully customizable requests** with all monday.com method arguments and fields available to the user.
+- **Asynchronous API calls** using `asyncio` and `aiohttp` for efficient I/O operations
+- **Automatic handling of API rate limits and query limits** following monday.com's rate limit policies
+- **Built-in retry logic** for handling rate limit exceptions, ensuring smooth operation without manual intervention
+- **Type-safe column value updates** with dedicated input classes for all column types
+- **Advanced filtering and querying** with QueryParams and QueryRule support
+- **Fully customizable requests** with all monday.com method arguments and fields available
 
 ## Installation
 
@@ -27,7 +28,7 @@ For detailed documentation, visit the [official documentation site](https://mond
 pip install monday-client
 ```
 
-## Quick Start
+## Usage
 
 ```python
 import asyncio
@@ -35,34 +36,130 @@ import asyncio
 from monday import MondayClient
 
 async def main():
-    monday_client = MondayClient(api_key='your_api_key_here')
-    boards = await monday_client.boards.query(board_ids=[987654321, 876543210])
-    items = await monday_client.items.query(item_ids=[123456789, 123456780])
+    client = MondayClient(api_key='your_api_key_here')
+
+    # Query boards and items
+    boards = await client.boards.query(board_ids=[987654321, 876543210])
+    items = await client.items.query(item_ids=[123456789, 123456780])
+
+    # Access dataclass attributes
+    for board in boards:
+        print(f'Board: {board.name} (ID: {board.id})')
+
+    for item in items:
+        print(f'Item: {item.name} (ID: {item.id})')
 
 asyncio.run(main())
 ```
 
-## Column Value Classes
-
-For better type safety when updating column values, use the provided input classes:
+### Use predefined field sets for more data
 
 ```python
-from monday.types.column_inputs import DateInput, StatusInput, TextInput, NumberInput
+import asyncio
 
-await client.items.change_column_values(
-    item_id=123456789,
-    column_values=[
-        DateInput('date_column_id', '2024-01-15', '14:30:00'),
-        StatusInput('status_column_id', 'Working on it'),
-        TextInput('text_column_id', 'Updated content'),
-        NumberInput('number_column_id', 42.5)
-    ]
+from monday import MondayClient
+from monday.fields import BoardFields, ItemFields
+
+async def main():
+    client = MondayClient(api_key='your_api_key_here')
+
+    # Get detailed board information
+    detailed_boards = await client.boards.query(
+        board_ids=[987654321, 876543210],
+        fields=BoardFields.DETAILED  # Includes: id name state board_kind description
+    )
+
+    # Get boards with items
+    boards_with_items = await client.boards.query(
+        board_ids=[987654321, 876543210],
+        fields=BoardFields.ITEMS  # Includes: id name items_count items_page
+    )
+
+asyncio.run(main())
+```
+
+See [Fields Reference](https://monday-client.readthedocs.io/en/latest/fields.html) in the documentation for more info.
+
+You can also use custom field strings for specific needs:
+
+```python
+custom_boards = await client.boards.query(
+    board_ids=[987654321],
+    fields='id name state type url items_count update { body }'
+)
+
+custom_items = await client.items.query(
+    item_ids=[123456789],
+    fields='id name created_at updated_at column_values { id text }'
 )
 ```
 
-See the [documentation](https://monday-client.readthedocs.io) for all available column input types.
+### Use QueryParams and QueryRule to filter data
 
-## Usage
+```python
+import asyncio
+
+from monday import MondayClient, QueryParams, QueryRule
+
+async def main():
+    client = MondayClient(api_key='your_api_key_here')
+
+    # Filter items with status "Done" or "In Progress"
+    query_params = QueryParams(
+        rules=[
+            QueryRule(
+                column_id='status',
+                compare_value=['Done', 'In Progress'],
+                operator='any_of'
+            )
+        ],
+        operator='and'
+    )
+
+    item_lists = await client.boards.get_items(
+        board_ids=[987654321, 876543210],
+        query_params=query_params,
+        fields='id name column_values { id text column { title } } '
+    )
+
+    # Access dataclass attributes from filtered results
+    for item_list in item_lists:
+        print(f'Board {item_list.board_id}:')
+        for item in item_list.items:
+            print(f'  - {item.name} (ID: {item.id})')
+
+asyncio.run(main())
+```
+
+### Use type-safe input classes to update column values
+
+```python
+import asyncio
+
+from monday import MondayClient
+from monday.types import DateInput, StatusInput, TextInput
+
+async def main():
+    client = MondayClient(api_key='your_api_key_here')
+
+    # Create a new item
+    new_item = await client.items.create(
+        board_id=987654321,
+        item_name='New Task',
+        group_id='topics'
+    )
+
+    await client.items.change_column_values(
+        item_id=new_item.id,
+        column_values=[
+            StatusInput('status', 'Working on it'),
+            TextInput('text', 'Task description'),
+            DateInput('date', '2024-01-15', '14:30:00')
+        ]
+    )
+
+asyncio.run(main())
+```
 
 ### Asynchronous Operations
 
@@ -76,11 +173,11 @@ The client automatically handles rate limiting in compliance with monday.com's A
 
 Custom exceptions are defined for handling specific error cases:
 
-- `MondayAPIError`: Raised when an error occurs during API communication with monday.com.
-- `PaginationError`: Raised when item pagination fails during a request.
-- `QueryFormatError`: Raised when there is a query formatting error.
-- `ComplexityLimitExceeded`: Raised when the complexity limit and max retries are exceeded.
-- `MutationLimitExceeded`: Raised when the mutation limit and max retries are exceeded.
+- `MondayAPIError`: Raised when an error occurs during API communication with monday.com
+- `PaginationError`: Raised when item pagination fails during a request
+- `QueryFormatError`: Raised when there is a query formatting error
+- `ComplexityLimitExceeded`: Raised when the complexity limit and max retries are exceeded
+- `MutationLimitExceeded`: Raised when the mutation limit and max retries are exceeded
 
 ### Logging
 
@@ -104,8 +201,6 @@ if not monday_logger.handlers:
 
 client = MondayClient('your_api_key')
 ```
-
-See the [documentation](https://monday-client.readthedocs.io) for advanced logging configuration.
 
 ## Testing
 
@@ -131,14 +226,14 @@ pytest tests/ -m "integration and not mutation"
 pytest tests/ -m mutation
 
 # Run with logging
-pytest --logging=debug
+pytest tests/ --logging=debug
 ```
 
 See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation, configuration, and best practices.
 
 ## Development
 
-This project uses modern Python development tools:
+This project uses these Python development tools:
 
 - **ruff**: Fast Python linter and formatter (replaces autopep8, isort, pylint)
 - **basedpyright**: Type checking
@@ -177,9 +272,6 @@ basedpyright
 ruff format monday tests
 ruff check monday tests
 basedpyright
-
-# Run tests
-pytest tests/
 ```
 
 ## Contributing
