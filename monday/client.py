@@ -170,12 +170,9 @@ class MondayClient:
         Type: `Users <services.html#users>`_
         """
 
-        # Private attributes
         self._rate_limit_seconds = 60
         self._query_errors = {'argumentLiteralsIncompatible'}
         self._error_handler = ErrorHandler(self._rate_limit_seconds)
-
-    # Public methods
 
     async def post_request(self, query: str) -> dict[str, Any]:
         """
@@ -269,8 +266,6 @@ class MondayClient:
 
         return {'error': f'Max retries reached: {response_data}'}
 
-    # Private methods - Error handling
-
     def _handle_api_errors(
         self,
         response_data: dict[str, Any],
@@ -297,8 +292,6 @@ class MondayClient:
             self._error_handler.handle_graphql_errors(
                 response_data, response_headers, query
             )
-
-    # Private methods - Request handling
 
     async def _ensure_version_set(self) -> None:
         """

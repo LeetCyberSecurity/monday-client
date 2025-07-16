@@ -73,8 +73,6 @@ class Boards:
         """
         self.client = client
 
-    # Public methods - Query operations
-
     async def query(  # noqa: PLR0913
         self,
         board_ids: int | str | list[int | str] | None = None,
@@ -490,8 +488,6 @@ class Boards:
 
         return items
 
-    # Public methods - Board management
-
     async def create(  # noqa: PLR0913
         self,
         name: str,
@@ -854,8 +850,6 @@ class Boards:
         board_data = data['data']['delete_board']
         return Board.from_dict(board_data)
 
-    # Public methods - Column management
-
     async def create_column(  # noqa: PLR0913
         self,
         board_id: int | str,
@@ -990,8 +984,6 @@ class Boards:
 
         column_data = data['data']['create_column']
         return Column.from_dict(column_data)
-
-    # Private methods - Query building and processing
 
     def _prepare_fields_with_cursor(
         self, fields: Fields, *, paginate_items: bool
@@ -1242,8 +1234,6 @@ class Boards:
             else:
                 items.append(ItemList(board_id=str(board['id']), items=[]))
         return items
-
-    # Private methods - Utility
 
     @staticmethod
     def _find_items_page_block(fields_str: str) -> tuple[int, int] | None:
