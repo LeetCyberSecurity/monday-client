@@ -104,6 +104,7 @@ ENUM_FIELDS = {
     'group_attribute',
     'kind',
     'order_by',
+    'position_relative_method',
     'query_params',
     'state',
 }
@@ -133,11 +134,11 @@ NUMERIC_ID_FIELDS = {
 
 def _process_dict_value(key: str, value: dict) -> str:
     """Process dictionary values for GraphQL formatting."""
-    if key == 'columns_mapping':
-        columns_mapping = []
+    if key in {'columns_mapping', 'subitems_columns_mapping'}:
+        pairs = []
         for k, v in value.items():
-            columns_mapping.append(f'{{source: "{k}", target: "{v}"}}')
-        return '[' + ', '.join(columns_mapping) + ']'
+            pairs.append(f'{{source: "{k}", target: "{v}"}}')
+        return '[' + ', '.join(pairs) + ']'
     return json.dumps(json.dumps(value))
 
 
@@ -182,7 +183,8 @@ def _process_list_value(key: str, value: list) -> str:
 
     processed_values = []
     for item in value:
-        if key == 'ids' or (key in NUMERIC_ID_FIELDS and key.endswith('_ids')):
+        # Treat any *_ids list (or known numeric fields) as numeric (unquoted)
+        if key == 'ids' or key.endswith(('_ids',)) or key in NUMERIC_ID_FIELDS:
             processed_values.append(str(item))
         else:
             processed_values.append(f'"{item}"')
@@ -193,7 +195,8 @@ def _process_string_value(key: str, value: str) -> str:
     """Process string values for GraphQL formatting."""
     if key in ENUM_FIELDS:
         return value.strip()
-    if key in NUMERIC_ID_FIELDS and value.isdigit():
+    # Treat singular or plural *_id/_ids as numeric when digits
+    if (key in NUMERIC_ID_FIELDS or key.endswith(('_id', '_ids'))) and value.isdigit():
         return value
     return f'"{value}"'
 
@@ -267,6 +270,65 @@ def build_graphql_query(
                 {f'{{ {fields} }}' if fields else ''}
         }}
     """
+
+
+def build_operation_with_variables(  # noqa: PLR0913
+    operation: str,
+    query_type: Literal['query', 'mutation'],
+    variable_types: dict[str, str],
+    arg_var_mapping: dict[str, str],
+    fields: Any,
+    *,
+    arg_literals: dict[str, str] | None = None,
+) -> str:
+    """
+    Build a GraphQL operation string using variables.
+
+    Args:
+        operation: Operation name (e.g., 'create_board')
+        query_type: 'query' or 'mutation'
+        variable_types: Mapping of variable name -> GraphQL type (e.g., 'name': 'String!')
+        arg_var_mapping: Mapping of argument name -> variable name (e.g., 'board_name': 'name')
+        fields: Selection set fields (string or Fields-like)
+        arg_literals: Literal argument strings to include verbatim (e.g., formatted lists)
+
+    Returns:
+        GraphQL operation string with variable definitions and arguments bound to variables.
+
+    """
+    var_defs = ', '.join(
+        f'${var}: {gql_type}' for var, gql_type in variable_types.items()
+    )
+
+    arg_pairs: list[str] = []
+    for arg, var in arg_var_mapping.items():
+        arg_pairs.append(f'{arg}: ${var}')
+
+    if arg_literals:
+        for arg, literal in arg_literals.items():
+            if literal is not None:
+                arg_pairs.append(f'{arg}: {literal}')
+
+    args_str = ', '.join(arg_pairs)
+
+    fields_fmt = _format_fields(fields) if fields is not None else None
+
+    selection = f' {{ {fields_fmt} }}' if fields_fmt else ''
+
+    return f'{query_type} ({var_defs})\n{{\n    {operation} ({args_str}){selection}\n}}'
+
+
+def format_columns_mapping(mapping: dict[str, Any]) -> str:
+    """
+    Format columns mapping dict to GraphQL argument value.
+
+    Input: {'source_col': 'target_col'}
+    Output: [{source: "source_col", target: "target_col"}, ...]
+    """
+    if not mapping:
+        return '[]'
+    pairs = [f'{{source: "{k}", target: "{v}"}}' for k, v in mapping.items()]
+    return '[' + ', '.join(pairs) + ']'
 
 
 def _process_rule(rule) -> str:

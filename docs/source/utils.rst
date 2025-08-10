@@ -46,3 +46,15 @@ Query Builder
 
 .. automodule:: monday.services.utils.query_builder
     :member-order: bysource
+
+Logging
+~~~~~~~
+
+Convenience helpers for configuring the library's logging.
+
+.. autofunction:: monday.logging_utils.enable_logging
+.. autofunction:: monday.logging_utils.disable_logging
+.. autofunction:: monday.logging_utils.set_log_level
+.. autofunction:: monday.logging_utils.get_logger
+.. autofunction:: monday.logging_utils.is_logging_enabled
+.. autofunction:: monday.logging_utils.configure_for_external_logging

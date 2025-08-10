@@ -34,14 +34,18 @@ from typing import TYPE_CHECKING, Literal
 
 from monday.fields.group_fields import GroupFields
 from monday.fields.item_fields import ItemFields
+from monday.protocols import MondayClientProtocol
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
-from monday.services.utils.query_builder import build_graphql_query, map_hex_to_color
+from monday.services.utils.query_builder import (
+    build_graphql_query,
+    build_operation_with_variables,
+    map_hex_to_color,
+)
 from monday.types.group import Group, GroupList
 from monday.types.item import Item
 
 if TYPE_CHECKING:
-    from monday.client import MondayClient
     from monday.services.boards import Boards
 
 
@@ -52,12 +56,12 @@ class Groups:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient', boards: 'Boards'):
+    def __init__(self, client: MondayClientProtocol, boards: 'Boards'):
         """
         Initialize a Groups instance with specified parameters.
 
         Args:
-            client: The MondayClient instance to use for API requests.
+            client: A client implementing MondayClientProtocol for API requests.
             boards: The Boards instance to use for board-related operations.
 
         """
@@ -93,7 +97,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> result = await monday_client.groups.query(
                 ...     board_ids=987654321,
                 ...     fields='id title'
@@ -160,7 +164,7 @@ class Groups:
             group_name: The new group's name.
             group_color: The new group's HEX code color.
             relative_to: The ID of the group you want to create the new one in relation to.
-            position_relative_method: Specify whether you want to create the new item above or below the item given to relative_to
+            position_relative_method: Specify whether you want to create the new group above or below the group given to ``relative_to``. Accepts ``'before'`` or ``'after'`` (internally mapped to API enums ``before_at``/``after_at``).
             fields: Fields to return from the created group.
 
         Returns:
@@ -176,7 +180,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> group = await monday_client.groups.create(
                 ...     board_id=987654321,
                 ...     group_name='Group Name',
@@ -196,20 +200,39 @@ class Groups:
         """
         fields = Fields(fields)
 
-        args = {
-            'board_id': board_id,
-            'group_name': group_name,
-            'group_color': group_color,
-            'relative_to': relative_to,
-            'position_relative_method': f'{position_relative_method}_at'
-            if position_relative_method
-            else None,
-            'fields': fields,
+        variable_types = {
+            'boardId': 'ID!',
+            'name': 'String!',
+        }
+        variables = {
+            'boardId': str(board_id),
+            'name': group_name,
+        }
+        arg_var_mapping = {
+            'board_id': 'boardId',
+            'group_name': 'name',
         }
 
-        query_string = build_graphql_query('create_group', 'mutation', args)
+        if group_color is not None:
+            variable_types['color'] = 'String'
+            variables['color'] = group_color
+            arg_var_mapping['group_color'] = 'color'
 
-        query_result = await self.client.post_request(query_string)
+        if relative_to is not None:
+            variable_types['relativeTo'] = 'String'
+            variables['relativeTo'] = relative_to
+            arg_var_mapping['relative_to'] = 'relativeTo'
+
+        if position_relative_method is not None:
+            variable_types['relativeMethod'] = 'PositionRelative'
+            variables['relativeMethod'] = f'{position_relative_method}_at'
+            arg_var_mapping['position_relative_method'] = 'relativeMethod'
+
+        operation = build_operation_with_variables(
+            'create_group', 'mutation', variable_types, arg_var_mapping, fields
+        )
+
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 
@@ -235,8 +258,8 @@ class Groups:
         Args:
             board_id: The ID of the board where the group will be updated.
             group_id: The ID of the group to update.
-            attribute: The group attribute to update.
-            new_value: The ID of the group you want to create the new one in relation to.
+            attribute: The group attribute to update. When ``'color'``, provide a supported hex code (e.g., ``#0086c0``). When using position-related attributes (``relative_position_after`` or ``relative_position_before``), ``new_value`` should be the ID of the reference group. When ``'title'``, ``new_value`` is the new title string.
+            new_value: The new value for the specified ``attribute``. For ``'color'``, pass a supported hex code (e.g., ``#0086c0``); for position attributes (``relative_position_after``/``relative_position_before``), pass the reference group ID; for ``'title'``, pass the new title string.
             fields: Fields to return from the updated group.
 
         Returns:
@@ -252,7 +275,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> group = await monday_client.groups.update(
                 ...     board_id=987654321,
                 ...     group_id='group',
@@ -278,17 +301,33 @@ class Groups:
         if attribute == 'color':
             new_value = map_hex_to_color(new_value)
 
-        args = {
-            'board_id': board_id,
-            'group_id': group_id,
-            'group_attribute': attribute,
-            'new_value': new_value,
-            'fields': fields,
+        variable_types = {
+            'boardId': 'ID!',
+            'groupId': 'String!',
+            'newValue': 'String!',
         }
+        variables = {
+            'boardId': str(board_id),
+            'groupId': group_id,
+            'newValue': new_value,
+        }
+        arg_var_mapping = {
+            'board_id': 'boardId',
+            'group_id': 'groupId',
+            'new_value': 'newValue',
+        }
+        arg_literals = {'group_attribute': attribute}
 
-        query_string = build_graphql_query('update_group', 'mutation', args)
+        operation = build_operation_with_variables(
+            'update_group',
+            'mutation',
+            variable_types,
+            arg_var_mapping,
+            fields,
+            arg_literals=arg_literals,
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 
@@ -327,7 +366,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> group = await monday_client.groups.duplicate(
                 ...     board_id=987654321,
                 ...     group_id='group',
@@ -341,17 +380,31 @@ class Groups:
         """
         fields = Fields(fields)
 
-        args = {
-            'board_id': board_id,
-            'group_id': group_id,
-            'add_to_top': add_to_top,
-            'group_title': group_title,
-            'fields': fields,
+        variable_types = {
+            'boardId': 'ID!',
+            'groupId': 'String!',
+            'addToTop': 'Boolean',
         }
+        variables = {
+            'boardId': str(board_id),
+            'groupId': group_id,
+            'addToTop': bool(add_to_top),
+        }
+        arg_var_mapping = {
+            'board_id': 'boardId',
+            'group_id': 'groupId',
+            'add_to_top': 'addToTop',
+        }
+        if group_title is not None:
+            variable_types['groupTitle'] = 'String'
+            variables['groupTitle'] = group_title
+            arg_var_mapping['group_title'] = 'groupTitle'
 
-        query_string = build_graphql_query('duplicate_group', 'mutation', args)
+        operation = build_operation_with_variables(
+            'duplicate_group', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 
@@ -384,7 +437,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> group = await monday_client.groups.archive(
                 ...     board_id=987654321,
                 ...     group_id='group',
@@ -400,15 +453,21 @@ class Groups:
         """
         fields = Fields(fields)
 
-        args = {
-            'board_id': board_id,
-            'group_id': group_id,
-            'fields': fields,
+        variable_types = {
+            'boardId': 'ID!',
+            'groupId': 'String!',
         }
+        variables = {
+            'boardId': str(board_id),
+            'groupId': group_id,
+        }
+        arg_var_mapping = {'board_id': 'boardId', 'group_id': 'groupId'}
 
-        query_string = build_graphql_query('archive_group', 'mutation', args)
+        operation = build_operation_with_variables(
+            'archive_group', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 
@@ -441,7 +500,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> group = await monday_client.groups.delete(
                 ...     board_id=987654321,
                 ...     group_id='group',
@@ -457,15 +516,21 @@ class Groups:
         """
         fields = Fields(fields)
 
-        args = {
-            'board_id': board_id,
-            'group_id': group_id,
-            'fields': fields,
+        variable_types = {
+            'boardId': 'ID!',
+            'groupId': 'String!',
         }
+        variables = {
+            'boardId': str(board_id),
+            'groupId': group_id,
+        }
+        arg_var_mapping = {'board_id': 'boardId', 'group_id': 'groupId'}
 
-        query_string = build_graphql_query('delete_group', 'mutation', args)
+        operation = build_operation_with_variables(
+            'delete_group', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 
@@ -500,7 +565,7 @@ class Groups:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> items = await monday_client.groups.get_items_by_name(
                 ...     board_id=987654321,
                 ...     group_id='group',

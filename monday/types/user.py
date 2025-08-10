@@ -25,10 +25,11 @@ including user profiles, out-of-office settings, and account information.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-from monday.types.account import Account
-from monday.types.team import Team
+if TYPE_CHECKING:
+    from monday.types.account import Account
+    from monday.types.team import Team
 
 
 @dataclass
@@ -134,7 +135,7 @@ class User:
     """Returns ``True`` if the user is a guest"""
 
     is_pending: bool = False
-    """Returns ``True`` if the user didn't confirm their email yet"""
+    """Returns ``True`` if the user is pending (did not yet confirm the email)"""
 
     is_view_only: bool = False
     """Returns ``True`` if the user is only a viewer"""
@@ -182,7 +183,7 @@ class User:
     """The user's teams"""
 
     time_zone_identifier: str = ''
-    """The user's timezone identifier"""
+    """The user's time zone identifier"""
 
     title: str = ''
     """The user's title"""
@@ -191,13 +192,17 @@ class User:
     """The user's profile URL"""
 
     utc_hours_diff: int = 0
-    """The user's UTC hours difference"""
+    """The user's UTC time difference in hours"""
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
 
-        def _convert_list(items: list, converter_name: str = 'to_dict') -> list:
+        def _convert_list(
+            items: list[Any] | None, converter_name: str = 'to_dict'
+        ) -> list[Any] | None:
             """Convert list items using their converter method if available."""
+            if items is None:
+                return None
             return [
                 getattr(item, converter_name)()
                 if hasattr(item, converter_name)
@@ -245,6 +250,9 @@ class User:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> User:
         """Create from dictionary."""
+        from monday.types.account import Account  # noqa: PLC0415
+        from monday.types.team import Team  # noqa: PLC0415
+
         return cls(
             account=Account.from_dict(data['account']) if data.get('account') else None,
             birthday=str(data.get('birthday', '')),

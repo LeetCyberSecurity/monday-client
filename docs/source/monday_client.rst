@@ -22,12 +22,45 @@ MondayClient
 ------------
 
 .. autoclass:: monday.client.MondayClient
-   :no-members:
+   :members: logger, post_request
+   :show-inheritance:
 
-.. autoattribute:: monday.client.MondayClient.boards
-.. autoattribute:: monday.client.MondayClient.groups
-.. autoattribute:: monday.client.MondayClient.items
-.. autoattribute:: monday.client.MondayClient.subitems
-.. autoattribute:: monday.client.MondayClient.users
-.. autoattribute:: monday.client.MondayClient.logger
-.. automethod:: monday.client.MondayClient.post_request
+Services
+~~~~~~~~
+
+The MondayClient provides access to various services for interacting with different aspects of the Monday.com API:
+
+.. py:attribute:: MondayClient.boards
+   :no-index:
+
+   Service for board-related operations.
+
+   Type: :ref:`Boards <services_section_boards>`
+
+.. py:attribute:: MondayClient.items
+   :no-index:
+
+   Service for item-related operations.
+
+   Type: :ref:`Items <services_section_items>`
+
+.. py:attribute:: MondayClient.subitems
+   :no-index:
+
+   Service for subitem-related operations.
+
+   Type: :ref:`Subitems <services_section_subitems>`
+
+.. py:attribute:: MondayClient.groups
+   :no-index:
+
+   Service for group-related operations.
+
+   Type: :ref:`Groups <services_section_groups>`
+
+.. py:attribute:: MondayClient.users
+   :no-index:
+
+   Service for user-related operations.
+
+   Type: :ref:`Users <services_section_users>`

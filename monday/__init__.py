@@ -17,15 +17,24 @@
 
 """Monday API client"""
 
-__version__ = '0.1.76'
+__version__ = '0.1.77'
 __authors__ = [{'name': 'Dan Hollis', 'email': 'dh@leetsys.com'}]
 
 from monday.client import MondayClient
+from monday.config import Config, EnvConfig, JsonConfig, MultiSourceConfig, YamlConfig
 from monday.fields.board_fields import BoardFields
 from monday.fields.column_fields import ColumnFields
 from monday.fields.group_fields import GroupFields
 from monday.fields.item_fields import ItemFields
 from monday.fields.user_fields import UserFields
+from monday.logging_utils import (
+    configure_for_external_logging,
+    disable_logging,
+    enable_logging,
+    get_logger,
+    is_logging_enabled,
+    set_log_level,
+)
 from monday.services.utils.fields import Fields
 from monday.types.account import Account, AccountProduct, Plan
 from monday.types.asset import Asset
@@ -83,12 +92,14 @@ __all__ = [
     'ColumnInput',
     'ColumnType',
     'ColumnValue',
+    'Config',
     'CountryInput',
     'DateInput',
     'DropdownDefaults',
     'DropdownInput',
     'DropdownLabel',
     'EmailInput',
+    'EnvConfig',
     'Fields',
     'Group',
     'GroupFields',
@@ -98,10 +109,12 @@ __all__ = [
     'ItemFields',
     'ItemList',
     'ItemsPage',
+    'JsonConfig',
     'LinkInput',
     'LocationInput',
     'LongTextInput',
     'MondayClient',
+    'MultiSourceConfig',
     'NumberInput',
     'OrderBy',
     'OutOfOffice',
@@ -129,4 +142,11 @@ __all__ = [
     'WeekInput',
     'Workspace',
     'WorldClockInput',
+    'YamlConfig',
+    'configure_for_external_logging',
+    'disable_logging',
+    'enable_logging',
+    'get_logger',
+    'is_logging_enabled',
+    'set_log_level',
 ]

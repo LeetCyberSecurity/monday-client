@@ -25,9 +25,10 @@ including files, images, and other uploaded content with their metadata.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from monday.types.user import User
+if TYPE_CHECKING:
+    from monday.types.user import User
 
 
 @dataclass
@@ -107,6 +108,8 @@ class Asset:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Asset:
         """Create from dictionary."""
+        from monday.types.user import User  # noqa: PLC0415
+
         return cls(
             created_at=str(data.get('created_at', '')),
             file_extension=str(data.get('file_extension', '')),

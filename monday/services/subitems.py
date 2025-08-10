@@ -33,14 +33,14 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from monday.fields.item_fields import ItemFields
+from monday.protocols import MondayClientProtocol
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
-from monday.services.utils.query_builder import build_graphql_query
+from monday.services.utils.query_builder import build_operation_with_variables
 from monday.types.column import ColumnType
 from monday.types.subitem import Subitem, SubitemList
 
 if TYPE_CHECKING:
-    from monday.client import MondayClient
     from monday.services.boards import Boards
     from monday.services.items import Items
 
@@ -52,12 +52,12 @@ class Subitems:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient', items: 'Items', boards: 'Boards'):
+    def __init__(self, client: MondayClientProtocol, items: 'Items', boards: 'Boards'):
         """
         Initialize a Subitems instance with specified parameters.
 
         Args:
-            client: The MondayClient instance to use for API requests.
+            client: A client implementing MondayClientProtocol for API requests.
             items: The Items instance to use for item-related operations.
             boards: The Boards instance to use for board-related operations.
 
@@ -95,7 +95,7 @@ class Subitems:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> result = await monday_client.subitems.query(
                 ...     item_ids=[123456789, 012345678],
                 ...     subitem_ids=[987654321, 098765432, 998765432],
@@ -200,7 +200,7 @@ class Subitems:
         Args:
             item_id: The ID of the item where the subitem will be created.
             subitem_name: The name of the subitem.
-            column_values: Column values for the subitem. Can be a dictionary with column IDs as keys and values as either strings or dictionaries. For better type safety, you can also use ColumnInput objects from :mod:`monday.types.column_inputs`.
+            column_values: Column values for the subitem. Provide a dictionary with column IDs as keys and values as either strings or dictionaries matching Monday.com's expected JSON payloads. Unlike :meth:`Items.change_column_values`, this method currently does not convert ColumnInput helper objects; pass JSON-serializable values only.
             create_labels_if_missing: Creates status/dropdown labels if they are missing.
             fields: Fields to return from the created subitem.
 
@@ -218,7 +218,7 @@ class Subitems:
 
                 >>> from monday import MondayClient
                 >>> from monday.types.column_inputs import StatusInput, TextInput
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
 
                 # Using ColumnInput objects (recommended for type safety)
                 >>> subitem = await monday_client.subitems.create(
@@ -253,17 +253,33 @@ class Subitems:
         """
         fields = Fields(fields)
 
-        args = {
-            'parent_item_id': item_id,
-            'item_name': subitem_name,
-            'column_values': column_values,
-            'create_labels_if_missing': create_labels_if_missing,
-            'fields': fields,
+        variable_types = {
+            'parentItemId': 'Int!',
+            'name': 'String!',
+            'createLabels': 'Boolean',
         }
+        variables = {
+            'parentItemId': int(item_id) if not isinstance(item_id, int) else item_id,
+            'name': subitem_name,
+            'createLabels': bool(create_labels_if_missing),
+        }
+        if column_values is not None:
+            variable_types['columnValues'] = 'JSONString'
+            variables['columnValues'] = column_values
 
-        query_string = build_graphql_query('create_subitem', 'mutation', args)
+        arg_var_mapping = {
+            'parent_item_id': 'parentItemId',
+            'item_name': 'name',
+            'create_labels_if_missing': 'createLabels',
+        }
+        if column_values is not None:
+            arg_var_mapping['column_values'] = 'columnValues'
 
-        query_result = await self.client.post_request(query_string)
+        operation = build_operation_with_variables(
+            'create_subitem', 'mutation', variable_types, arg_var_mapping, fields
+        )
+
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 

@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# ruff: noqa: PLR2004, S101
-
 """Tests for pagination utilities."""
 
 from unittest.mock import AsyncMock, MagicMock, patch

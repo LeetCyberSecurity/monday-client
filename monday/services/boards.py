@@ -31,11 +31,13 @@ MondayClient instance.
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import Any, Literal, cast
 
+from monday.exceptions import MondayAPIError
 from monday.fields.board_fields import BoardFields
 from monday.fields.column_fields import ColumnFields
 from monday.fields.item_fields import ItemFields
+from monday.protocols import MondayClientProtocol
 from monday.services.utils.data_modifiers import update_data_in_place
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
@@ -45,15 +47,13 @@ from monday.services.utils.pagination import (
 )
 from monday.services.utils.query_builder import (
     build_graphql_query,
+    build_operation_with_variables,
     build_query_params_string,
 )
 from monday.types.board import Board, UpdateBoard
 from monday.types.column import Column, ColumnFilter, ColumnType
 from monday.types.column_defaults import ColumnDefaults
 from monday.types.item import Item, ItemList, QueryParams, QueryRule
-
-if TYPE_CHECKING:
-    from monday.client import MondayClient
 
 
 class Boards:
@@ -63,12 +63,12 @@ class Boards:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient'):
+    def __init__(self, client: MondayClientProtocol):
         """
         Initialize a Boards instance with specified parameters.
 
         Args:
-            client: The MondayClient instance to use for API requests.
+            client: A client implementing MondayClientProtocol for API requests.
 
         """
         self.client = client
@@ -115,8 +115,9 @@ class Boards:
         Example:
             .. code-block:: python
 
-                >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> from monday import MondayClient, Config
+                >>> config = Config(api_key='your_api_key')
+                >>> monday_client = MondayClient(config)
                 >>> boards = await monday_client.boards.query(
                 ...     board_ids=987654321,
                 ...     fields='id name state'
@@ -226,7 +227,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient, QueryParams, QueryRule
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
 
                 # Using QueryParams objects (recommended for type safety)
                 >>> query_params = QueryParams(
@@ -333,7 +334,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient, ColumnFilter
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
 
                 # Using ColumnFilter objects (recommended for type safety)
                 >>> columns = [
@@ -430,7 +431,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> items = await monday_client.boards.get_column_values(
                 ...     board_id=987654321,
                 ...     column_ids=['status', 'priority'],
@@ -444,36 +445,38 @@ class Boards:
         column_fields = Fields(column_fields)
         item_fields = Fields(item_fields)
 
-        column_ids = (
-            [column_ids]
-            if column_ids is not None and not isinstance(column_ids, list)
-            else column_ids
+        # Normalize column_ids to a list of strings or None
+        norm_column_ids: list[str] | None
+        if column_ids is None:
+            norm_column_ids = None
+        elif isinstance(column_ids, list):
+            norm_column_ids = [str(c) for c in column_ids]
+        else:
+            norm_column_ids = [str(column_ids)]
+
+        # Build variable-based query
+        variable_types: dict[str, str] = {'boardId': '[ID!]'}
+        variables: dict[str, Any] = {'boardId': [str(board_id)]}
+        if norm_column_ids is not None:
+            variable_types['columnIds'] = '[String!]'
+            variables['columnIds'] = norm_column_ids
+
+        # Top-level operation is boards; bind ids via variables
+        arg_var_mapping = {'ids': 'boardId'}
+
+        # Include columnIds argument only when defined
+        if norm_column_ids is not None:
+            selection = f'items_page {{ items {{ {item_fields} column_values (ids: $columnIds) {{ {column_fields} }} }} }}'
+        else:
+            selection = f'items_page {{ items {{ {item_fields} column_values {{ {column_fields} }} }} }}'
+
+        operation = build_operation_with_variables(
+            'boards', 'query', variable_types, arg_var_mapping, selection
         )
 
-        # Ensure column_ids are rendered as double-quoted strings
-        if isinstance(column_ids, list):
-            column_ids_str = '[' + ', '.join(f'"{col}"' for col in column_ids) + ']'
-        else:
-            column_ids_str = f'"{column_ids}"'
+        self._logger.debug('query: %s', operation)
 
-        query = f"""
-            query {{
-                boards (ids: {board_id}) {{
-                    items_page {{
-                        items {{
-                            {item_fields}
-                            column_values (ids: {column_ids_str}) {{
-                                {column_fields}
-                            }}
-                        }}
-                    }}
-                }}
-            }}
-        """
-
-        self._logger.debug('query: %s', query)
-
-        query_result = await self.client.post_request(query)
+        query_result = await self.client.post_request(operation, variables)
         data = check_query_result(query_result)
 
         items_data = []
@@ -488,11 +491,12 @@ class Boards:
 
         return items
 
-    async def create(  # noqa: PLR0913
+    async def create(  # noqa: PLR0913, PLR0915
         self,
         name: str,
         board_kind: Literal['private', 'public', 'share'] | None = 'public',
         owner_ids: list[int | str] | None = None,
+        owner_team_ids: list[int | str] | None = None,
         subscriber_ids: list[int | str] | None = None,
         subscriber_teams_ids: list[int | str] | None = None,
         description: str | None = None,
@@ -508,6 +512,7 @@ class Boards:
             name: The name of the board to create.
             board_kind: The kind of board to create.
             owner_ids: List of user IDs to set as board owners.
+            owner_team_ids: List of team IDs to set as board owner teams.
             subscriber_ids: List of user IDs to subscribe to the board.
             subscriber_teams_ids: List of team IDs to subscribe to the board.
             description: A description for the board.
@@ -529,7 +534,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> board = await monday_client.boards.create(
                 ...     name='New Project Board',
                 ...     board_kind='public',
@@ -543,29 +548,89 @@ class Boards:
         """
         fields = Fields(fields)
 
-        mutation_args = {
-            'board_name': name,
-            'board_kind': board_kind,
-            'fields': fields,
-        }
+        # Build variables and operation
+        variable_types: dict[str, str] = {'name': 'String!'}
+        variables: dict[str, Any] = {'name': name}
 
-        if owner_ids is not None:
-            mutation_args['board_owners_ids'] = owner_ids
-        if subscriber_ids is not None:
-            mutation_args['board_subscribers_ids'] = subscriber_ids
-        if subscriber_teams_ids is not None:
-            mutation_args['board_subscribers_teams_ids'] = subscriber_teams_ids
+        arg_var_mapping: dict[str, str] = {'board_name': 'name'}
+
+        if board_kind is not None:
+            variable_types['kind'] = 'BoardKind!'
+            variables['kind'] = board_kind
+            arg_var_mapping['board_kind'] = 'kind'
+
+        def _ints(values: list[int | str] | None) -> list[int] | None:
+            if values is None:
+                return None
+            result: list[int] = []
+            for v in values:
+                try:
+                    result.append(int(v))
+                except (ValueError, TypeError):
+                    # best effort; monday.com expects ints
+                    result.append(int(str(v)))
+            return result
+
+        owners = _ints(owner_ids)
+        if owners is not None:
+            variable_types['ownerIds'] = '[ID!]'
+            variables['ownerIds'] = owners
+            arg_var_mapping['board_owner_ids'] = 'ownerIds'
+
+        owner_teams = _ints(owner_team_ids)
+        if owner_teams is not None:
+            variable_types['ownerTeamIds'] = '[ID!]'
+            variables['ownerTeamIds'] = owner_teams
+            arg_var_mapping['board_owner_team_ids'] = 'ownerTeamIds'
+
+        subscribers = _ints(subscriber_ids)
+        if subscribers is not None:
+            variable_types['subscriberIds'] = '[ID!]'
+            variables['subscriberIds'] = subscribers
+            arg_var_mapping['board_subscriber_ids'] = 'subscriberIds'
+
+        subscriber_teams = _ints(subscriber_teams_ids)
+        if subscriber_teams is not None:
+            variable_types['subscriberTeamIds'] = '[ID!]'
+            variables['subscriberTeamIds'] = subscriber_teams
+            arg_var_mapping['board_subscriber_teams_ids'] = 'subscriberTeamIds'
+
         if description is not None:
-            mutation_args['board_description'] = description
-        if folder_id is not None:
-            mutation_args['board_folder_id'] = folder_id
-        if template_id is not None:
-            mutation_args['board_template_id'] = template_id
-        if workspace_id is not None:
-            mutation_args['board_workspace_id'] = workspace_id
+            variable_types['description'] = 'String'
+            variables['description'] = description
+            arg_var_mapping['description'] = 'description'
 
-        query = build_graphql_query('create_board', 'mutation', mutation_args)
-        query_result = await self.client.post_request(query)
+        def _int_or_none(val: int | str | None) -> int | None:
+            if val is None:
+                return None
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return int(str(val))
+
+        f_id = _int_or_none(folder_id)
+        if f_id is not None:
+            variable_types['folderId'] = 'ID'
+            variables['folderId'] = f_id
+            arg_var_mapping['folder_id'] = 'folderId'
+
+        t_id = _int_or_none(template_id)
+        if t_id is not None:
+            variable_types['templateId'] = 'ID'
+            variables['templateId'] = t_id
+            arg_var_mapping['template_id'] = 'templateId'
+
+        w_id = _int_or_none(workspace_id)
+        if w_id is not None:
+            variable_types['workspaceId'] = 'ID'
+            variables['workspaceId'] = w_id
+            arg_var_mapping['workspace_id'] = 'workspaceId'
+
+        operation = build_operation_with_variables(
+            'create_board', 'mutation', variable_types, arg_var_mapping, fields
+        )
+
+        query_result = await self.client.post_request(operation, variables)
         data = check_query_result(query_result)
 
         board_data = data['data']['create_board']
@@ -611,7 +676,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> duplicated_board = await monday_client.boards.duplicate(
                 ...     board_id=987654321,
                 ...     board_name='Project Board Copy',
@@ -629,25 +694,49 @@ class Boards:
         board_fields = f'board {{ {fields} }}'
         fields = Fields(board_fields)
 
-        mutation_args = {
-            'board_id': board_id,
-            'duplicate_type': f'duplicate_board_{duplicate_type}',
-            'keep_subscribers': keep_subscribers,
-            'fields': fields,
+        # Use variables for all except duplicate_type (left as literal enum)
+        variable_types: dict[str, str] = {
+            'boardId': 'ID!',
+            'keepSubscribers': 'Boolean',
+        }
+        variables: dict[str, Any] = {
+            'boardId': str(board_id),
+            'keepSubscribers': bool(keep_subscribers),
+        }
+        arg_var_mapping: dict[str, str] = {
+            'board_id': 'boardId',
+            'keep_subscribers': 'keepSubscribers',
         }
 
         if board_name is not None:
-            mutation_args['board_name'] = board_name
+            variable_types['boardName'] = 'String'
+            variables['boardName'] = board_name
+            arg_var_mapping['board_name'] = 'boardName'
         if folder_id is not None:
-            mutation_args['folder_id'] = folder_id
+            variable_types['folderId'] = 'ID'
+            variables['folderId'] = str(folder_id)
+            arg_var_mapping['folder_id'] = 'folderId'
         if workspace_id is not None:
-            mutation_args['workspace_id'] = workspace_id
+            variable_types['workspaceId'] = 'ID'
+            variables['workspaceId'] = str(workspace_id)
+            arg_var_mapping['workspace_id'] = 'workspaceId'
 
-        query = build_graphql_query('duplicate_board', 'mutation', mutation_args)
+        arg_literals = {
+            'duplicate_type': f'duplicate_board_{duplicate_type}',
+        }
 
-        self._logger.debug('query: %s', query)
+        operation = build_operation_with_variables(
+            'duplicate_board',
+            'mutation',
+            variable_types,
+            arg_var_mapping,
+            fields,
+            arg_literals=arg_literals,
+        )
 
-        query_result = await self.client.post_request(query)
+        self._logger.debug('query: %s', operation)
+
+        query_result = await self.client.post_request(operation, variables)
         data = check_query_result(query_result)
 
         board_data = data['data']['duplicate_board']
@@ -685,7 +774,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> result = await monday_client.boards.update(
                 ...     board_id=987654321,
                 ...     board_attribute='name',
@@ -715,17 +804,33 @@ class Boards:
                 board_attribute
             )
 
-        mutation_args = {
-            'board_id': board_id,
-            'board_attribute': board_attribute,
-            'new_value': new_value,
+        variable_types: dict[str, str] = {
+            'boardId': 'ID!',
+            'newValue': 'String!',
         }
+        variables: dict[str, Any] = {
+            'boardId': str(board_id),
+            'newValue': new_value,
+        }
+        arg_var_mapping: dict[str, str] = {
+            'board_id': 'boardId',
+            'new_value': 'newValue',
+        }
+        # board_attribute remains an enum literal
+        arg_literals = {'board_attribute': board_attribute}
 
-        query = build_graphql_query('update_board', 'mutation', mutation_args)
+        operation = build_operation_with_variables(
+            'update_board',
+            'mutation',
+            variable_types,
+            arg_var_mapping,
+            Fields(''),
+            arg_literals=arg_literals,
+        )
 
-        self._logger.debug('query: %s', query)
+        self._logger.debug('query: %s', operation)
 
-        query_result = await self.client.post_request(query)
+        query_result = await self.client.post_request(operation, variables)
         data = check_query_result(query_result)
 
         self._logger.debug('update_board response data: %s', data)
@@ -783,7 +888,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> archived_board = await monday_client.boards.archive(
                 ...     board_id=987654321
                 ... )
@@ -793,13 +898,13 @@ class Boards:
         """
         fields = Fields(fields)
 
-        mutation_args = {
-            'board_id': board_id,
-            'fields': fields,
-        }
-
-        query = build_graphql_query('archive_board', 'mutation', mutation_args)
-        query_result = await self.client.post_request(query)
+        variable_types = {'boardId': 'ID!'}
+        variables = {'boardId': str(board_id)}
+        arg_var_mapping = {'board_id': 'boardId'}
+        operation = build_operation_with_variables(
+            'archive_board', 'mutation', variable_types, arg_var_mapping, fields
+        )
+        query_result = await self.client.post_request(operation, variables)
         data = check_query_result(query_result)
 
         board_data = data['data']['archive_board']
@@ -828,7 +933,7 @@ class Boards:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> deleted_board = await monday_client.boards.delete(
                 ...     board_id=987654321
                 ... )
@@ -838,13 +943,13 @@ class Boards:
         """
         fields = Fields(fields)
 
-        mutation_args = {
-            'board_id': board_id,
-            'fields': fields,
-        }
-
-        query = build_graphql_query('delete_board', 'mutation', mutation_args)
-        query_result = await self.client.post_request(query)
+        variable_types = {'boardId': 'ID!'}
+        variables = {'boardId': str(board_id)}
+        arg_var_mapping = {'board_id': 'boardId'}
+        operation = build_operation_with_variables(
+            'delete_board', 'mutation', variable_types, arg_var_mapping, fields
+        )
+        query_result = await self.client.post_request(operation, variables)
         data = check_query_result(query_result)
 
         board_data = data['data']['delete_board']
@@ -884,7 +989,7 @@ class Boards:
 
                 >>> from monday import MondayClient
                 >>> from monday.types.column_defaults import StatusDefaults, StatusLabel, DropdownDefaults, DropdownLabel
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
 
                 # Using StatusDefaults objects (recommended for type safety)
                 >>> column = await monday_client.boards.create_column(
@@ -953,32 +1058,77 @@ class Boards:
         """
         fields = Fields(fields)
 
-        mutation_args = {
-            'board_id': board_id,
-            'column_type': column_type,
+        variable_types: dict[str, str] = {
+            'boardId': 'ID!',
+            'title': 'String!',
+            'type': 'ColumnType!',
+        }
+        variables: dict[str, Any] = {
+            'boardId': str(board_id),
             'title': title,
-            'fields': fields,
+            'type': column_type,
+        }
+        arg_var_mapping: dict[str, str] = {
+            'board_id': 'boardId',
+            'title': 'title',
+            'column_type': 'type',
         }
 
-        if defaults is not None:
-            if isinstance(defaults, dict):
-                # Convert to JSON and escape double quotes for GraphQL
-                json_str = json.dumps(defaults)
-                mutation_args['defaults'] = json_str.replace('"', '\\"')
-            else:
-                # Convert to JSON and escape double quotes for GraphQL
-                json_str = json.dumps(defaults.to_dict())
-                mutation_args['defaults'] = json_str.replace('"', '\\"')
-
         if after_column_id is not None:
-            mutation_args['after_column_id'] = after_column_id
+            variable_types['afterColumnId'] = 'ID'
+            variables['afterColumnId'] = str(after_column_id)
+            arg_var_mapping['after_column_id'] = 'afterColumnId'
 
-        query = build_graphql_query('create_column', 'mutation', mutation_args)
+        if defaults is not None:
+            defaults_obj = (
+                defaults if isinstance(defaults, dict) else defaults.to_dict()
+            )
+            # The monday.com API expects JSON-typed variables to be provided as a JSON string.
+            variable_types['defaults'] = 'JSON'
+            variables['defaults'] = json.dumps(defaults_obj)
+            arg_var_mapping['defaults'] = 'defaults'
 
-        self._logger.debug('query %s', query)
+        operation = build_operation_with_variables(
+            'create_column', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query)
-        data = check_query_result(query_result)
+        self._logger.debug('query %s', operation)
+        try:
+            self._logger.debug('variables %s', json.dumps(variables, default=str))
+        except ValueError:
+            self._logger.debug('variables could not be serialized for debug output')
+        if 'defaults' in variables:
+            try:
+                self._logger.debug(
+                    'defaults payload %s',
+                    json.dumps(variables['defaults'], default=str),
+                )
+            except ValueError:
+                self._logger.debug(
+                    'defaults payload could not be serialized for debug output'
+                )
+
+        try:
+            query_result = await self.client.post_request(operation, variables)
+            data = check_query_result(query_result)
+        except MondayAPIError as e:
+            # Provide rich context for debugging failures without altering behavior
+            self._logger.exception('create_column failed')
+            self._logger.exception('operation: %s', operation)
+            try:
+                self._logger.exception(
+                    'variables: %s', json.dumps(variables, default=str)
+                )
+            except ValueError:
+                self._logger.exception('variables: <unserializable>')
+            if getattr(e, 'json', None) is not None:
+                try:
+                    self._logger.exception(
+                        'api_error_json: %s', json.dumps(e.json, default=str)
+                    )
+                except ValueError:
+                    self._logger.exception('api_error_json: <unserializable>')
+            raise
 
         self._logger.debug('create_column response data: %s', data)
 

@@ -29,12 +29,14 @@ from typing import Any
 
 import aiohttp
 
+from monday.config import Config
 from monday.exceptions import (
     ComplexityLimitExceeded,
     MondayAPIError,
     MutationLimitExceeded,
     QueryFormatError,
 )
+from monday.http_adapters import AiohttpAdapter, HttpxAdapter
 from monday.services.boards import Boards
 from monday.services.groups import Groups
 from monday.services.items import Items
@@ -48,19 +50,31 @@ class MondayClient:
     Client for interacting with the monday.com API.
     This client handles API requests, rate limiting, and pagination for monday.com's GraphQL API.
 
-    It uses a class-level logger named ``monday`` for all logging operations.
+    Logging:
+        Each module in this library uses a module-level logger under the
+        ``monday.*`` namespace (for example, ``monday.client``). These
+        loggers propagate to the root library logger ``monday``. Configure
+        logging either by working with the ``monday`` logger directly or by
+        using helpers in :mod:`monday.logging_utils`.
 
     Usage:
         .. code-block:: python
 
-            >>> from monday import MondayClient
-            >>> monday_client = MondayClient('your_api_key')
+            # Recommended: Using configuration object
+            >>> from monday import MondayClient, Config
+            >>> config = Config(api_key='your_api_key')
+            >>> monday_client = MondayClient(config)
+            >>> monday_client.boards.query(board_ids=987654321)
+
+            # Alternative: Using individual parameters
+            >>> monday_client = MondayClient(api_key='your_api_key')
             >>> monday_client.boards.query(board_ids=987654321)
 
     Args:
-        api_key: The API key for authenticating with the monday.com API.
+        config: Config instance containing all client settings (recommended approach).
+        api_key: The API key for authenticating with the monday.com API (alternative approach).
         url: The endpoint URL for the monday.com API.
-        version: The monday.com API version to use. If None, will automatically fetch the current version.
+        version: The monday.com API version to use.
         headers: Additional HTTP headers used for API requests.
         max_retries: Maximum amount of retry attempts before raising an error.
 
@@ -68,118 +82,106 @@ class MondayClient:
 
     logger: logging.Logger = logging.getLogger(__name__)
     """
-    Class-level logger named ``monday`` for all logging operations.
+    Module logger used by this class (e.g., ``monday.client``).
 
     Note:
-        Logging can be controlled by configuring this logger.
-        By default, a ``NullHandler`` is added to the logger, which suppresses all output.
-        To enable logging, configure the logger in your application code. For example:
+        By default, a ``NullHandler`` is attached to the root ``monday`` logger
+        to suppress output. To enable logs quickly in development, call:
 
         .. code-block:: python
 
-            import logging
+            from monday import enable_logging
+            enable_logging()  # Enable with default settings
 
-            logging.basicConfig(
-                level=logging.DEBUG,
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                handlers=[
-                    logging.StreamHandler(),
-                ]
-            )
-            logging.getLogger('monday').setLevel(logging.DEBUG)
-
-            # Always remove the NullHandler that monday-client adds and add a real handler
-            monday_logger = logging.getLogger('monday')
-            for handler in monday_logger.handlers[:]:
-                if isinstance(handler, logging.NullHandler):
-                    monday_logger.removeHandler(handler)
-
-            # Add a real handler to monday logger if it doesn't have one
-            if not monday_logger.handlers:
-                handler = logging.StreamHandler()
-                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                handler.setFormatter(formatter)
-                monday_logger.addHandler(handler)
-
-        To disable all logging (including warnings and errors):
+        To integrate with an existing logging configuration, call:
 
         .. code-block:: python
 
-            import logging
-            logging.getLogger('monday').disabled = True
+            import logging.config
+            from monday import configure_for_external_logging
+
+            configure_for_external_logging()
+            logging.config.dictConfig({
+                'version': 1,
+                'handlers': {'console': {'class': 'logging.StreamHandler'}},
+                'loggers': {'monday': {'level': 'INFO', 'handlers': ['console']}},
+            })
+
+        Other helpers:
+
+        .. code-block:: python
+
+            from monday import set_log_level, disable_logging
+            set_log_level('DEBUG')  # Change level
+            disable_logging()       # Turn off completely
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        api_key: str,
+        config: Config | None = None,
+        *,
+        api_key: str | None = None,
         url: str = 'https://api.monday.com/v2',
         version: str | None = None,
         headers: dict[str, Any] | None = None,
         max_retries: int = 4,
+        transport: str = 'aiohttp',
     ):
         """
-        Initialize the MondayClient with the provided API key.
+        Initialize the MondayClient with either a configuration object or individual parameters.
 
         Args:
+            config: Config instance containing all client settings.
             api_key: The API key for authenticating with the monday.com API.
             url: The endpoint URL for the monday.com API.
             version: The monday.com API version to use. If None, will automatically fetch the current version.
             headers: Additional HTTP headers used for API requests.
             max_retries: Maximum amount of retry attempts before raising an error.
+            transport: HTTP transport to use: 'aiohttp' (default) or 'httpx'.
+
+        Raises:
+            ValueError: If neither config nor api_key is provided, or if both config and individual parameters are provided.
 
         """
-        self.url = url
-        self.api_key = api_key
-        self.version = version
-        self.headers = {
-            'Content-Type': 'application/json',
-            'Authorization': api_key,
-            **(headers or {}),
-        }
-        self.max_retries = int(max_retries)
+        self._validate_init_params(config, api_key)
 
-        # Initialize service instances
-        self.boards = Boards(self)
-        """
-        Service for board-related operations
+        if config is not None:
+            self._setup_from_config(config)
+        else:
+            self._setup_from_params(api_key, url, version, headers, max_retries)
 
-        Type: `Boards <services.html#boards>`_
-        """
-        self.items = Items(self, self.boards)
-        """
-        Service for item-related operations
+        # Initialize transport adapter (default: aiohttp; optional: httpx)
+        if transport == 'httpx':
+            self._adapter = HttpxAdapter(
+                proxy_url=self.proxy_url,
+                proxy_auth=self.proxy_auth,
+                proxy_auth_type=self.proxy_auth_type,
+                proxy_trust_env=self.proxy_trust_env,
+                proxy_headers=self.proxy_headers,
+                proxy_ssl_verify=self.proxy_ssl_verify,
+                timeout_seconds=self.timeout,
+            )
+        else:
+            self._adapter = AiohttpAdapter(
+                proxy_url=self.proxy_url,
+                proxy_auth=self.proxy_auth,
+                proxy_auth_type=self.proxy_auth_type,
+                proxy_trust_env=self.proxy_trust_env,
+                proxy_ssl_verify=self.proxy_ssl_verify,
+                timeout_seconds=self.timeout,
+            )
 
-        Type: `Items <services.html#items>`_
-        """
-        self.subitems = Subitems(self, self.items, self.boards)
-        """
-        Service for subitem-related operations
+        self._initialize_services()
 
-        Type: `Subitems <services.html#subitems>`_
-        """
-        self.groups = Groups(self, self.boards)
-        """
-        Service for group-related operations
-
-        Type: `Groups <services.html#groups>`_
-        """
-        self.users = Users(self)
-        """
-        Service for user-related operations
-
-        Type: `Users <services.html#users>`_
-        """
-
-        self._rate_limit_seconds = 60
-        self._query_errors = {'argumentLiteralsIncompatible'}
-        self._error_handler = ErrorHandler(self._rate_limit_seconds)
-
-    async def post_request(self, query: str) -> dict[str, Any]:
+    async def post_request(
+        self, query: str, variables: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Executes an asynchronous post request to the monday.com API with rate limiting and retry logic.
 
         Args:
             query: The GraphQL query string to be executed.
+            variables: Optional GraphQL variables to include with the query.
 
         Returns:
             A dictionary containing the response data from the API.
@@ -194,8 +196,16 @@ class MondayClient:
         Example:
             .. code-block:: python
 
-                >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                # Using config object (recommended)
+                >>> from monday import MondayClient, Config
+                >>> config = Config(api_key='your_api_key')
+                >>> monday_client = MondayClient(config)
+                >>> await monday_client.post_request(
+                ...      query='query { boards (ids: 987654321) { id name } }'
+                ... )
+
+                # Using individual parameters (alternative)
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> await monday_client.post_request(
                 ...      query='query { boards (ids: 987654321) { id name } }'
                 ... )
@@ -225,7 +235,9 @@ class MondayClient:
             response_headers = {}
 
             try:
-                response_data, response_headers = await self._execute_request(query)
+                response_data, response_headers = await self._execute_request(
+                    query, variables
+                )
                 self._handle_api_errors(response_data, response_headers, query)
             except (ComplexityLimitExceeded, MutationLimitExceeded) as e:
                 if attempt < self.max_retries - 1:
@@ -259,12 +271,129 @@ class MondayClient:
                     )
                     e.args = (f'Max retries ({self.max_retries}) reached',)
                     raise
+            except Exception as e:  # Fallback for other transport errors (e.g., httpx)
+                if attempt >= self.max_retries - 1:
+                    self.logger.exception('Max retries reached. Last network error')
+                    raise
+                retry_seconds = self._error_handler.get_retry_after_seconds(
+                    response_headers, self._rate_limit_seconds
+                )
+                self.logger.warning(
+                    'Attempt %d failed due to network error: %s. Retrying after %d seconds...',
+                    attempt + 1,
+                    str(e),
+                    retry_seconds,
+                )
+                await asyncio.sleep(retry_seconds)
             else:
                 # Always check for legacy errors before returning
                 check_query_result(response_data)
                 return response_data
 
         return {'error': f'Max retries reached: {response_data}'}
+
+    def _validate_init_params(self, config: Config | None, api_key: str | None) -> None:
+        """Validate initialization parameters."""
+        if config is not None and api_key is not None:
+            error_msg = 'Cannot specify both config and individual parameters'
+            raise ValueError(error_msg)
+
+        if config is None and api_key is None:
+            error_msg = 'Either config or api_key must be provided'
+            raise ValueError(error_msg)
+
+    def _setup_from_config(self, config: Config) -> None:
+        """Setup client from config object."""
+        if not isinstance(config, Config):
+            error_msg = f'Expected Config, got {type(config).__name__}'
+            raise TypeError(error_msg)
+        config.validate()
+
+        self.url = config.url
+        self.api_key = config.api_key
+        self.version = config.version
+        self.headers = {
+            'Content-Type': 'application/json',
+            'Authorization': config.api_key,
+            **config.headers,
+        }
+        self.max_retries = int(config.max_retries)
+        self._rate_limit_seconds = config.rate_limit_seconds
+        self.timeout = config.timeout
+        self.proxy_url = config.proxy_url
+        self.proxy_auth = config.proxy_auth
+        self.proxy_auth_type = config.proxy_auth_type
+        self.proxy_trust_env = config.proxy_trust_env
+        self.proxy_headers = config.proxy_headers
+        self.proxy_ssl_verify = config.proxy_ssl_verify
+
+    def _setup_from_params(
+        self,
+        api_key: str | None,
+        url: str,
+        version: str | None,
+        headers: dict[str, Any] | None,
+        max_retries: int,
+    ) -> None:
+        """Setup client from individual parameters."""
+        if api_key is None:
+            error_msg = 'api_key cannot be None'
+            raise ValueError(error_msg)
+
+        self.url = url
+        self.api_key = api_key
+        self.version = version
+        self.headers = {
+            'Content-Type': 'application/json',
+            'Authorization': api_key,
+            **(headers or {}),
+        }
+        self.max_retries = int(max_retries)
+        self._rate_limit_seconds = 60
+        self.timeout = 30
+        self.proxy_url = None
+        self.proxy_auth = None
+        self.proxy_auth_type = 'basic'
+        self.proxy_trust_env = False
+        self.proxy_headers = {}
+        self.proxy_ssl_verify = True
+
+    def _initialize_services(self) -> None:
+        """Initialize service instances and error handler."""
+        # Initialize service instances
+        self.boards = Boards(self)
+        """
+        Service for board-related operations
+
+        Type: `Boards <services.html#boards>`_
+        """
+        self.items = Items(self, self.boards)
+        """
+        Service for item-related operations
+
+        Type: `Items <services.html#items>`_
+        """
+        self.subitems = Subitems(self, self.items, self.boards)
+        """
+        Service for subitem-related operations
+
+        Type: `Subitems <services.html#subitems>`_
+        """
+        self.groups = Groups(self, self.boards)
+        """
+        Service for group-related operations
+
+        Type: `Groups <services.html#groups>`_
+        """
+        self.users = Users(self)
+        """
+        Service for user-related operations
+
+        Type: `Users <services.html#users>`_
+        """
+
+        self._query_errors = {'argumentLiteralsIncompatible'}
+        self._error_handler = ErrorHandler(self._rate_limit_seconds)
 
     def _handle_api_errors(
         self,
@@ -328,49 +457,53 @@ class MondayClient:
         }
         """
 
+        error_msg: str | None = None
+        current_version_str: str | None = None
+        data: dict[str, Any] | None = None
+
         try:
-            async with (
-                aiohttp.ClientSession() as session,
-                session.post(
-                    self.url, json={'query': query}, headers=temp_headers
-                ) as response,
-            ):
-                data = await response.json()
+            data, _ = await self._adapter.post(
+                url=self.url,
+                json={'query': query},
+                headers=temp_headers,
+                timeout_seconds=self.timeout,
+            )
+            if 'errors' in data:
+                error_msg = f'Failed to fetch API versions: {data["errors"]}'
 
-                if 'errors' in data:
-                    raise MondayAPIError(
-                        message=f'Failed to fetch API versions: {data["errors"]}',
-                        json=data,
-                    )
+            versions = data.get('data', {}).get('versions', [])
+            current_version = next(
+                (v['value'] for v in versions if v['kind'] == 'current'), None
+            )
 
-                versions = data.get('data', {}).get('versions', [])
-                current_version = next(
-                    (v['value'] for v in versions if v['kind'] == 'current'), None
-                )
+            if not current_version and error_msg is None:
+                error_msg = 'No current version found in API response'
 
-                if not current_version:
-                    raise MondayAPIError(
-                        message='No current version found in API response', json=data
-                    )
+            if error_msg is None:
+                current_version_str = str(current_version)
+            self.logger.info(
+                'Using current monday.com API version: %s', current_version_str
+            )
 
-                self.logger.info(
-                    'Using current monday.com API version: %s', current_version
-                )
-                return current_version
-
-        except aiohttp.ClientError as e:
+        except Exception as e:
             raise MondayAPIError(
                 message=f'Network error while fetching API version: {e}'
             ) from e
 
+        if error_msg is not None:
+            raise MondayAPIError(message=error_msg, json=data or {})
+
+        return current_version_str or ''
+
     async def _execute_request(
-        self, query: str
+        self, query: str, variables: dict[str, Any] | None = None
     ) -> tuple[dict[str, Any], dict[str, str]]:
         """
         Executes a single API request.
 
         Args:
             query: The GraphQL query to be executed.
+            variables: Optional GraphQL variables to include with the query.
 
         Returns:
             A tuple containing (JSON response from the API, HTTP response headers).
@@ -379,23 +512,17 @@ class MondayClient:
             aiohttp.ClientError: If there's a client-side error during the request.
 
         """
-        async with (
-            aiohttp.ClientSession() as session,
-            session.post(
-                self.url, json={'query': query}, headers=self.headers
-            ) as response,
-        ):
-            response_headers = dict(response.headers)
-            try:
-                response_data = await response.json()
-            except aiohttp.ContentTypeError:
-                # Handle non-JSON responses
-                text_response = await response.text()
-                return {
-                    'error': f'Non-JSON response: {text_response[:200]}'
-                }, response_headers
-            else:
-                return response_data, response_headers
+        payload: dict[str, Any] = {'query': query}
+        if variables:
+            payload['variables'] = variables
+
+        response_data, response_headers = await self._adapter.post(
+            url=self.url,
+            json=payload,
+            headers=self.headers,
+            timeout_seconds=self.timeout,
+        )
+        return response_data, response_headers
 
 
 logging.getLogger('monday').addHandler(logging.NullHandler())

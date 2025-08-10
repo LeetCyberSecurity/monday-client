@@ -21,8 +21,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 .pytest_cache/
-base_service.py
 config.yml
+.cursor/
 custom_holidays.txt
 env/
 env-test/
@@ -31,9 +31,7 @@ fake_client.py
 **/.history
 item_utils.py
 json_utils.py
-monday/config.py
-monday/testing.py
-monday/protocols.py
+.markdownlint*
 monday-env/
 notes.txt
 old/
@@ -42,6 +40,7 @@ scorecard.py
 scripts/
 services/models
 setup.py
+todo/
 token/
 venv/
 .venv/

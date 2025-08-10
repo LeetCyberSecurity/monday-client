@@ -86,7 +86,7 @@ Click any color below to copy its HEX code to your clipboard.
             { hex: '#ff642e', usages: ['groups'] }, // dark-orange
             { hex: '#fdab3d', usages: ['groups'] }, // orange
             { hex: '#ffcb00', usages: ['groups'] }, // yellow
-            { hex: '#cab641', usages: ['groups'] },
+            // '#cab641' intentionally omitted: not supported by map_hex_to_color for updates
             { hex: '#9cd326', usages: ['groups'] }, // lime-green
             { hex: '#00c875', usages: ['groups'] }, // green
             { hex: '#037f4c', usages: ['groups'] }, // dark-green

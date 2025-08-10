@@ -45,7 +45,7 @@ Quick Start
     async def main():
         monday_client = MondayClient(api_key='your_api_key_here')
         boards = await monday_client.boards.query(board_ids=[987654321, 876543210])
-        items_page = await monday_client.items.query(item_ids=[123456789, 123456780])
+        items = await monday_client.items.query(item_ids=[123456789, 123456780])
 
     asyncio.run(main())
 
@@ -76,17 +76,18 @@ The client provides powerful filtering capabilities for retrieving items based o
             operator='and'
         )
 
-        # Get filtered items from a board
+        # Get filtered items from a board, including status column text
         item_lists = await monday_client.boards.get_items(
             board_ids=987654321,
             query_params=query_params,
-            fields='id name status'
+            fields='id name column_values (ids: ["status"]) { id text }'
         )
 
         for item_list in item_lists:
             print(f"Board {item_list.board_id}:")
             for item in item_list.items:
-                print(f"  - {item.name} ({item.status})")
+                status_text = next((cv.text for cv in (item.column_values or []) if cv.id == 'status'), '')
+                print(f"  - {item.name} (status: {status_text})")
 
     asyncio.run(main())
 
@@ -106,23 +107,24 @@ Custom exceptions are defined for handling specific error cases:
 Logging
 -------
 
-The client uses a logger named ``monday`` for all logging operations. By default, a ``NullHandler`` is added to suppress logging output. To enable logging, you can configure the logger in your application:
+Library modules log under the ``monday.*`` hierarchy (e.g., ``monday.client``) which propagate to the root ``monday`` logger. By default, a ``NullHandler`` is attached to ``monday`` to suppress output. Enable logging by configuring the ``monday`` logger or by using the helpers:
 
 .. code-block:: python
 
     import logging
     from monday import MondayClient
 
-    # Remove the default NullHandler and add a real handler
-    monday_logger = logging.getLogger('monday')
-    for handler in monday_logger.handlers[:]:
-        if isinstance(handler, logging.NullHandler):
-            monday_logger.removeHandler(handler)
+    from monday import enable_logging, configure_for_external_logging
 
-    if not monday_logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        monday_logger.addHandler(handler)
+    # Simple enable with defaults
+    enable_logging(level='INFO')
 
-    client = MondayClient('your_api_key')
+    # Or integrate with your logging config
+    configure_for_external_logging()
+    logging.config.dictConfig({
+        'version': 1,
+        'handlers': {'console': {'class': 'logging.StreamHandler'}},
+        'loggers': {'monday': {'level': 'INFO', 'handlers': ['console']}},
+    })
+
+    client = MondayClient(api_key='your_api_key')

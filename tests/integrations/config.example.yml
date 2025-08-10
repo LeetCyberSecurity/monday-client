@@ -11,4 +11,4 @@ monday:
   group_id: 'topics'                   # Example group ID
   workspace_id: 1234                   # Example workspace ID
   column_id: 'status'                  # Example column ID
-  column_values: ['column_value1']      # example columns values
+  column_values: ['column_value1']     # Example column values

@@ -29,20 +29,25 @@ Usage of this module requires proper authentication and initialization of the
 MondayClient instance.
 """
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
 from monday.fields.column_fields import ColumnFields
 from monday.fields.item_fields import ItemFields
+from monday.protocols import MondayClientProtocol
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
-from monday.services.utils.query_builder import build_graphql_query
+from monday.services.utils.query_builder import (
+    build_graphql_query,
+    build_operation_with_variables,
+    format_columns_mapping,
+)
 from monday.types.column import ColumnFilter, ColumnValue
 from monday.types.column_inputs import ColumnInput
 from monday.types.item import Item
 
 if TYPE_CHECKING:
-    from monday.client import MondayClient
     from monday.services.boards import Boards
 
 
@@ -53,12 +58,12 @@ class Items:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient', boards: 'Boards'):
+    def __init__(self, client: MondayClientProtocol, boards: 'Boards'):
         """
         Initialize an Items instance with specified parameters.
 
         Args:
-            client: The MondayClient instance to use for API requests.
+            client: A client implementing MondayClientProtocol for API requests.
             boards: The Boards instance to use for board-related operations.
 
         """
@@ -99,9 +104,9 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> items = await monday_client.items.query(
-                ...     item_ids=[123456789, 012345678],
+                ...     item_ids=[123456789, 123456780],
                 ...     fields='id name state updates { text_body }',
                 ...     limit=50
                 ... )
@@ -166,7 +171,7 @@ class Items:
             column_values: Column values for the item. Can be a list of ColumnInput objects or a dictionary. When using ColumnInput objects, the column_id is extracted from each object. When using a dictionary, keys are column IDs and values are the column values.
             group_id: The ID of the group where the item will be created.
             create_labels_if_missing: Creates status/dropdown labels if they are missing.
-            position_relative_method: Specify whether you want to create the new item above or below the item given to relative_to.
+            position_relative_method: Specify whether you want to create the new item above or below the item given to ``relative_to``. Accepts ``'before_at'`` or ``'after_at'`` to align with API enums.
             relative_to: The ID of the item you want to create the new one in relation to.
             fields: Fields to return from the created item.
 
@@ -184,7 +189,7 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> from monday.types.column_inputs import StatusInput, TextInput, DateInput
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
 
                 # Using ColumnInput objects (recommended for type safety)
                 >>> item = await monday_client.items.create(
@@ -223,25 +228,51 @@ class Items:
         """
         fields = Fields(fields)
 
-        # Process column values to handle value classes
-        processed_column_values = None
-        if column_values:
-            processed_column_values = Items._process_column_values(column_values)
-
-        args = {
-            'board_id': board_id,
-            'item_name': item_name,
-            'column_values': processed_column_values,
-            'group_id': group_id,
-            'create_labels_if_missing': create_labels_if_missing,
-            'position_relative_method': position_relative_method,
-            'relative_to': relative_to,
-            'fields': fields,
+        variable_types: dict[str, str] = {
+            'boardId': 'ID!',
+            'name': 'String!',
+        }
+        variables: dict[str, Any] = {
+            'boardId': str(board_id),
+            'name': item_name,
+        }
+        arg_var_mapping: dict[str, str] = {
+            'board_id': 'boardId',
+            'item_name': 'name',
         }
 
-        query_string = build_graphql_query('create_item', 'mutation', args)
+        if group_id is not None:
+            variable_types['groupId'] = 'String'
+            variables['groupId'] = group_id
+            arg_var_mapping['group_id'] = 'groupId'
 
-        query_result = await self.client.post_request(query_string)
+        if position_relative_method is not None:
+            variable_types['relativeMethod'] = 'PositionRelative'
+            variables['relativeMethod'] = position_relative_method
+            arg_var_mapping['position_relative_method'] = 'relativeMethod'
+
+        if relative_to is not None:
+            variable_types['relativeTo'] = 'ID'
+            variables['relativeTo'] = str(relative_to)
+            arg_var_mapping['relative_to'] = 'relativeTo'
+
+        if column_values:
+            processed_column_values = Items._process_column_values(column_values)
+            variable_types['columnValues'] = 'JSON'
+            # monday.com expects JSON variables as JSON strings
+            variables['columnValues'] = json.dumps(processed_column_values)
+            arg_var_mapping['column_values'] = 'columnValues'
+
+        if create_labels_if_missing:
+            variable_types['createLabels'] = 'Boolean'
+            variables['createLabels'] = True
+            arg_var_mapping['create_labels_if_missing'] = 'createLabels'
+
+        operation = build_operation_with_variables(
+            'create_item', 'mutation', variable_types, arg_var_mapping, fields
+        )
+
+        query_result = await self.client.post_request(operation, variables)
 
         data = check_query_result(query_result)
 
@@ -279,7 +310,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> item = await monday_client.items.duplicate(
                 ...     item_id=123456789,
                 ...     board_id=987654321,
@@ -298,19 +329,29 @@ class Items:
         fields = Fields(fields)
 
         # Only query the ID first if the duplicated item name is being changed
-        # Other potential fields are added back in during the change column values query
         query_fields = 'id' if new_item_name else fields
 
-        args = {
-            'item_id': item_id,
-            'board_id': board_id,
-            'with_updates': with_updates,
-            'fields': query_fields,
+        variable_types = {
+            'itemId': 'ID!',
+            'boardId': 'ID!',
+            'withUpdates': 'Boolean',
+        }
+        variables_map: dict[str, Any] = {
+            'itemId': str(item_id),
+            'boardId': str(board_id),
+            'withUpdates': bool(with_updates),
+        }
+        arg_var_mapping = {
+            'item_id': 'itemId',
+            'board_id': 'boardId',
+            'with_updates': 'withUpdates',
         }
 
-        query_string = build_graphql_query('duplicate_item', 'mutation', args)
+        operation = build_operation_with_variables(
+            'duplicate_item', 'mutation', variable_types, arg_var_mapping, query_fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -320,7 +361,6 @@ class Items:
                 column_values={'name': new_item_name},
                 fields=fields,
             )
-            # Query the complete item after changing the name
             return (
                 await self.query(data['data']['duplicate_item']['id'], fields=fields)
             )[0]
@@ -350,7 +390,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> item = await monday_client.items.move_to_group(
                 ...     item_id=123456789,
                 ...     group_id='group',
@@ -368,11 +408,24 @@ class Items:
         """
         fields = Fields(fields)
 
-        args = {'item_id': item_id, 'group_id': group_id, 'fields': fields}
+        variable_types = {
+            'itemId': 'ID!',
+            'groupId': 'String!',
+        }
+        variables_map: dict[str, Any] = {
+            'itemId': str(item_id),
+            'groupId': group_id,
+        }
+        arg_var_mapping = {
+            'item_id': 'itemId',
+            'group_id': 'groupId',
+        }
 
-        query_string = build_graphql_query('move_item_to_group', 'mutation', args)
+        operation = build_operation_with_variables(
+            'move_item_to_group', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -383,8 +436,8 @@ class Items:
         item_id: int | str,
         board_id: int | str,
         group_id: str,
-        columns_mapping: list[dict[str, str]] | None = None,
-        subitems_columns_mapping: list[dict[str, str]] | None = None,
+        columns_mapping: list[dict[str, str]] | dict[str, str] | None = None,
+        subitems_columns_mapping: list[dict[str, str]] | dict[str, str] | None = None,
         fields: str | Fields = ItemFields.BASIC,
     ) -> Item:
         """
@@ -411,7 +464,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> item = await monday_client.items.move_to_board(
                 ...     item_id=123456789,
                 ...     board_id=987654321,
@@ -446,18 +499,69 @@ class Items:
         """
         fields = Fields(fields)
 
-        args = {
-            'item_id': item_id,
-            'board_id': board_id,
-            'group_id': group_id,
-            'columns_mapping': columns_mapping,
-            'subitems_columns_mapping': subitems_columns_mapping,
-            'fields': fields,
+        # Normalize mappings: accept dict or list[dict], convert list-of-dicts to a single dict
+        def _normalize_mapping(
+            mapping: list[dict[str, str]] | dict[str, str] | None,
+        ) -> dict[str, str] | None:
+            if mapping is None:
+                return None
+            if isinstance(mapping, dict):
+                return mapping
+            normalized: dict[str, str] = {}
+            for pair in mapping:
+                # Prefer explicit keys if present
+                if 'source' in pair and 'target' in pair:
+                    normalized[str(pair['source'])] = str(pair['target'])
+                    continue
+                # Support common synonyms 'from'/'to'
+                if 'from' in pair and 'to' in pair:
+                    normalized[str(pair['from'])] = str(pair['to'])
+                    continue
+                # Otherwise, take the first key/value of the dict
+                for k, v in pair.items():
+                    normalized[str(k)] = str(v)
+                    break
+            return normalized
+
+        normalized_columns_mapping = _normalize_mapping(columns_mapping)
+        normalized_subitems_mapping = _normalize_mapping(subitems_columns_mapping)
+
+        # Prepare variables and literals
+        variable_types = {
+            'itemId': 'ID!',
+            'boardId': 'ID!',
+            'groupId': 'ID!',
         }
+        variables_map: dict[str, Any] = {
+            'itemId': str(item_id),
+            'boardId': str(board_id),
+            'groupId': str(group_id),
+        }
+        arg_var_mapping = {
+            'item_id': 'itemId',
+            'board_id': 'boardId',
+            'group_id': 'groupId',
+        }
+        arg_literals: dict[str, str] = {}
+        if normalized_columns_mapping is not None:
+            arg_literals['columns_mapping'] = format_columns_mapping(
+                normalized_columns_mapping
+            )
+        if normalized_subitems_mapping is not None:
+            arg_literals['subitems_columns_mapping'] = format_columns_mapping(
+                normalized_subitems_mapping
+            )
 
-        query_string = build_graphql_query('move_item_to_board', 'mutation', args)
+        operation = build_operation_with_variables(
+            'move_item_to_board',
+            'mutation',
+            variable_types,
+            arg_var_mapping,
+            fields,
+            arg_literals=arg_literals or None,
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -486,7 +590,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> item = await monday_client.items.archive(
                 ...     item_id=123456789,
                 ...     fields='id state'
@@ -499,11 +603,15 @@ class Items:
         """
         fields = Fields(fields)
 
-        args = {'item_id': item_id, 'fields': fields}
+        variable_types = {'itemId': 'ID!'}
+        variables_map = {'itemId': str(item_id)}
+        arg_var_mapping = {'item_id': 'itemId'}
 
-        query_string = build_graphql_query('archive_item', 'mutation', args)
+        operation = build_operation_with_variables(
+            'archive_item', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -532,7 +640,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> item = await monday_client.items.delete(
                 ...     item_id=123456789,
                 ...     fields='id state'
@@ -545,11 +653,15 @@ class Items:
         """
         fields = Fields(fields)
 
-        args = {'item_id': item_id, 'fields': fields}
+        variable_types = {'itemId': 'ID!'}
+        variables_map = {'itemId': str(item_id)}
+        arg_var_mapping = {'item_id': 'itemId'}
 
-        query_string = build_graphql_query('delete_item', 'mutation', args)
+        operation = build_operation_with_variables(
+            'delete_item', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -578,7 +690,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> item = await monday_client.items.clear_updates(
                 ...     item_id=123456789,
                 ...     fields='id updates { text_body }'
@@ -591,11 +703,15 @@ class Items:
         """
         fields = Fields(fields)
 
-        args = {'item_id': item_id, 'fields': fields}
+        variable_types = {'itemId': 'ID!'}
+        variables_map = {'itemId': str(item_id)}
+        arg_var_mapping = {'item_id': 'itemId'}
 
-        query_string = build_graphql_query('clear_item_updates', 'mutation', args)
+        operation = build_operation_with_variables(
+            'clear_item_updates', 'mutation', variable_types, arg_var_mapping, fields
+        )
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -628,7 +744,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> column_values = await monday_client.items.get_column_values(
                 ...     item_id=123456789,
                 ...     column_ids=['status', 'text'],
@@ -688,7 +804,7 @@ class Items:
             fields: Fields to return from the updated columns.
 
         Returns:
-            ColumnValue dataclass instance containing info for the updated columns.
+            ColumnValue dataclass instance for the updated columns payload returned by the API.
 
         Raises:
             ComplexityLimitExceeded: When the API request exceeds monday.com's complexity limits.
@@ -701,10 +817,10 @@ class Items:
 
                 >>> from monday import MondayClient
                 >>> from monday.types.column_inputs import DateInput, StatusInput, TextInput
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
 
                 # Using ColumnInput objects (recommended for type safety)
-                >>> result = await monday_client.items.change_column_values(
+                >>> col_val = await monday_client.items.change_column_values(
                 ...     item_id=123456789,
                 ...     column_values=[
                 ...         StatusInput('status_column_id', 'Working on it'),
@@ -715,7 +831,7 @@ class Items:
                 ... )
 
                 # Using dictionary format (equivalent functionality)
-                >>> result = await monday_client.items.change_column_values(
+                >>> col_val = await monday_client.items.change_column_values(
                 ...     item_id=123456789,
                 ...     column_values={
                 ...         'status_column_id': {'label': 'Working on it'},
@@ -725,12 +841,8 @@ class Items:
                 ...     },
                 ...     fields='id column_values { id text }'
                 ... )
-                >>> result.id
+                >>> col_val.id
                 "123456789"
-                >>> result.column_values[0].id
-                "status_column_id"
-                >>> result.column_values[0].text
-                "Working on it"
 
         Note:
             Each column has a certain type, and different column types expect a different set of parameters to update their values.
@@ -759,21 +871,40 @@ class Items:
         # Process column values to handle value classes
         processed_column_values = Items._process_column_values(column_values)
 
-        args = {
-            'item_id': item_id,
-            'board_id': board_id,
-            'column_values': processed_column_values,
-            'create_labels_if_missing': create_labels_if_missing,
-            'fields': fields,
+        # Build variable-based operation
+        variable_types = {
+            'itemId': 'ID!',
+            'boardId': 'ID!',
+            'columnValues': 'JSON!',
+            'createLabels': 'Boolean',
+        }
+        variables_map: dict[str, Any] = {
+            'itemId': str(item_id),
+            'boardId': str(board_id),
+            # monday.com expects JSON variables as JSON strings
+            'columnValues': json.dumps(processed_column_values),
+        }
+        if create_labels_if_missing:
+            variables_map['createLabels'] = True
+
+        arg_var_mapping = {
+            'item_id': 'itemId',
+            'board_id': 'boardId',
+            'column_values': 'columnValues',
+            'create_labels_if_missing': 'createLabels',
         }
 
-        query_string = build_graphql_query(
-            'change_multiple_column_values', 'mutation', args
+        operation = build_operation_with_variables(
+            'change_multiple_column_values',
+            'mutation',
+            variable_types,
+            arg_var_mapping,
+            fields,
         )
 
-        self._logger.debug('query: %s', query_string)
+        self._logger.debug('query: %s', operation)
 
-        query_result = await self.client.post_request(query_string)
+        query_result = await self.client.post_request(operation, variables_map)
 
         data = check_query_result(query_result)
 
@@ -807,7 +938,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> await monday_client.items.get_name(item_id=123456789)
                 "Item 1"
 
@@ -844,7 +975,7 @@ class Items:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> await monday_client.items.get_id(
                 ...     board_id=987654321,
                 ...     item_name='Item 1'

@@ -42,6 +42,6 @@ class ColumnFields(BaseFields):
 
     - id: Column's ID
     - text: Column's text
-    - title: Colun's title
+    - title: Column's title
     - value: Column's raw value
     """

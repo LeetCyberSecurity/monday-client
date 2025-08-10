@@ -60,6 +60,7 @@ This is the official documentation for the `monday-client <https://github.com/Le
    :caption: Usage
 
    usage
+   configuration
 
 .. toctree::
    :maxdepth: 1

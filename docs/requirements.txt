@@ -1,5 +1,7 @@
 aiohttp
+aiohttp-socks
 myst-parser
+pyyaml
 sphinx
 sphinx-autodoc-typehints
 sphinx-rtd-theme

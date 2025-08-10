@@ -30,8 +30,6 @@ To skip these tests (default):
     python -m pytest tests/ -m "not integration"
 """
 
-# ruff: noqa: BLE001, S101
-
 import uuid
 from typing import Any
 
@@ -46,7 +44,7 @@ def client(monday_config: dict[str, Any]) -> MondayClient:
     """Create a MondayClient instance with API key from config file or environment."""
     api_key = monday_config.get('api_key')
     if api_key:
-        return MondayClient(api_key)
+        return MondayClient(api_key=api_key)
     pytest.skip('MONDAY_API_KEY not found in config file or environment variable')
 
 
@@ -66,6 +64,24 @@ def item_id(monday_config: dict[str, Any]) -> int:
     if item_id_value:
         return int(item_id_value)
     pytest.skip('MONDAY_ITEM_ID not found in config file or environment variable')
+
+
+@pytest.fixture(scope='module')
+def column_id(monday_config: dict[str, Any]) -> str:
+    """Get test column ID from config file or environment or skip."""
+    value = monday_config.get('column_id')
+    if value:
+        return str(value)
+    pytest.skip('MONDAY_COLUMN_ID not found in config file or environment variable')
+
+
+@pytest.fixture(scope='module')
+def group_id(monday_config: dict[str, Any]) -> str:
+    """Get test group ID from config file or environment or skip."""
+    value = monday_config.get('group_id')
+    if value:
+        return str(value)
+    pytest.skip('MONDAY_GROUP_ID not found in config file or environment variable')
 
 
 @pytest.mark.integration
@@ -94,6 +110,26 @@ class TestItemIntegrations:
             pytest.skip(f'Cannot access configured item: {e}')
 
     @pytest.mark.asyncio
+    async def test_items_query_with_flags(
+        self,
+        client: MondayClient,
+        item_id: int,
+    ):
+        """Test querying items with optional flags toggled."""
+        try:
+            items = await client.items.query(
+                item_ids=item_id,
+                limit=1,
+                fields='id name',
+                exclude_nonactive=True,
+                newest_first=True,
+            )
+
+            assert isinstance(items, list)
+        except Exception as e:
+            pytest.skip(f'Cannot access configured item with flags: {e}')
+
+    @pytest.mark.asyncio
     async def test_items_get_column_values(
         self,
         client: MondayClient,
@@ -112,6 +148,27 @@ class TestItemIntegrations:
                 assert hasattr(column_value, 'value')
         except Exception as e:
             pytest.skip(f'Cannot access item column values: {e}')
+
+    @pytest.mark.asyncio
+    async def test_items_get_column_values_specific_ids(
+        self,
+        client: MondayClient,
+        item_id: int,
+        column_id: str,
+    ):
+        """Test getting specific column values for an item by ID filter."""
+        try:
+            column_values = await client.items.get_column_values(
+                item_id=item_id, column_ids=[column_id], fields='id text'
+            )
+
+            assert isinstance(column_values, list)
+            # If returned, ensure only requested IDs appear
+            if column_values:
+                ids = {cv.id for cv in column_values}
+                assert ids == {column_id}
+        except Exception as e:
+            pytest.skip(f'Cannot access specific item column values: {e}')
 
     @pytest.mark.asyncio
     async def test_items_get_name(
@@ -254,6 +311,42 @@ class TestItemMutations:
             pytest.skip(f'Cannot perform item duplication: {e}')
 
     @pytest.mark.asyncio
+    async def test_duplicate_item_with_updates_flag(
+        self,
+        client: MondayClient,
+        board_id: int,
+    ):
+        """Test duplicating an item with with_updates flag set."""
+        unique_id = str(uuid.uuid4())[:8]
+        item_name = f'Duplicate With Updates Test Item {unique_id}'
+
+        try:
+            # Create the original item
+            original_item = await client.items.create(
+                board_id=board_id, item_name=item_name, fields='id name'
+            )
+
+            original_id = original_item.id
+
+            # Duplicate the item with updates flag (no renaming to cover alt code path)
+            duplicated_item = await client.items.duplicate(
+                item_id=original_id,
+                board_id=board_id,
+                with_updates=True,
+                fields='id name',
+            )
+
+            assert duplicated_item is not None
+            assert duplicated_item.id != original_id
+
+            # Clean up both items
+            await client.items.delete(item_id=original_id)
+            await client.items.delete(item_id=duplicated_item.id)
+
+        except Exception as e:
+            pytest.skip(f'Cannot perform duplicate item with updates flag: {e}')
+
+    @pytest.mark.asyncio
     async def test_archive_item(
         self,
         client: MondayClient,
@@ -280,6 +373,50 @@ class TestItemMutations:
 
         except Exception as e:
             pytest.skip(f'Cannot perform item archiving: {e}')
+
+    @pytest.mark.asyncio
+    async def test_create_with_group_and_relative_position(
+        self,
+        client: MondayClient,
+        board_id: int,
+        group_id: str,
+    ):
+        """Test creating items with group and relative positioning parameters."""
+        unique_id = str(uuid.uuid4())[:8]
+        base_item_name = f'Base Item {unique_id}'
+        rel_item_name = f'Rel Positioned Item {unique_id}'
+
+        try:
+            base_item = await client.items.create(
+                board_id=board_id,
+                item_name=base_item_name,
+                group_id=group_id,
+                fields='id name group { id }',
+            )
+
+            assert base_item is not None
+            assert base_item.group
+            assert base_item.group.id == group_id
+
+            rel_item = await client.items.create(
+                board_id=board_id,
+                item_name=rel_item_name,
+                group_id=group_id,
+                position_relative_method='after_at',
+                relative_to=int(base_item.id),
+                fields='id name group { id }',
+            )
+
+            assert rel_item is not None
+            assert rel_item.group
+            assert rel_item.group.id == group_id
+
+            # Clean up
+            await client.items.delete(item_id=base_item.id)
+            await client.items.delete(item_id=rel_item.id)
+
+        except Exception as e:
+            pytest.skip(f'Cannot create items with relative position: {e}')
 
     @pytest.mark.asyncio
     async def test_move_to_group(
@@ -489,6 +626,40 @@ class TestItemMutations:
 
         except Exception as e:
             pytest.skip(f'Cannot perform change column values: {e}')
+
+    @pytest.mark.asyncio
+    async def test_change_column_values_with_create_labels(
+        self,
+        client: MondayClient,
+        board_id: int,
+    ):
+        """Test changing item column values with create_labels_if_missing flag."""
+        unique_id = str(uuid.uuid4())[:8]
+        item_name = f'Change Column Values With Labels {unique_id}'
+
+        try:
+            created_item = await client.items.create(
+                board_id=board_id, item_name=item_name, fields='id name'
+            )
+
+            created_item_id = created_item.id
+
+            updated_column_value = await client.items.change_column_values(
+                item_id=created_item_id,
+                column_values={'name': f'Updated {item_name}'},
+                create_labels_if_missing=True,
+                fields='id column_values { id text }',
+            )
+
+            assert updated_column_value is not None
+
+            # Clean up
+            await client.items.delete(item_id=created_item_id)
+
+        except Exception as e:
+            pytest.skip(
+                f'Cannot perform change column values with create labels flag: {e}'
+            )
 
     @pytest.mark.asyncio
     async def test_create_with_column_values(

@@ -30,16 +30,14 @@ MondayClient instance.
 """
 
 import logging
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from monday.fields.user_fields import UserFields
+from monday.protocols import MondayClientProtocol
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
 from monday.services.utils.query_builder import build_graphql_query
 from monday.types.user import User
-
-if TYPE_CHECKING:
-    from monday import MondayClient
 
 
 class Users:
@@ -49,12 +47,12 @@ class Users:
 
     _logger: logging.Logger = logging.getLogger(__name__)
 
-    def __init__(self, client: 'MondayClient'):
+    def __init__(self, client: MondayClientProtocol):
         """
         Initialize a Users instance with specified parameters.
 
         Args:
-            client: The MondayClient instance to use for API requests.
+            client: A client implementing MondayClientProtocol for API requests.
 
         """
         self.client = client
@@ -101,7 +99,7 @@ class Users:
             .. code-block:: python
 
                 >>> from monday import MondayClient
-                >>> monday_client = MondayClient('your_api_key')
+                >>> monday_client = MondayClient(api_key='your_api_key')
                 >>> users = await monday_client.users.query(
                 ...     emails=[
                 ...         'user1@domain.com',

@@ -115,6 +115,11 @@ Column Types
    :members:
    :show-inheritance:
 
+.. py:data:: monday.types.column.ColumnType
+   :type: Literal
+
+   Literal of supported column type names used throughout the API.
+
 Group Types
 """""""""""
 

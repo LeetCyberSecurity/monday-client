@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-# ruff: noqa: PLR2004, S101, SLF001
-
 """Comprehensive tests for MondayClient methods"""
 
 from unittest.mock import AsyncMock, patch
@@ -31,7 +29,7 @@ from monday.exceptions import MondayAPIError
 @pytest.fixture(scope='module')
 def client_instance():
     """Create mock MondayClient instance"""
-    client = MondayClient('test_api_key')
+    client = MondayClient(api_key='test_api_key')
     client.max_retries = 2
     client._rate_limit_seconds = 1
     return client
@@ -41,7 +39,7 @@ def client_instance():
 @pytest.mark.unit
 async def test_init():
     """Test MondayClient initialization and default values."""
-    client = MondayClient('test_api_key')
+    client = MondayClient(api_key='test_api_key')
     assert client.url == 'https://api.monday.com/v2'
     assert client.headers == {
         'Content-Type': 'application/json',
@@ -323,7 +321,7 @@ async def test_service_initialization(client_instance):
 async def test_custom_headers():
     """Test initialization with custom headers."""
     custom_headers = {'Custom-Header': 'test_value'}
-    client = MondayClient('test_api_key', headers=custom_headers)
+    client = MondayClient(api_key='test_api_key', headers=custom_headers)
 
     assert client.headers['Custom-Header'] == 'test_value'
     assert client.headers['Authorization'] == 'test_api_key'
@@ -334,7 +332,7 @@ async def test_custom_headers():
 @pytest.mark.unit
 async def test_invalid_max_retries():
     """Test initialization with invalid max_retries value."""
-    client = MondayClient('test_api_key', max_retries=4)
+    client = MondayClient(api_key='test_api_key', max_retries=4)
     assert isinstance(client.max_retries, int)
     assert client.max_retries == 4
 

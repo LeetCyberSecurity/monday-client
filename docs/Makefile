@@ -7,6 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = source
 BUILDDIR      = build
+DOC8FLAGS     ?= -e D001
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -18,3 +19,8 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: lint
+lint:
+	@echo "Running doc8 with flags: $(DOC8FLAGS)"
+	@doc8 $(DOC8FLAGS) $(SOURCEDIR) | cat || true

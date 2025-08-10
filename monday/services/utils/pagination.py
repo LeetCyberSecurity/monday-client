@@ -25,13 +25,11 @@ pagination-related data from API responses.
 import json
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from monday.exceptions import PaginationError
+from monday.protocols import MondayClientProtocol
 from monday.services.utils import check_query_result
-
-if TYPE_CHECKING:
-    from monday import MondayClient
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -240,7 +238,7 @@ def _process_general_data(
 
 
 async def paginated_item_request(
-    client: 'MondayClient', query: str, limit: int = 25, cursor: str | None = None
+    client: MondayClientProtocol, query: str, limit: int = 25, cursor: str | None = None
 ) -> PaginatedResult:
     """
     Executes a paginated request to retrieve items from monday.com.

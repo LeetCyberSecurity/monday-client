@@ -835,9 +835,9 @@ Example:
 
         # Type-safe approach using input classes
         column_values: dict[str, ColumnInput] = {
-            'date_column_id': DateInput('2024-01-15'),
-            'status_column_id': StatusInput('Working on it'),
-            'text_column_id': TextInput('Some text')
+            'date_column_id': DateInput('date_column_id', '2024-01-15'),
+            'status_column_id': StatusInput('status_column_id', 'Working on it'),
+            'text_column_id': TextInput('text_column_id', 'Some text')
         }
 
         # Or using simple strings/dicts

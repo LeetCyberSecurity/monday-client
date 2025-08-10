@@ -33,10 +33,15 @@ pip install monday-client
 ```python
 import asyncio
 
-from monday import MondayClient
+from monday import MondayClient, Config
 
 async def main():
-    client = MondayClient(api_key='your_api_key_here')
+    # Recommended: Using configuration object
+    config = Config(api_key='your_api_key_here')
+    client = MondayClient(config)
+
+    # Alternative: Using individual parameters  
+    # client = MondayClient(api_key='your_api_key_here')
 
     # Query boards and items
     boards = await client.boards.query(board_ids=[987654321, 876543210])
@@ -52,16 +57,48 @@ async def main():
 asyncio.run(main())
 ```
 
+## Configuration
+
+The monday-client supports flexible configuration through the `Config` class and various configuration providers:
+
+### Environment Variables
+
+```python
+import os
+from monday import MondayClient, EnvConfig
+
+# Set environment variables
+os.environ['MONDAY_API_KEY'] = 'your_api_key_here'
+os.environ['MONDAY_TIMEOUT'] = '60'
+
+# Load from environment
+env_config = EnvConfig()
+client = MondayClient(env_config.get_config())
+```
+
+### Configuration Files
+
+```python
+from monday import MondayClient, JsonConfig
+
+# Load from JSON file
+json_config = JsonConfig('config.json')
+client = MondayClient(json_config.get_config())
+```
+
+For comprehensive configuration options, including proxy settings, multi-source configurations, and advanced features, see the [Configuration Documentation](https://monday-client.readthedocs.io/en/latest/configuration.html).
+
 ### Use predefined field sets for more data
 
 ```python
 import asyncio
 
-from monday import MondayClient
+from monday import MondayClient, Config
 from monday.fields import BoardFields, ItemFields
 
 async def main():
-    client = MondayClient(api_key='your_api_key_here')
+    config = Config(api_key='your_api_key_here')
+    client = MondayClient(config)
 
     # Get detailed board information
     detailed_boards = await client.boards.query(
@@ -99,10 +136,11 @@ custom_items = await client.items.query(
 ```python
 import asyncio
 
-from monday import MondayClient, QueryParams, QueryRule
+from monday import MondayClient, Config, QueryParams, QueryRule
 
 async def main():
-    client = MondayClient(api_key='your_api_key_here')
+    config = Config(api_key='your_api_key_here')
+    client = MondayClient(config)
 
     # Filter items with status "Done" or "In Progress"
     query_params = QueryParams(
@@ -136,11 +174,12 @@ asyncio.run(main())
 ```python
 import asyncio
 
-from monday import MondayClient
+from monday import MondayClient, Config
 from monday.types import DateInput, StatusInput, TextInput
 
 async def main():
-    client = MondayClient(api_key='your_api_key_here')
+    config = Config(api_key='your_api_key_here')
+    client = MondayClient(config)
 
     # Create a new item
     new_item = await client.items.create(
@@ -181,25 +220,66 @@ Custom exceptions are defined for handling specific error cases:
 
 ### Logging
 
-The client uses a logger named `monday` for all logging operations. By default, logging is suppressed. To enable logging:
+The client uses a logger named `monday` for all logging operations. By default, logging is suppressed to follow Python library best practices.
+
+#### Quick Setup
+
+For simple logging during development or testing:
 
 ```python
-import logging
-from monday import MondayClient
+from monday import MondayClient, enable_logging
 
-# Remove the default NullHandler and add a real handler
-monday_logger = logging.getLogger('monday')
-for handler in monday_logger.handlers[:]:
-    if isinstance(handler, logging.NullHandler):
-        monday_logger.removeHandler(handler)
+# Enable logging with default settings
+enable_logging()
 
-if not monday_logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    monday_logger.addHandler(handler)
+client = MondayClient(api_key='your_api_key')
+# Now you'll see Monday client logs
+```
 
-client = MondayClient('your_api_key')
+#### Advanced Configuration
+
+For production applications, integrate with your existing logging configuration:
+
+```python
+import logging.config
+from monday import configure_for_external_logging
+
+# Prepare Monday client for external configuration
+configure_for_external_logging()
+
+# Add Monday client to your logging configuration
+LOGGING_CONFIG = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'standard'},
+    },
+    'loggers': {
+        'myapp': {'level': 'DEBUG', 'handlers': ['console']},
+        'monday': {'level': 'INFO', 'handlers': ['console']},  # Add this line
+    },
+}
+
+logging.config.dictConfig(LOGGING_CONFIG)
+client = MondayClient(api_key='your_api_key')
+```
+
+#### Other Options
+
+```python
+from monday import enable_logging, disable_logging, set_log_level
+
+# Enable with specific level and format
+enable_logging(level='DEBUG', format_string='%(name)s: %(message)s')
+
+# Change level at runtime
+set_log_level('WARNING')
+
+# Disable when done
+disable_logging()
 ```
 
 ## Testing

@@ -52,6 +52,17 @@ dev = [
     "rstcheck[sphinx,toml]",
     "ruff",
 ]
+proxy = [
+    "aiohttp-socks",
+]
+httpx = [
+    "httpx[socks]",
+    "httpx-ntlm",
+    "pyspnego",
+]
+yaml = [
+    "pyyaml",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/LeetCyberSecurity/monday-client"
@@ -85,7 +96,7 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.basedpyright]
 include = ["monday", "tests"]
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 typeCheckingMode = "standard"
 
 [tool.esbonio.sphinx]
@@ -96,6 +107,7 @@ buildCommand = ["sphinx-build", "-M", "html", "docs/source", "docs/build"]
 ignore_directives = [
     "autoattribute",
     "autoclass",
+    "autofunction",
     "automethod",
     "automodule",
 ]
@@ -155,4 +167,20 @@ known-third-party = [
     "aiohttp",
     "pytest",
     "yaml",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = [
+    "F841",
+    "INP001",
+    "PLR0912",
+    "PLR0915",
+    "T201",
+]
+"tests/*" = [
+    "BLE001",
+    "S101",
+    "PLC0415",
+    "PLR2004",
+    "SLF001",
 ]

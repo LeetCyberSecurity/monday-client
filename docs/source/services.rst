@@ -39,8 +39,6 @@ Services
 
 Boards
 ~~~~~~
-
-
 .. automethod:: monday.services.boards.Boards.query
 .. automethod:: monday.services.boards.Boards.get_items
 .. automethod:: monday.services.boards.Boards.get_items_by_column_values
@@ -64,6 +62,10 @@ Groups
 .. automethod:: monday.services.groups.Groups.delete
 .. automethod:: monday.services.groups.Groups.get_items_by_name
 
+.. note::
+
+   ``Groups.create(position_relative_method)`` accepts ``'before'`` or ``'after'`` which map internally to the API enums ``before_at``/``after_at``.
+
 .. _services_section_items:
 
 Items
@@ -80,6 +82,10 @@ Items
 .. automethod:: monday.services.items.Items.change_column_values
 .. automethod:: monday.services.items.Items.get_name
 .. automethod:: monday.services.items.Items.get_id
+
+.. note::
+
+   ``Items.create(position_relative_method)`` accepts ``'before_at'`` or ``'after_at'`` to align with the underlying API enums.
 
 .. _services_section_subitems:
 

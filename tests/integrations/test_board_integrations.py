@@ -30,8 +30,6 @@ To skip these tests (default):
     python -m pytest tests/ -m "not integration"
 """
 
-# ruff: noqa: BLE001, S101
-
 import uuid
 
 import pytest
@@ -52,7 +50,7 @@ def client(monday_config):
     """Create a MondayClient instance with API key from config file or environment."""
     api_key = monday_config.get('api_key')
     if api_key:
-        return MondayClient(api_key)
+        return MondayClient(api_key=api_key)
     pytest.skip('MONDAY_API_KEY not found in config file or environment variable')
 
 
@@ -81,6 +79,42 @@ def column_values(monday_config):
     if column_values_value:
         return column_values_value
     pytest.skip('MONDAY_COLUMN_VALUES not found in config file or environment variable')
+
+
+@pytest.fixture(scope='module')
+def item_id(monday_config):
+    """Get test item ID from config file or environment or skip."""
+    value = monday_config.get('item_id')
+    if value:
+        return int(value)
+    pytest.skip('MONDAY_ITEM_ID not found in config file or environment variable')
+
+
+@pytest.fixture(scope='module')
+def group_id(monday_config):
+    """Get test group ID from config file or environment or skip."""
+    value = monday_config.get('group_id')
+    if value:
+        return str(value)
+    pytest.skip('MONDAY_GROUP_ID not found in config file or environment variable')
+
+
+@pytest.fixture(scope='module')
+def workspace_id(monday_config):
+    """Get test workspace ID from config file or environment or skip."""
+    value = monday_config.get('workspace_id')
+    if value:
+        return int(value)
+    pytest.skip('MONDAY_WORKSPACE_ID not found in config file or environment variable')
+
+
+@pytest.fixture(scope='module')
+def user_id(monday_config):
+    """Get test user ID from config file or environment or skip."""
+    value = monday_config.get('user_id')
+    if value:
+        return int(value)
+    pytest.skip('MONDAY_USER_ID not found in config file or environment variable')
 
 
 @pytest.mark.integration
@@ -162,6 +196,31 @@ class TestBoardIntegrations:
             pytest.fail(str(e))
 
     @pytest.mark.asyncio
+    async def test_boards_query_with_parameters(
+        self,
+        client: MondayClient,
+        board_id: int,
+        workspace_id: int,
+    ):
+        """Test querying boards with non-default parameters and toggled pagination flags."""
+        try:
+            boards = await client.boards.query(
+                fields='id name',
+                board_ids=board_id,
+                board_kind='all',
+                order_by='used',
+                boards_limit=1,
+                page=1,
+                state='all',
+                workspace_ids=workspace_id,
+                paginate_items=False,
+                paginate_boards=False,
+            )
+            assert isinstance(boards, list)
+        except Exception as e:
+            pytest.skip(f'Cannot query boards with parameters: {e}')
+
+    @pytest.mark.asyncio
     async def test_boards_get_items(
         self,
         client: MondayClient,
@@ -189,6 +248,33 @@ class TestBoardIntegrations:
                     assert item.name
         except Exception as e:
             pytest.skip(f'Cannot access board items: {e}')
+
+    @pytest.mark.asyncio
+    async def test_boards_get_items_with_group_and_query_params(
+        self,
+        client: MondayClient,
+        board_id: int,
+        item_id: int,
+    ):
+        """Test getting items filtered by group and query_params (ids)."""
+        try:
+            # Discover a valid group on the board at runtime
+            groups = await client.groups.query(board_ids=board_id, fields='id title')
+            if not groups or not groups[0].groups:
+                pytest.skip('No groups available on the board')
+            discovered_group_id = groups[0].groups[0].id
+
+            items = await client.boards.get_items(
+                board_ids=board_id,
+                query_params={'ids': [str(item_id)]},
+                limit=1,
+                group_id=discovered_group_id,
+                fields='id name',
+                paginate_items=False,
+            )
+            assert isinstance(items, list)
+        except Exception as e:
+            pytest.skip(f'Cannot access board items with group and query params: {e}')
 
     @pytest.mark.asyncio
     async def test_boards_get_items_by_column_values(
@@ -397,6 +483,34 @@ class TestBoardMutations:
             pytest.skip(f'Cannot perform duplicate board: {e}')
 
     @pytest.mark.asyncio
+    async def test_duplicate_board_keep_subscribers(
+        self,
+        client: MondayClient,
+    ):
+        """Test duplicating a board keeping subscribers flag set."""
+        unique_id = str(uuid.uuid4())[:8]
+        board_name = f'Duplicate Keep Subs Test Board {unique_id}'
+        try:
+            created_board = await client.boards.create(
+                name=board_name, board_kind='public', fields='id name state'
+            )
+            created_board_id = created_board.id
+
+            duplicated_board = await client.boards.duplicate(
+                board_id=created_board_id,
+                duplicate_type='with_structure',
+                keep_subscribers=True,
+                fields='id name state',
+            )
+            assert duplicated_board is not None
+
+            # Cleanup
+            await client.boards.delete(board_id=duplicated_board.id)
+            await client.boards.delete(board_id=created_board_id)
+        except Exception as e:
+            pytest.skip(f'Cannot perform duplicate board keep subscribers: {e}')
+
+    @pytest.mark.asyncio
     async def test_create_columns(
         self,
         client: MondayClient,
@@ -447,9 +561,9 @@ class TestBoardMutations:
             # Create dropdown column with dropdown defaults
             dropdown_defaults = DropdownDefaults(
                 [
-                    DropdownLabel('Low Priority', 1),
-                    DropdownLabel('Medium Priority', 2),
-                    DropdownLabel('High Priority', 3),
+                    DropdownLabel('Low Priority', 0),
+                    DropdownLabel('Medium Priority', 1),
+                    DropdownLabel('High Priority', 2),
                 ]
             )
 
@@ -476,6 +590,41 @@ class TestBoardMutations:
 
         except Exception as e:
             pytest.skip(f'Cannot perform create columns: {e}')
+
+    @pytest.mark.asyncio
+    async def test_create_column_after_another(
+        self,
+        client: MondayClient,
+    ):
+        """Test creating a column positioned after an existing column."""
+        unique_id = str(uuid.uuid4())[:8]
+        board_name = f'After Column Test Board {unique_id}'
+        try:
+            created_board = await client.boards.create(
+                name=board_name, board_kind='public', fields='id name'
+            )
+            created_board_id = created_board.id
+
+            # First create an anchor column on the new board
+            anchor_column = await client.boards.create_column(
+                board_id=created_board_id,
+                column_type='status',
+                title='Anchor',
+                fields='id title type',
+            )
+
+            text_column = await client.boards.create_column(
+                board_id=created_board_id,
+                column_type='text',
+                title='Notes',
+                after_column_id=anchor_column.id,
+                fields='id title type',
+            )
+            assert text_column is not None
+
+            await client.boards.delete(board_id=created_board_id)
+        except Exception as e:
+            pytest.skip(f'Cannot perform create column after another: {e}')
 
     @pytest.mark.asyncio
     async def test_update_board(
@@ -542,6 +691,31 @@ class TestBoardMutations:
 
         except Exception as e:
             pytest.skip(f'Cannot perform update board: {e}')
+
+    @pytest.mark.asyncio
+    async def test_create_board_with_additional_parameters(
+        self,
+        client: MondayClient,
+        workspace_id: int,
+        user_id: int,
+    ):
+        """Test creating a board with description, owners and subscribers in a workspace."""
+        unique_id = str(uuid.uuid4())[:8]
+        board_name = f'Create With Params {unique_id}'
+        try:
+            created_board = await client.boards.create(
+                name=board_name,
+                board_kind='public',
+                owner_ids=[user_id],
+                subscriber_ids=[user_id],
+                description='Integration created board',
+                workspace_id=workspace_id,
+                fields='id name state description',
+            )
+            assert created_board is not None
+            await client.boards.delete(board_id=created_board.id)
+        except Exception as e:
+            pytest.skip(f'Cannot perform create board with additional parameters: {e}')
 
     @pytest.mark.asyncio
     async def test_archive_board(
