@@ -165,7 +165,11 @@ inline-quotes = "single"
 known-first-party = ["monday"]
 known-third-party = [
     "aiohttp",
+    "aiohttp_socks",
+    "httpx",
+    "httpx_ntlm",
     "pytest",
+    "spnego",
     "yaml",
 ]
 

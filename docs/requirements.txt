@@ -1,6 +1,13 @@
 aiohttp
 aiohttp-socks
+httpx[socks]
+httpx-ntlm
 myst-parser
+pyspnego
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
 pyyaml
 sphinx
 sphinx-autodoc-typehints
