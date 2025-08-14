@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
 
 from monday.types.country_codes import get_country_name, is_valid_country_code
@@ -845,4 +845,37 @@ Example:
             'text_column_id': 'Simple text',
             'status_column_id': {'label': 'Done'}
         }
+"""
+
+
+# Protocol-based structural typing for column input objects (pythonic, flexible)
+@runtime_checkable
+class HasToDict(Protocol):
+    """Structural protocol for column input objects exposing ``to_dict()``."""
+
+    column_id: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable mapping for the monday.com payload."""
+        ...
+
+
+@runtime_checkable
+class HasToStr(Protocol):
+    """Structural protocol for column input objects exposing ``to_str()``."""
+
+    column_id: str
+
+    def to_str(self) -> str:
+        """Return the string representation expected by monday.com."""
+        ...
+
+
+# Narrow protocol that user code can pass to APIs as a sequence
+type ColumnInputObject = HasToDict | HasToStr
+"""
+Structural type for column input objects accepted by APIs when provided
+as a sequence. Any object with a ``column_id`` and either ``to_dict`` or
+``to_str`` is supported. This covers all helper input classes like
+``DateInput``, ``TextInput``, ``StatusInput``, etc.
 """

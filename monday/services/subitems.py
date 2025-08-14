@@ -30,6 +30,7 @@ MondayClient instance.
 """
 
 import logging
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from monday.fields.item_fields import ItemFields
@@ -37,7 +38,12 @@ from monday.protocols import MondayClientProtocol
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
 from monday.services.utils.query_builder import build_operation_with_variables
-from monday.types.column import ColumnType
+from monday.types.column_inputs import (
+    ColumnInput,
+    ColumnInputObject,
+    HasToDict,
+    HasToStr,
+)
 from monday.types.subitem import Subitem, SubitemList
 
 if TYPE_CHECKING:
@@ -189,7 +195,10 @@ class Subitems:
         self,
         item_id: int | str,
         subitem_name: str,
-        column_values: dict[ColumnType, str | dict[str, Any]] | None = None,
+        column_values: Sequence[ColumnInputObject]
+        | Mapping[str, ColumnInput]
+        | Mapping[str, Any]
+        | None = None,
         fields: str | Fields = ItemFields.BASIC,
         *,
         create_labels_if_missing: bool = False,
@@ -264,8 +273,27 @@ class Subitems:
             'createLabels': bool(create_labels_if_missing),
         }
         if column_values is not None:
+            # Reuse Items._process_column_values behavior without circular import
+            processed: dict[str, Any] = {}
+            if isinstance(column_values, (list, tuple)):
+                for cv in column_values:
+                    if isinstance(cv, HasToStr):
+                        processed[cv.column_id] = cv.to_str()
+                    elif isinstance(cv, HasToDict):
+                        processed[cv.column_id] = cv.to_dict()
+            elif isinstance(column_values, Mapping):
+                for key, val in column_values.items():
+                    if isinstance(val, HasToStr):
+                        processed[str(key)] = val.to_str()
+                    elif isinstance(val, HasToDict):
+                        processed[str(key)] = val.to_dict()
+                    else:
+                        processed[str(key)] = val
+            else:
+                processed = {}
+
             variable_types['columnValues'] = 'JSONString'
-            variables['columnValues'] = column_values
+            variables['columnValues'] = processed
 
         arg_var_mapping = {
             'parent_item_id': 'parentItemId',

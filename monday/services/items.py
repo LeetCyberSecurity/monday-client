@@ -31,6 +31,7 @@ MondayClient instance.
 
 import json
 import logging
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal
 
 from monday.fields.column_fields import ColumnFields
@@ -44,7 +45,12 @@ from monday.services.utils.query_builder import (
     format_columns_mapping,
 )
 from monday.types.column import ColumnFilter, ColumnValue
-from monday.types.column_inputs import ColumnInput
+from monday.types.column_inputs import (
+    ColumnInput,
+    ColumnInputObject,
+    HasToDict,
+    HasToStr,
+)
 from monday.types.item import Item
 
 if TYPE_CHECKING:
@@ -154,7 +160,10 @@ class Items:
         self,
         board_id: int | str,
         item_name: str,
-        column_values: list[ColumnInput] | dict[str, Any] | None = None,
+        column_values: Sequence[ColumnInputObject]
+        | Mapping[str, ColumnInput]
+        | Mapping[str, Any]
+        | None = None,
         group_id: str | None = None,
         position_relative_method: Literal['before_at', 'after_at'] | None = None,
         relative_to: int | None = None,
@@ -789,7 +798,9 @@ class Items:
     async def change_column_values(
         self,
         item_id: int | str,
-        column_values: list[ColumnInput] | dict[str, Any],
+        column_values: Sequence[ColumnInputObject]
+        | Mapping[str, ColumnInput]
+        | Mapping[str, Any],
         fields: str | Fields = ColumnFields.BASIC,
         *,
         create_labels_if_missing: bool = False,
@@ -993,8 +1004,10 @@ class Items:
         return [str(item.id) for item in data]
 
     @staticmethod
-    def _process_column_values(
-        column_values: list[ColumnInput] | dict[str, Any],
+    def _process_column_values(  # noqa: PLR0912
+        column_values: Sequence[ColumnInputObject]
+        | Mapping[str, ColumnInput]
+        | Mapping[str, Any],
     ) -> dict[str, Any]:
         """
         Process column values to handle both ColumnInput objects and dictionary formats.
@@ -1042,21 +1055,37 @@ class Items:
 
         """
         # Process column values to handle value classes
-        processed_column_values = {}
-        if isinstance(column_values, list):
+        processed_column_values: dict[str, Any] = {}
+
+        # Sequence of ColumnInput-like objects
+        if isinstance(column_values, (list, tuple)):
             for column_value in column_values:
-                # Handle value classes - some use to_str(), others use to_dict()
-                if not isinstance(column_value, (str, dict)):
-                    if hasattr(column_value, 'to_str'):
-                        processed_column_values[column_value.column_id] = (
-                            column_value.to_str()  # pyright: ignore [reportAttributeAccessIssue]
-                        )
-                    elif hasattr(column_value, 'to_dict'):
-                        processed_column_values[column_value.column_id] = (
-                            column_value.to_dict()  # pyright: ignore [reportAttributeAccessIssue]
-                        )
+                if isinstance(column_value, HasToStr):
+                    processed_column_values[column_value.column_id] = (
+                        column_value.to_str()
+                    )
+                elif isinstance(column_value, HasToDict):
+                    processed_column_values[column_value.column_id] = (
+                        column_value.to_dict()
+                    )
+                else:
+                    # Fallback for unexpected inline primitives
+                    if isinstance(column_value, str):
+                        # Cannot map without column_id, ignore silently
+                        continue
+                    if isinstance(column_value, dict):
+                        # Cannot map without column_id, ignore silently
+                        continue
+        elif isinstance(column_values, Mapping):
+            for key, value in column_values.items():
+                if isinstance(value, HasToStr):
+                    processed_column_values[str(key)] = value.to_str()
+                elif isinstance(value, HasToDict):
+                    processed_column_values[str(key)] = value.to_dict()
+                else:
+                    processed_column_values[str(key)] = value
         else:
-            # Handle regular string/dict values
-            processed_column_values = dict(column_values)
+            # Unsupported type at runtime; return empty mapping
+            processed_column_values = {}
 
         return processed_column_values
