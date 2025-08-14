@@ -278,7 +278,8 @@ class Boards:
             query_params = QueryParams()
 
         if isinstance(query_params, dict):
-            query_params = QueryParams(**query_params)
+            # Ensure proper conversion of nested rule dicts to QueryRule instances
+            query_params = QueryParams.from_dict(query_params)
 
         # Build the items_page field with query parameters if provided
         items_page_field = 'items_page'
