@@ -28,73 +28,6 @@ from monday.types.item import QueryParams
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def _convert_list_value(value: list) -> list:
-    """Convert list values to integers where possible."""
-    converted = []
-    for x in value:
-        if x is None:
-            continue
-        try:
-            converted.append(int(x))
-        except (ValueError, TypeError):
-            converted.append(x)
-    return converted
-
-
-def _convert_string_array_value(value: str) -> list | str:
-    """Convert string array values to actual arrays with numeric conversion."""
-    try:
-        parsed_array = ast.literal_eval(value)
-        if isinstance(parsed_array, list):
-            converted_array = []
-            for x in parsed_array:
-                if x is None:
-                    continue
-                try:
-                    converted_array.append(int(x))
-                except (ValueError, TypeError):
-                    converted_array.append(x)
-            return converted_array
-        return value  # noqa: TRY300
-    except (ValueError, SyntaxError):
-        return value
-
-
-def _convert_single_value(value: Any) -> Any:
-    """Convert single values to integers where possible."""
-    try:
-        return int(value) if not isinstance(value, bool) else value
-    except (ValueError, TypeError):
-        return value
-
-
-def convert_numeric_args(args_dict: dict) -> dict:
-    """
-    Convert numeric arguments to integers in a dictionary.
-
-    Args:
-        args_dict: Dictionary containing arguments that may need numeric conversion
-
-    Returns:
-        Dictionary with numeric values converted to integers
-
-    """
-    converted = {}
-    for key, value in args_dict.items():
-        if value is None:
-            continue
-        if isinstance(value, bool):
-            converted[key] = value
-        elif isinstance(value, list):
-            converted[key] = _convert_list_value(value)
-        elif isinstance(value, str) and value.startswith('[') and value.endswith(']'):
-            converted[key] = _convert_string_array_value(value)
-        else:
-            converted[key] = _convert_single_value(value)
-    return converted
-
-
-# Fields that should be treated as GraphQL enums (unquoted)
 ENUM_FIELDS = {
     'board_attribute',
     'board_kind',
@@ -108,8 +41,8 @@ ENUM_FIELDS = {
     'query_params',
     'state',
 }
+"""Fields that should be treated as GraphQL enums (unquoted)"""
 
-# Fields that should be treated as numeric IDs (unquoted when they are numeric strings)
 NUMERIC_ID_FIELDS = {
     'board_id',
     'board_ids',
@@ -130,6 +63,104 @@ NUMERIC_ID_FIELDS = {
     'relative_to',
     'ids',
 }
+"""Fields that should be treated as numeric IDs (unquoted when they are numeric strings)"""
+
+
+def build_graphql_query(
+    operation: str,
+    query_type: Literal['query', 'mutation'],
+    args: dict[str, Any] | None = None,
+) -> str:
+    """
+    Builds a formatted GraphQL query string based on the provided parameters.
+
+    Args:
+        operation: The GraphQL operation name (e.g., 'items', 'create_item')
+        query_type: The type of GraphQL operation ('query' or 'mutation')
+        args: GraphQL query arguments
+
+    Returns:
+        A formatted GraphQL query string ready for API submission
+
+    """
+    processed_args = {}
+    if args:
+        args = _convert_numeric_args(args)
+        processed_args = _process_args(args)
+
+    fields = processed_args.pop('fields', None)
+    if fields:
+        fields = _format_fields(fields)
+
+    args_str = ', '.join(
+        f'{k}: {v}' for k, v in processed_args.items() if v is not None
+    )
+
+    return f"""
+        {query_type} {{
+            {operation} {f'({args_str})' if args_str else ''}
+                {f'{{ {fields} }}' if fields else ''}
+        }}
+    """
+
+
+def build_operation_with_variables(  # noqa: PLR0913
+    operation: str,
+    query_type: Literal['query', 'mutation'],
+    variable_types: dict[str, str],
+    arg_var_mapping: dict[str, str],
+    fields: Any,
+    *,
+    arg_literals: dict[str, str] | None = None,
+) -> str:
+    """
+    Build a GraphQL operation string using variables.
+
+    Args:
+        operation: Operation name (e.g., 'create_board')
+        query_type: 'query' or 'mutation'
+        variable_types: Mapping of variable name -> GraphQL type (e.g., 'name': 'String!')
+        arg_var_mapping: Mapping of argument name -> variable name (e.g., 'board_name': 'name')
+        fields: Selection set fields (string or Fields-like)
+        arg_literals: Literal argument strings to include verbatim (e.g., formatted lists)
+
+    Returns:
+        GraphQL operation string with variable definitions and arguments bound to variables.
+
+    """
+    var_defs = ', '.join(
+        f'${var}: {gql_type}' for var, gql_type in variable_types.items()
+    )
+
+    arg_pairs: list[str] = []
+    for arg, var in arg_var_mapping.items():
+        arg_pairs.append(f'{arg}: ${var}')
+
+    if arg_literals:
+        for arg, literal in arg_literals.items():
+            if literal is not None:
+                arg_pairs.append(f'{arg}: {literal}')
+
+    args_str = ', '.join(arg_pairs)
+
+    fields_fmt = _format_fields(fields) if fields is not None else None
+
+    selection = f' {{ {fields_fmt} }}' if fields_fmt else ''
+
+    return f'{query_type} ({var_defs})\n{{\n    {operation} ({args_str}){selection}\n}}'
+
+
+def format_columns_mapping(mapping: dict[str, Any]) -> str:
+    """
+    Format columns mapping dict to GraphQL argument value.
+
+    Input: {'source_col': 'target_col'}
+    Output: [{source: "source_col", target: "target_col"}, ...]
+    """
+    if not mapping:
+        return '[]'
+    pairs = [f'{{source: "{k}", target: "{v}"}}' for k, v in mapping.items()]
+    return '[' + ', '.join(pairs) + ']'
 
 
 def _process_dict_value(key: str, value: dict) -> str:
@@ -234,101 +265,70 @@ def _format_fields(fields: Any) -> str:
     return ' '.join(fields_str.split())
 
 
-def build_graphql_query(
-    operation: str,
-    query_type: Literal['query', 'mutation'],
-    args: dict[str, Any] | None = None,
-) -> str:
+def _convert_list_value(value: list) -> list:
+    """Convert list values to integers where possible."""
+    converted = []
+    for x in value:
+        if x is None:
+            continue
+        try:
+            converted.append(int(x))
+        except (ValueError, TypeError):
+            converted.append(x)
+    return converted
+
+
+def _convert_string_array_value(value: str) -> list | str:
+    """Convert string array values to actual arrays with numeric conversion."""
+    try:
+        parsed_array = ast.literal_eval(value)
+        if isinstance(parsed_array, list):
+            converted_array = []
+            for x in parsed_array:
+                if x is None:
+                    continue
+                try:
+                    converted_array.append(int(x))
+                except (ValueError, TypeError):
+                    converted_array.append(x)
+            return converted_array
+        return value  # noqa: TRY300
+    except (ValueError, SyntaxError):
+        return value
+
+
+def _convert_single_value(value: Any) -> Any:
+    """Convert single values to integers where possible."""
+    try:
+        return int(value) if not isinstance(value, bool) else value
+    except (ValueError, TypeError):
+        return value
+
+
+def _convert_numeric_args(args_dict: dict) -> dict:
     """
-    Builds a formatted GraphQL query string based on the provided parameters.
+    Convert numeric arguments to integers in a dictionary.
 
     Args:
-        operation: The GraphQL operation name (e.g., 'items', 'create_item')
-        query_type: The type of GraphQL operation ('query' or 'mutation')
-        args: GraphQL query arguments
+        args_dict: Dictionary containing arguments that may need numeric conversion
 
     Returns:
-        A formatted GraphQL query string ready for API submission
+        Dictionary with numeric values converted to integers
 
     """
-    processed_args = {}
-    if args:
-        args = convert_numeric_args(args)
-        processed_args = _process_args(args)
-
-    fields = processed_args.pop('fields', None)
-    if fields:
-        fields = _format_fields(fields)
-
-    args_str = ', '.join(
-        f'{k}: {v}' for k, v in processed_args.items() if v is not None
-    )
-
-    return f"""
-        {query_type} {{
-            {operation} {f'({args_str})' if args_str else ''}
-                {f'{{ {fields} }}' if fields else ''}
-        }}
-    """
-
-
-def build_operation_with_variables(  # noqa: PLR0913
-    operation: str,
-    query_type: Literal['query', 'mutation'],
-    variable_types: dict[str, str],
-    arg_var_mapping: dict[str, str],
-    fields: Any,
-    *,
-    arg_literals: dict[str, str] | None = None,
-) -> str:
-    """
-    Build a GraphQL operation string using variables.
-
-    Args:
-        operation: Operation name (e.g., 'create_board')
-        query_type: 'query' or 'mutation'
-        variable_types: Mapping of variable name -> GraphQL type (e.g., 'name': 'String!')
-        arg_var_mapping: Mapping of argument name -> variable name (e.g., 'board_name': 'name')
-        fields: Selection set fields (string or Fields-like)
-        arg_literals: Literal argument strings to include verbatim (e.g., formatted lists)
-
-    Returns:
-        GraphQL operation string with variable definitions and arguments bound to variables.
-
-    """
-    var_defs = ', '.join(
-        f'${var}: {gql_type}' for var, gql_type in variable_types.items()
-    )
-
-    arg_pairs: list[str] = []
-    for arg, var in arg_var_mapping.items():
-        arg_pairs.append(f'{arg}: ${var}')
-
-    if arg_literals:
-        for arg, literal in arg_literals.items():
-            if literal is not None:
-                arg_pairs.append(f'{arg}: {literal}')
-
-    args_str = ', '.join(arg_pairs)
-
-    fields_fmt = _format_fields(fields) if fields is not None else None
-
-    selection = f' {{ {fields_fmt} }}' if fields_fmt else ''
-
-    return f'{query_type} ({var_defs})\n{{\n    {operation} ({args_str}){selection}\n}}'
-
-
-def format_columns_mapping(mapping: dict[str, Any]) -> str:
-    """
-    Format columns mapping dict to GraphQL argument value.
-
-    Input: {'source_col': 'target_col'}
-    Output: [{source: "source_col", target: "target_col"}, ...]
-    """
-    if not mapping:
-        return '[]'
-    pairs = [f'{{source: "{k}", target: "{v}"}}' for k, v in mapping.items()]
-    return '[' + ', '.join(pairs) + ']'
+    converted = {}
+    for key, value in args_dict.items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            converted[key] = value
+        elif isinstance(value, list):
+            converted[key] = _convert_list_value(value)
+        elif isinstance(value, str) and value.startswith('[') and value.endswith(']'):
+            converted[key] = _convert_string_array_value(value)
+        else:
+            converted[key] = _convert_single_value(value)
+    return converted
 
 
 def _process_rule(rule) -> str:

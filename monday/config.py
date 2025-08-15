@@ -347,7 +347,9 @@ class MultiSourceConfig(ConfigProtocol):
     def reload_config(self) -> None:
         """Reload all configurations."""
         for provider in self.providers:
-            provider.reload_config()
+            reload_method = getattr(provider, 'reload_config', None)
+            if callable(reload_method):
+                reload_method()
         self._config = None
 
     def _merge_configs(self) -> None:

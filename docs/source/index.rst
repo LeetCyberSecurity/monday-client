@@ -56,7 +56,8 @@ This is the official documentation for the `monday-client <https://github.com/Le
    :local:
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
+   :titlesonly:
    :caption: Usage
 
    usage

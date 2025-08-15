@@ -85,6 +85,14 @@ class ConfigProtocol(Protocol):
         """Get the Monday configuration."""
         ...
 
+    def reload_config(self) -> None:  # pragma: no cover - optional
+        """Reload configuration from its source (optional)."""
+        ...
+
+    def validate_config(self) -> bool:  # pragma: no cover - optional
+        """Validate the configuration (optional)."""
+        ...
+
 
 class TransportAdapter(Protocol):
     """

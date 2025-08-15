@@ -21,9 +21,9 @@ import pytest
 
 from monday.exceptions import QueryFormatError
 from monday.services.utils.query_builder import (
+    _convert_numeric_args,
     build_graphql_query,
     build_query_params_string,
-    convert_numeric_args,
     map_hex_to_color,
 )
 
@@ -32,7 +32,7 @@ from monday.services.utils.query_builder import (
 def test_convert_numeric_args_basic():
     """Test basic numeric conversion functionality."""
     args = {'id': '123', 'name': 'test', 'active': True, 'empty': None}
-    result = convert_numeric_args(args)
+    result = _convert_numeric_args(args)
     assert result == {'id': 123, 'name': 'test', 'active': True}
 
 
@@ -44,7 +44,7 @@ def test_convert_numeric_args_lists():
         'names': ['test1', 'test2'],
         'mixed': ['1', None, 'test', '4'],
     }
-    result = convert_numeric_args(args)
+    result = _convert_numeric_args(args)
     assert result == {
         'ids': [1, 2, 3],
         'names': ['test1', 'test2'],
@@ -62,7 +62,7 @@ def test_convert_numeric_args_complex():
         'none_value': None,
         'text': 'not_a_number',
     }
-    result = convert_numeric_args(args)
+    result = _convert_numeric_args(args)
     assert result == {
         'id': 123,
         'values': [1, 2, 'text'],
@@ -251,7 +251,7 @@ def test_convert_numeric_args_edge_cases():
         'empty_list': [],
         'mixed_list': ['0', '-1', 'text', True],
     }
-    result = convert_numeric_args(args)
+    result = _convert_numeric_args(args)
     assert result['zero'] == 0
     assert result['negative'] == -123
     assert result['float_str'] == '123.45'  # Should remain string

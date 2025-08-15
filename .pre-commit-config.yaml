@@ -7,7 +7,8 @@ repos:
         exclude: |
           (?x)^(
               monday/types/column_inputs\.py|
-              monday/types/column\.py
+              monday/types/column\.py|
+              monday/services/utils/query_builder\.py
           )$
       - id: check-merge-conflict
       - id: check-yaml

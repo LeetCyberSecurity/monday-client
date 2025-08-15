@@ -24,7 +24,7 @@ Configuration
 The monday-client library provides a flexible configuration system that supports multiple sources and methods for managing client settings. This page covers all configuration options, from basic setup to advanced proxy configurations.
 
 .. contents:: Table of Contents
-    :depth: 3
+    :depth: 2
     :local:
 
 Overview
