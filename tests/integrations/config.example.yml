@@ -12,3 +12,4 @@ monday:
   workspace_id: 1234                   # Example workspace ID
   column_id: 'status'                  # Example column ID
   column_values: ['column_value1']     # Example column values
+  webhook_target_url: 'https://your-domain.example/webhooks/monday'  # Must respond to monday creation challenge

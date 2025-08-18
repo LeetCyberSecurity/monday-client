@@ -41,7 +41,7 @@ async def test_aiohttp_adapter_post_non_json_response():
     # Mock response that raises ContentTypeError on .json(), falls back to .text()
     response = AsyncMock()
     response.headers = {'X-Test': '1'}
-    response.json.side_effect = aiohttp.ContentTypeError(  # type: ignore[arg-type]
+    response.json.side_effect = aiohttp.ContentTypeError(
         MagicMock(), (), message='not json'
     )
     response.text = AsyncMock(return_value='oops')

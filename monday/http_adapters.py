@@ -2,7 +2,7 @@
 HTTP transport adapters for monday-client.
 
 Provides a pluggable transport abstraction so we can support different HTTP stacks
-like aiohttp (current) or httpx (new) without changing the public client API.
+like aiohttp or httpx without changing the public client API.
 """
 
 from __future__ import annotations
@@ -190,11 +190,11 @@ class HttpxAdapter:
         # NTLM (server-side or transparent proxies)
         if self._proxy_auth_type and self._proxy_auth_type.lower() == 'ntlm':
             try:
-                from httpx_ntlm import HttpNtlmAuth  # type: ignore[reportMissingImports]  # noqa: I001, PLC0415
+                from httpx_ntlm import HttpNtlmAuth  # noqa: PLC0415
 
                 if self._proxy_auth:
                     username, password = self._proxy_auth
-                    client.auth = HttpNtlmAuth(username, password)  # type: ignore[attr-defined]
+                    client.auth = HttpNtlmAuth(username, password)
             except Exception:  # noqa: BLE001
                 logger.warning('httpx-ntlm not installed; NTLM not enabled')
 
@@ -205,10 +205,10 @@ class HttpxAdapter:
             and self._proxy_auth_type.lower() in {'kerberos', 'spnego'}
         ):
             try:
-                import spnego  # type: ignore[reportMissingImports]  # noqa: PLC0415
+                import spnego  # noqa: PLC0415
 
                 if not hasattr(self, '_spnego_ctx'):
-                    self._spnego_ctx = spnego.client(protocol='negotiate')  # type: ignore[attr-defined]
+                    self._spnego_ctx = spnego.client(protocol='negotiate')
             except Exception:  # noqa: BLE001
                 logger.warning(
                     'Kerberos/SPNEGO initialization failed; proceeding without proxy token'
@@ -233,8 +233,8 @@ class HttpxAdapter:
             and self._proxy_auth_type.lower() in {'kerberos', 'spnego'}
         ):
             try:
-                if hasattr(self, '_spnego_ctx') and self._spnego_ctx is not None:  # type: ignore[attr-defined]
-                    initial = self._spnego_ctx.step(None)  # type: ignore[attr-defined]
+                if hasattr(self, '_spnego_ctx') and self._spnego_ctx is not None:
+                    initial = self._spnego_ctx.step(None)
                     if initial:
                         negotiate_b64 = base64.b64encode(initial).decode('ascii')
             except Exception:  # noqa: BLE001
@@ -252,14 +252,14 @@ class HttpxAdapter:
             if (
                 resp.status_code == self.PROXY_AUTH_REQUIRED
                 and hasattr(self, '_spnego_ctx')
-                and self._spnego_ctx is not None  # type: ignore[attr-defined]
+                and self._spnego_ctx is not None
             ):
                 challenge = resp.headers.get('Proxy-Authenticate', '')
                 if 'Negotiate ' in challenge:
                     try:
                         token_b64 = challenge.split('Negotiate ', 1)[1].strip()
                         in_token = base64.b64decode(token_b64)
-                        out_token = self._spnego_ctx.step(in_token)  # type: ignore[attr-defined]
+                        out_token = self._spnego_ctx.step(in_token)
                         if out_token:
                             b64 = base64.b64encode(out_token).decode('ascii')
                             # Rebuild client with updated Proxy-Authorization and resend once

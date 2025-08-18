@@ -99,3 +99,17 @@ Subitems
 Users
 ~~~~~
 .. automethod:: monday.services.users.Users.query
+
+.. _services_section_webhooks:
+
+Webhooks
+~~~~~~~~
+.. automethod:: monday.services.webhooks.Webhooks.query
+.. automethod:: monday.services.webhooks.Webhooks.create
+.. automethod:: monday.services.webhooks.Webhooks.delete
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Related Service Guides
+
+   webhooks

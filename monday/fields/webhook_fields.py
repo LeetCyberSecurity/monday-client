@@ -15,18 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with monday-client. If not, see <https://www.gnu.org/licenses/>.
 
-from monday.services.boards import Boards
-from monday.services.groups import Groups
-from monday.services.items import Items
-from monday.services.subitems import Subitems
-from monday.services.users import Users
-from monday.services.webhooks import Webhooks
+"""
+Field presets for monday.com Webhook operations.
+"""
 
-__all__ = [
-    'Boards',
-    'Groups',
-    'Items',
-    'Subitems',
-    'Users',
-    'Webhooks',
-]
+from monday.fields.base_fields import BaseFields
+from monday.services.utils.fields import Fields
+
+
+class WebhookFields(BaseFields):
+    """Predefined selection sets for webhook queries/mutations."""
+
+    BASIC = Fields('id event board_id config')
+    """
+    Returns the following fields:
+
+    - id: Webhook ID
+    - event: Subscribed event type
+    - board_id: Board ID of the webhook
+    - config: Webhook configuration JSON (string)
+    """

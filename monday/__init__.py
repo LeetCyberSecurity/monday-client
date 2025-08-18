@@ -17,7 +17,7 @@
 
 """Monday API client"""
 
-__version__ = '0.1.81'
+__version__ = '0.1.82'
 __authors__ = [{'name': 'Dan Hollis', 'email': 'dh@leetsys.com'}]
 
 from monday.client import MondayClient
@@ -27,6 +27,7 @@ from monday.fields.column_fields import ColumnFields
 from monday.fields.group_fields import GroupFields
 from monday.fields.item_fields import ItemFields
 from monday.fields.user_fields import UserFields
+from monday.fields.webhook_fields import WebhookFields
 from monday.logging_utils import (
     configure_for_external_logging,
     disable_logging,
@@ -75,6 +76,7 @@ from monday.types.tag import Tag
 from monday.types.team import Team
 from monday.types.update import Update
 from monday.types.user import OutOfOffice, User
+from monday.types.webhook import Webhook
 from monday.types.workspace import Workspace
 
 __all__ = [
@@ -139,6 +141,8 @@ __all__ = [
     'UpdateBoard',
     'User',
     'UserFields',
+    'Webhook',
+    'WebhookFields',
     'WeekInput',
     'Workspace',
     'WorldClockInput',

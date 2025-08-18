@@ -22,8 +22,35 @@ MondayClient
 ------------
 
 .. autoclass:: monday.client.MondayClient
-   :members: logger, post_request
+   :members: logger, post_request, use_api_key, use_headers
    :show-inheritance:
+
+Header overrides
+~~~~~~~~~~~~~~~~
+
+To use a different API token for a subset of calls (e.g., integration OAuth tokens for webhooks), use the async context managers. Overrides are applied per awaited call and are safe under concurrency:
+
+.. code-block:: python
+
+   import asyncio
+
+   async def main():
+      async with monday_client.use_api_key('integration_oauth_token'):
+         await monday_client.webhooks.create(...)
+
+   asyncio.run(main())
+
+You can also override arbitrary headers:
+
+.. code-block:: python
+
+   import asyncio
+
+   async def main():
+      async with monday_client.use_headers({'Authorization': 'token2', 'API-Version': '2025-01'}):
+         await monday_client.groups.create(...)
+
+   asyncio.run(main())
 
 Services
 ~~~~~~~~
@@ -64,3 +91,10 @@ The MondayClient provides access to various services for interacting with differ
    Service for user-related operations.
 
    Type: :ref:`Users <services_section_users>`
+
+.. py:attribute:: MondayClient.webhooks
+   :no-index:
+
+   Service for webhook-related operations.
+
+   Type: :ref:`Webhooks <services_section_webhooks>`

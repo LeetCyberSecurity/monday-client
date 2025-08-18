@@ -109,9 +109,11 @@ pytest tests/
 
    ```bash
    export MONDAY_API_KEY=your_api_key_here
-   export MONDAY_TEST_BOARD_ID=your_test_board_id
-   export MONDAY_TEST_ITEM_ID=your_test_item_id
-   export MONDAY_TEST_USER_ID=your_test_user_id
+   export MONDAY_BOARD_ID=your_test_board_id
+   export MONDAY_ITEM_ID=your_test_item_id
+   export MONDAY_USER_ID=your_test_user_id
+   # For webhook mutation tests, provide a URL that echoes the URL verification challenge
+   export MONDAY_WEBHOOK_TARGET_URL=https://your-domain.example/webhooks/monday
    ```
 
 3. **Or Use Configuration File (Recommended):**
@@ -124,9 +126,13 @@ pytest tests/
    # tests/integrations/config.yml
    monday:
      api_key: "your_actual_api_key_here"
-     test_board_id: "123456789"
-     test_item_id: "123456789"
-     test_user_id: "123456789"
+     board_id: "123456789"
+     item_id: "123456789"
+     user_id: "123456789"
+     webhook_target_url: "https://your-domain.example/webhooks/monday"
+     # webhook_target_url must respond to monday's URL verification challenge
+     # by echoing the provided JSON {"challenge": "..."} per monday docs.
+     # See: https://developer.monday.com/api-reference/reference/webhooks#url-verification
    ```
 
 4. **Run Integration Tests:**

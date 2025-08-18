@@ -49,6 +49,33 @@ Quick Start
 
     asyncio.run(main())
 
+Using multiple tokens safely
+----------------------------
+
+When you need to use a different token for a specific operation (e.g., creating a webhook with an integration OAuth token), use the client's async context managers to apply a per-request header override without mutating shared state:
+
+.. code-block:: python
+
+    import asyncio
+
+    async def main():
+        async with monday_client.use_api_key('integration_oauth_token'):
+            await monday_client.webhooks.create(board_id=1234567890, url='https://example.com/webhooks/monday', event='create_item')
+
+    asyncio.run(main())
+
+You can also override arbitrary headers:
+
+.. code-block:: python
+
+    import asyncio
+
+    async def main():
+        async with monday_client.use_headers({'Authorization': 'other_token', 'API-Version': '2025-01'}):
+            await monday_client.users.query()
+
+    asyncio.run(main())
+
 .. _usage_filtering_and_querying_items:
 
 Filtering and Querying Items

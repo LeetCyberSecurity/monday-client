@@ -25,6 +25,8 @@ and various API operations.
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from typing import Any
 
 import aiohttp
@@ -43,6 +45,7 @@ from monday.services.items import Items
 from monday.services.subitems import Subitems
 from monday.services.users import Users
 from monday.services.utils.error_handlers import ErrorHandler, check_query_result
+from monday.services.webhooks import Webhooks
 
 
 class MondayClient:
@@ -150,7 +153,7 @@ class MondayClient:
         else:
             self._setup_from_params(api_key, url, version, headers, max_retries)
 
-        # Initialize transport adapter (default: aiohttp; optional: httpx)
+        # Initialize transport adapter
         if transport == 'httpx':
             self._adapter = HttpxAdapter(
                 proxy_url=self.proxy_url,
@@ -171,7 +174,44 @@ class MondayClient:
                 timeout_seconds=self.timeout,
             )
 
+        # Task-local header overrides for concurrency-safe per-call credentials
+        self._headers_override: ContextVar[dict[str, Any] | None] = ContextVar(
+            'headers_override', default=None
+        )
+
         self._initialize_services()
+
+    @asynccontextmanager
+    async def use_api_key(self, api_key: str):
+        """
+        Temporarily override the Authorization header for awaited calls within the context.
+
+        Example:
+            async with client.use_api_key('integration_oauth_token'):
+                await client.webhooks.create(...)
+
+        """
+        token = self._headers_override.set({'Authorization': api_key})
+        try:
+            yield self
+        finally:
+            self._headers_override.reset(token)
+
+    @asynccontextmanager
+    async def use_headers(self, headers: dict[str, Any]):
+        """
+        Temporarily override arbitrary headers for awaited calls within the context.
+
+        Example:
+            async with client.use_headers({'Authorization': 'token2', 'API-Version': '2025-01'}):
+                await client.users.query(...)
+
+        """
+        token = self._headers_override.set(headers)
+        try:
+            yield self
+        finally:
+            self._headers_override.reset(token)
 
     async def post_request(
         self, query: str, variables: dict[str, Any] | None = None
@@ -392,6 +432,13 @@ class MondayClient:
         Type: `Users <services.html#users>`_
         """
 
+        self.webhooks = Webhooks(self)
+        """
+        Service for webhook-related operations
+
+        Type: `Webhooks <services.html#webhooks>`_
+        """
+
         self._query_errors = {'argumentLiteralsIncompatible'}
         self._error_handler = ErrorHandler(self._rate_limit_seconds)
 
@@ -416,7 +463,7 @@ class MondayClient:
             MondayAPIError: When an unhandled monday.com API error occurs.
 
         """
-        # Handle GraphQL-compliant error format (2025-01+)
+        # Handle GraphQL-compliant error format
         if response_data.get('errors'):
             self._error_handler.handle_graphql_errors(
                 response_data, response_headers, query
@@ -516,10 +563,18 @@ class MondayClient:
         if variables:
             payload['variables'] = variables
 
+        # Merge task-local header overrides (if any) in a concurrency-safe way
+        override_headers = self._headers_override.get()
+        effective_headers: dict[str, Any] = (
+            self.headers
+            if not override_headers
+            else {**self.headers, **override_headers}
+        )
+
         response_data, response_headers = await self._adapter.post(
             url=self.url,
             json=payload,
-            headers=self.headers,
+            headers=effective_headers,
             timeout_seconds=self.timeout,
         )
         return response_data, response_headers
