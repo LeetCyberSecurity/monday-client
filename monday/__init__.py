@@ -17,7 +17,7 @@
 
 """Monday API client"""
 
-__version__ = '0.1.82'
+__version__ = '0.1.83'
 __authors__ = [{'name': 'Dan Hollis', 'email': 'dh@leetsys.com'}]
 
 from monday.client import MondayClient

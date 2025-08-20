@@ -313,7 +313,10 @@ class LinkInput:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
-        return {'url': self.url, 'text': self.text or self.url}
+        # Ensure both fields are serialized as strings as required by monday.com
+        url_value = str(self.url)
+        text_value = str(self.text) if self.text is not None else url_value
+        return {'url': url_value, 'text': text_value}
 
 
 @dataclass
@@ -848,7 +851,7 @@ Example:
 """
 
 
-# Protocol-based structural typing for column input objects (pythonic, flexible)
+# Protocol-based structural typing for column input objects
 @runtime_checkable
 class HasToDict(Protocol):
     """Structural protocol for column input objects exposing ``to_dict()``."""
@@ -871,7 +874,7 @@ class HasToStr(Protocol):
         ...
 
 
-# Narrow protocol that user code can pass to APIs as a sequence
+# Narrow protocol for passing to APIs as a sequence
 type ColumnInputObject = HasToDict | HasToStr
 """
 Structural type for column input objects accepted by APIs when provided
