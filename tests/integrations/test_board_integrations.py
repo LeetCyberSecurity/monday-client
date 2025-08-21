@@ -390,6 +390,7 @@ class TestBoardMutations:
     async def test_create_and_delete_board(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test creating a board and then deleting it."""
         unique_id = str(uuid.uuid4())[:8]
@@ -398,7 +399,10 @@ class TestBoardMutations:
         try:
             # Create the board
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name state'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name state',
             )
 
             # Verify the board was created
@@ -430,6 +434,7 @@ class TestBoardMutations:
     async def test_duplicate_board(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test creating a board, duplicating it, then deleting both boards."""
         unique_id = str(uuid.uuid4())[:8]
@@ -439,7 +444,10 @@ class TestBoardMutations:
         try:
             # Create the board
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name state'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name state',
             )
 
             # Verify the board was created
@@ -486,13 +494,17 @@ class TestBoardMutations:
     async def test_duplicate_board_keep_subscribers(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test duplicating a board keeping subscribers flag set."""
         unique_id = str(uuid.uuid4())[:8]
         board_name = f'Duplicate Keep Subs Test Board {unique_id}'
         try:
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name state'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name state',
             )
             created_board_id = created_board.id
 
@@ -514,6 +526,7 @@ class TestBoardMutations:
     async def test_create_columns(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test creating a board, then creating status and dropdown columns with defaults, then deleting the board."""
         unique_id = str(uuid.uuid4())[:8]
@@ -522,7 +535,10 @@ class TestBoardMutations:
         try:
             # Create the board
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name state'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name state',
             )
 
             # Verify the board was created
@@ -595,13 +611,17 @@ class TestBoardMutations:
     async def test_create_column_after_another(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test creating a column positioned after an existing column."""
         unique_id = str(uuid.uuid4())[:8]
         board_name = f'After Column Test Board {unique_id}'
         try:
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name',
             )
             created_board_id = created_board.id
 
@@ -630,6 +650,7 @@ class TestBoardMutations:
     async def test_update_board(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test creating a board, updating it, then deleting it."""
         unique_id = str(uuid.uuid4())[:8]
@@ -639,7 +660,10 @@ class TestBoardMutations:
         try:
             # Create the board
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name state'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name state',
             )
 
             # Verify the board was created
@@ -721,6 +745,7 @@ class TestBoardMutations:
     async def test_archive_board(
         self,
         client: MondayClient,
+        workspace_id: int,
     ):
         """Test creating a board, archiving it, then deleting it."""
         unique_id = str(uuid.uuid4())[:8]
@@ -729,7 +754,10 @@ class TestBoardMutations:
         try:
             # Create the board
             created_board = await client.boards.create(
-                name=board_name, board_kind='public', fields='id name state'
+                name=board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name state',
             )
 
             # Verify the board was created

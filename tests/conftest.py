@@ -113,6 +113,7 @@ def get_monday_config(config: dict | None = None) -> dict:
         'workspace_id': get_config_value('monday.workspace_id', config=config),
         'column_id': get_config_value('monday.column_id', config=config),
         'column_values': get_config_value('monday.column_values', config=config),
+        'tag_id': get_config_value('monday.tag_id', config=config),
     }
 
 

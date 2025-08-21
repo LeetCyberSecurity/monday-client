@@ -184,6 +184,7 @@ known-third-party = [
     "BLE001",
     "S101",
     "PLC0415",
+    "PLR0915",
     "PLR2004",
     "SLF001",
 ]

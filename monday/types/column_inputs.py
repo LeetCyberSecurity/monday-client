@@ -194,8 +194,15 @@ class DropdownInput:
     """The dropdown option label or list of labels"""
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for API requests."""
-        return {'label': self.label if isinstance(self.label, list) else [self.label]}
+        """
+        Convert to dictionary for API requests.
+
+        Monday.com expects dropdown values as an array under the 'labels' key
+        (for label text) or 'ids' (for numeric IDs). This helper uses 'labels'
+        when strings are provided; to use IDs, pass a dictionary directly.
+        """
+        labels = self.label if isinstance(self.label, list) else [self.label]
+        return {'labels': labels}
 
 
 @dataclass

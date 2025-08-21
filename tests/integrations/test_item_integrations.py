@@ -84,6 +84,15 @@ def group_id(monday_config: dict[str, Any]) -> str:
     pytest.skip('MONDAY_GROUP_ID not found in config file or environment variable')
 
 
+@pytest.fixture(scope='module')
+def workspace_id(monday_config: dict[str, Any]) -> int:
+    """Get test workspace ID from config file or environment or skip."""
+    value = monday_config.get('workspace_id')
+    if value:
+        return int(value)
+    pytest.skip('MONDAY_WORKSPACE_ID not found in config file or environment variable')
+
+
 @pytest.mark.integration
 class TestItemIntegrations:
     """Integration tests for item operations."""
@@ -486,6 +495,7 @@ class TestItemMutations:
         self,
         client: MondayClient,
         board_id: int,
+        workspace_id: int,
     ):
         """Test moving an item to a different board."""
         unique_id = str(uuid.uuid4())[:8]
@@ -496,7 +506,10 @@ class TestItemMutations:
         try:
             # Create a target board for the move
             target_board = await client.boards.create(
-                name=target_board_name, board_kind='public', fields='id name'
+                name=target_board_name,
+                board_kind='public',
+                workspace_id=workspace_id,
+                fields='id name',
             )
 
             target_board_id = target_board.id
