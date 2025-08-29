@@ -85,6 +85,7 @@ markers = [
     "unit: Unit tests (Default, no external dependencies)",
     "integration: Integration tests (Require API key and network)",
     "mutation: Mutation tests (Require API key and network. Will create, update, and delete data)",
+    "sync: Tests for sync facade/helpers",
 ]
 addopts = [
     "--strict-markers"

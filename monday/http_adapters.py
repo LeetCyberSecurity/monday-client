@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class AiohttpAdapter:
-    """Adapter that uses aiohttp, mirroring the current client behavior."""
+    """Adapter that uses aiohttp for requests."""
 
     def __init__(  # noqa: PLR0913
         self,

@@ -77,6 +77,7 @@ This is the official documentation for the `monday-client <https://github.com/Le
    :caption: Utils
 
    utils
+   sync
 
 .. toctree::
    :maxdepth: 1
