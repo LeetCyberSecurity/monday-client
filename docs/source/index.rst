@@ -68,6 +68,7 @@ This is the official documentation for the `monday-client <https://github.com/Le
    :caption: API Documentation
 
    monday_client
+   http_adapters
    services
    fields
    exceptions

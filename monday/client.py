@@ -32,19 +32,16 @@ from typing import Any
 import aiohttp
 
 from monday.config import Config
-from monday.exceptions import (
-    ComplexityLimitExceeded,
-    MondayAPIError,
-    MutationLimitExceeded,
-    QueryFormatError,
-)
+from monday.exceptions import (ComplexityLimitExceeded, MondayAPIError,
+                               MutationLimitExceeded, QueryFormatError)
 from monday.http_adapters import AiohttpAdapter, HttpxAdapter
 from monday.services.boards import Boards
 from monday.services.groups import Groups
 from monday.services.items import Items
 from monday.services.subitems import Subitems
 from monday.services.users import Users
-from monday.services.utils.error_handlers import ErrorHandler, check_query_result
+from monday.services.utils.error_handlers import (ErrorHandler,
+                                                  check_query_result)
 from monday.services.webhooks import Webhooks
 
 

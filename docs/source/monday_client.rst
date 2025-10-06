@@ -22,7 +22,7 @@ MondayClient
 ------------
 
 .. autoclass:: monday.client.MondayClient
-   :members: logger, post_request, use_api_key, use_headers
+   :members: logger, post_request, use_api_key, use_headers, _adapter
    :show-inheritance:
 
 Header overrides

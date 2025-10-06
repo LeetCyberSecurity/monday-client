@@ -71,7 +71,7 @@ Top-level helpers
 Testing guidance
 ----------------
 
-- When writing tests for code using :class:`SyncMondayClient <monday.sync_client.SyncMondayClient>`, mock or stub ``MondayClient._adapter.post``` to avoid real network calls.
+- When writing tests for code using :class:`SyncMondayClient <monday.sync_client.SyncMondayClient>`, mock or stub :meth:`AiohttpAdapter.post <monday.http_adapters.AiohttpAdapter.post>` (or :meth:`HttpxAdapter.post <monday.http_adapters.HttpxAdapter.post>`) to avoid real network calls.
 - Use nested :func:`use_headers() <monday.sync_client.SyncMondayClient.use_headers>` contexts to test header propagation and override precedence.
 
 API reference

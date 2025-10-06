@@ -17,7 +17,7 @@
 
 """Monday API client"""
 
-__version__ = '0.1.85'
+__version__ = '0.1.86'
 __authors__ = [{'name': 'Dan Hollis', 'email': 'dh@leetsys.com'}]
 
 import asyncio
@@ -27,57 +27,37 @@ from contextlib import suppress
 from typing import Any
 
 from monday.client import MondayClient
-from monday.config import Config, EnvConfig, JsonConfig, MultiSourceConfig, YamlConfig
+from monday.config import (Config, EnvConfig, JsonConfig, MultiSourceConfig,
+                           YamlConfig)
 from monday.fields.board_fields import BoardFields
 from monday.fields.column_fields import ColumnFields
 from monday.fields.group_fields import GroupFields
 from monday.fields.item_fields import ItemFields
 from monday.fields.user_fields import UserFields
 from monday.fields.webhook_fields import WebhookFields
-from monday.logging_utils import (
-    configure_for_external_logging,
-    disable_logging,
-    enable_logging,
-    get_logger,
-    is_logging_enabled,
-    set_log_level,
-)
+from monday.logging_utils import (configure_for_external_logging,
+                                  disable_logging, enable_logging, get_logger,
+                                  is_logging_enabled, set_log_level)
 from monday.services.utils.fields import Fields
 from monday.sync_client import SyncMondayClient
 from monday.types.account import Account, AccountProduct, Plan
 from monday.types.asset import Asset
-from monday.types.board import ActivityLog, Board, BoardView, UndoData, UpdateBoard
+from monday.types.board import (ActivityLog, Board, BoardView, UndoData,
+                                UpdateBoard)
 from monday.types.column import Column, ColumnFilter, ColumnType, ColumnValue
-from monday.types.column_defaults import (
-    DropdownDefaults,
-    DropdownLabel,
-    StatusDefaults,
-    StatusLabel,
-)
-from monday.types.column_inputs import (
-    CheckboxInput,
-    ColumnInput,
-    CountryInput,
-    DateInput,
-    DropdownInput,
-    EmailInput,
-    HourInput,
-    LinkInput,
-    LocationInput,
-    LongTextInput,
-    NumberInput,
-    PeopleInput,
-    PhoneInput,
-    RatingInput,
-    StatusInput,
-    TagInput,
-    TextInput,
-    TimelineInput,
-    WeekInput,
-    WorldClockInput,
-)
+from monday.types.column_defaults import (DropdownDefaults, DropdownLabel,
+                                          StatusDefaults, StatusLabel)
+from monday.types.column_inputs import (CheckboxInput, ColumnInput,
+                                        CountryInput, DateInput, DropdownInput,
+                                        EmailInput, HourInput, LinkInput,
+                                        LocationInput, LongTextInput,
+                                        NumberInput, PeopleInput, PhoneInput,
+                                        RatingInput, StatusInput, TagInput,
+                                        TextInput, TimelineInput, WeekInput,
+                                        WorldClockInput)
 from monday.types.group import Group, GroupList
-from monday.types.item import Item, ItemList, ItemsPage, OrderBy, QueryParams, QueryRule
+from monday.types.item import (Item, ItemList, ItemsPage, OrderBy, QueryParams,
+                               QueryRule)
 from monday.types.subitem import Subitem, SubitemList
 from monday.types.tag import Tag
 from monday.types.team import Team
