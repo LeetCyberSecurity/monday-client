@@ -648,6 +648,30 @@ async def test_query_with_workspace_ids(boards_instance: Boards):
 
 @pytest.mark.asyncio
 @pytest.mark.unit
+async def test_query_with_group_ids(boards_instance: Boards):
+    """Test query method with group_ids filtering (multiple groups)."""
+    mock_responses = [
+        {'data': {'boards': [{'id': 1, 'name': 'Board 1'}]}},
+        {'data': {'boards': []}},
+    ]
+
+    boards_instance.client.post_request = AsyncMock(side_effect=mock_responses)
+    result = await boards_instance.query(
+        board_ids=1, group_ids=['group1', 'group2'], fields='id name'
+    )
+
+    # Basic assertions on returned data shape
+    assert len(result) == 1
+    assert result[0].id == '1'
+    assert result[0].name == 'Board 1'
+
+    # Ensure group_ids argument was included in the constructed query
+    first_call_args, _ = boards_instance.client.post_request.call_args
+    assert isinstance(first_call_args[0], str)
+    assert 'group_ids' in first_call_args[0]
+
+@pytest.mark.asyncio
+@pytest.mark.unit
 async def test_create_with_all_parameters(boards_instance: Boards):
     """Test board creation with all optional parameters."""
     mock_response = {

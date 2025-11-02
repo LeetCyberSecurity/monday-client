@@ -41,15 +41,11 @@ from monday.protocols import MondayClientProtocol
 from monday.services.utils.data_modifiers import update_data_in_place
 from monday.services.utils.error_handlers import check_query_result
 from monday.services.utils.fields import Fields
-from monday.services.utils.pagination import (
-    extract_items_page_value,
-    paginated_item_request,
-)
+from monday.services.utils.pagination import (extract_items_page_value,
+                                              paginated_item_request)
 from monday.services.utils.query_builder import (
-    build_graphql_query,
-    build_operation_with_variables,
-    build_query_params_string,
-)
+    build_graphql_query, build_operation_with_variables,
+    build_query_params_string)
 from monday.types.board import Board, UpdateBoard
 from monday.types.column import Column, ColumnFilter, ColumnType
 from monday.types.column_defaults import ColumnDefaults
@@ -85,6 +81,7 @@ class Boards:
         workspace_ids: int | str | list[int | str] | None = None,
         fields: str | Fields = BoardFields.BASIC,
         *,
+        group_ids: str | list[str] | None = None,
         paginate_items: bool = True,
         paginate_boards: bool = True,
     ) -> list[Board]:
@@ -102,6 +99,7 @@ class Boards:
             page: The page number to start from.
             state: The state of the boards to include.
             workspace_ids: The ID or list of IDs of the workspaces to filter by.
+            group_ids: The ID or list of IDs of groups to filter returned data by.
             fields: Fields to return from the queried board. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 
         Returns:
@@ -144,6 +142,7 @@ class Boards:
             page,
             state,
             workspace_ids,
+            group_ids,
             fields,
         )
 
@@ -1177,6 +1176,7 @@ class Boards:
         page: int,
         state: str,
         workspace_ids: int | str | list[int | str] | None,
+        group_ids: str | list[str] | None,
         fields: Fields,
     ) -> dict[str, Any]:
         """Build query arguments dictionary."""
@@ -1194,6 +1194,7 @@ class Boards:
             'page': page,
             'state': state,
             'workspace_ids': workspace_ids,
+            'group_ids': group_ids,
             'fields': fields,
         }
 
