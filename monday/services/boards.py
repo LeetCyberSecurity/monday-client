@@ -198,6 +198,7 @@ class Boards:
         fields: str | Fields = ItemFields.BASIC,
         *,
         paginate_items: bool = True,
+        group_ids: str | list[str] | None = None,
     ) -> list[ItemList]:
         """
         Retrieves a paginated list of items from specified boards.
@@ -292,10 +293,27 @@ class Boards:
             if query_params_str:
                 items_page_field = f'items_page (query_params: {query_params_str})'
 
-        boards_fields = f'id {items_page_field} {{ cursor items {{ {fields!s} }} }}'
+        # Normalize group filters (prefer group_ids if provided)
+        norm_group_ids: list[str] | None
+        if group_ids is not None:
+            norm_group_ids = [group_ids] if isinstance(group_ids, str) else list(group_ids)
+        elif group_id is not None:
+            norm_group_ids = [group_id]
+        else:
+            norm_group_ids = None
+
+        if norm_group_ids:
+            gid_arg = ', '.join([f'"{g}"' for g in norm_group_ids])
+            boards_fields = (
+                f'id groups (ids: [{gid_arg}]) '
+                f'{{ {items_page_field} {{ cursor items {{ {fields!s} }} }} }}'
+            )
+        else:
+            boards_fields = f'id {items_page_field} {{ cursor items {{ {fields!s} }} }}'
+
         boards_data = await self._fetch_paginated_boards(board_ids, boards_fields)
 
-        if group_id:
+        if norm_group_ids:
             return self._process_group_items(boards_data)
 
         return await self._process_board_items_pagination(

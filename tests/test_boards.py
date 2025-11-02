@@ -170,6 +170,10 @@ async def test_get_items_with_group(boards_instance: Boards):
     assert result[0].items[1].name == 'Item 2'
     boards_instance.client.post_request.assert_awaited_once()
 
+    # Ensure query includes groups with the single id (normalized spacing)
+    first_call_args, _ = boards_instance.client.post_request.call_args
+    assert 'groups ( ids: ["group1"] )' in first_call_args[0]
+
 
 @pytest.mark.asyncio
 @pytest.mark.unit
@@ -188,6 +192,102 @@ async def test_get_items_with_empty_group(boards_instance: Boards):
     assert result[0].board_id == '1'
     assert len(result[0].items) == 0
     boards_instance.client.post_request.assert_awaited_once()
+
+    # Ensure query includes groups with the single id (normalized spacing)
+    first_call_args, _ = boards_instance.client.post_request.call_args
+    assert 'groups ( ids: ["group1"] )' in first_call_args[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_get_items_with_multiple_group_ids(boards_instance: Boards):
+    """Test retrieving items when multiple group IDs are provided."""
+    mock_response = {
+        'data': {
+            'boards': [
+                {
+                    'id': 1,
+                    'groups': [
+                        {
+                            'items_page': {
+                                'cursor': None,
+                                'items': [
+                                    {'id': '101', 'name': 'Item 1'},
+                                    {'id': '102', 'name': 'Item 2'},
+                                ],
+                            }
+                        },
+                        {
+                            'items_page': {
+                                'cursor': None,
+                                'items': [
+                                    {'id': '103', 'name': 'Item 3'},
+                                ],
+                            }
+                        },
+                    ],
+                }
+            ]
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+
+    result = await boards_instance.get_items(
+        board_ids=1, fields='id name', group_ids=['group1', 'group2']
+    )
+
+    # Items from both groups are collected
+    assert len(result) == 1
+    assert result[0].board_id == '1'
+    assert len(result[0].items) == 3
+
+    # Ensure query contains both group IDs
+    first_call_args, _ = boards_instance.client.post_request.call_args
+    q = first_call_args[0]
+    assert 'groups ( ids: ["group1", "group2"] )' in q
+
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_get_items_with_group_ids_and_query_params(boards_instance: Boards):
+    """Test that query_params are applied inside groups when group_ids is set."""
+    mock_response = {
+        'data': {
+            'boards': [
+                {
+                    'id': 1,
+                    'groups': [
+                        {
+                            'items_page': {
+                                'cursor': None,
+                                'items': [
+                                    {'id': '101', 'name': 'Item 1'},
+                                ],
+                            }
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+    boards_instance.client.post_request = AsyncMock(return_value=mock_response)
+
+    qp = QueryParams(
+        rules=[
+            QueryRule(column_id='status', compare_value=['Done'], operator='contains_terms')
+        ]
+    )
+
+    _ = await boards_instance.get_items(
+        board_ids=1, fields='id name', group_ids=['group1'], query_params=qp
+    )
+
+    first_call_args, _ = boards_instance.client.post_request.call_args
+    q = first_call_args[0]
+    assert 'groups ( ids: ["group1"] )' in q
+    assert 'items_page ( query_params:' in q
 
 
 @pytest.mark.asyncio
