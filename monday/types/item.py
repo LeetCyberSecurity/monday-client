@@ -129,6 +129,21 @@ class Item:
     updates: list[Update] | None = None
     """The item's updates"""
 
+    email: str = ''
+    """The item's email (when available)."""
+
+    url: str = ''
+    """The item's link URL (when available)."""
+
+    relative_link: str = ''
+    """The item's relative path (when available)."""
+
+    linked_items: list['Item'] | None = None
+    """The item's linked items (when available)."""
+
+    parent_item: 'Item' | None = None
+    """The parent item, when this Item represents a subitem (e.g., parent_item { ... })."""
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API requests."""
 
@@ -160,6 +175,13 @@ class Item:
             else None,
             'updated_at': self.updated_at,
             'updates': _convert_list(self.updates) if self.updates else None,
+            'email': self.email,
+            'url': self.url,
+            'relative_link': self.relative_link,
+            'linked_items': _convert_list(self.linked_items)
+            if self.linked_items
+            else None,
+            'parent_item': self.parent_item.to_dict() if self.parent_item else None,
         }
 
         return {k: v for k, v in data.items() if v}
@@ -214,6 +236,18 @@ class Item:
                 for update in data.get('updates', [])
             ]
             if data.get('updates')
+            else None,
+            email=str(data.get('email', '')),
+            url=str(data.get('url', '')),
+            relative_link=str(data.get('relative_link', '')),
+            linked_items=[
+                Item.from_dict(li) if isinstance(li, dict) else li
+                for li in data.get('linked_items', [])
+            ]
+            if data.get('linked_items')
+            else None,
+            parent_item=Item.from_dict(data['parent_item'])
+            if data.get('parent_item')
             else None,
         )
 

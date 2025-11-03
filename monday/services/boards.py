@@ -210,7 +210,8 @@ class Boards:
             board_ids: The ID or list of IDs of the boards from which to retrieve items.
             query_params: A set of parameters to filter, sort, and control the scope of the underlying boards query. Use this to customize the results based on specific criteria. Can be a QueryParams object or a dictionary.
             limit: The maximum number of items to retrieve per page.
-            group_id: Only retrieve items from the specified group ID.
+            group_id: Only retrieve items from the specified group ID. If both group_id and group_ids are provided, group_ids takes precedence.
+            group_ids: The group ID or list of group IDs to restrict the items to. When provided, items are fetched under each matching group using a groups selection with ids.
             paginate_items: Whether to paginate items. If False, only returns the first page.
             fields: Fields to return from the items. Can be a string of space-separated field names or a :meth:`Fields() <monday.services.utils.fields.Fields>` instance.
 

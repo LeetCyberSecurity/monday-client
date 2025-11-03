@@ -17,7 +17,7 @@
 
 """Monday API client"""
 
-__version__ = '0.1.89'
+__version__ = '0.1.90'
 __authors__ = [{'name': 'Dan Hollis', 'email': 'dh@leetsys.com'}]
 
 import asyncio
